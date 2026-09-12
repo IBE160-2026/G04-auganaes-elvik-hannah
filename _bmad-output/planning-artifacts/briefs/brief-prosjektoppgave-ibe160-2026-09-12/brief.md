@@ -1,5 +1,5 @@
 ---
-title: Product Brief: AI-Driven Household Task App
+title: "Product Brief: AI-Driven Household Task App"
 status: ready
 created: 2026-09-12
 updated: 2026-09-12
