@@ -8,4 +8,4 @@ Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og
 
 - Eirik Auganæs
 - Steffen Elvik
-- Hannah
+- Hannah Linnea Elvestad Mattsson
