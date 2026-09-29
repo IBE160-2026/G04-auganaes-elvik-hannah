@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<title>Husly — Landlord Portfolio Dashboard (tablet/desktop)</title>
+<style>
+/*
+  Governs:
+  - DESIGN.md Components: Portfolio row, status tag (must-badge/should-badge
+    "pattern" resolved here as danger/success fills per Component Patterns
+    below), Primary button
+  - DESIGN.md Colors: danger (#C9404B, "Forsinket"), success (#267F59,
+    "Alt i orden"), accent (#5B96B1, landlord/portfolio cooler register)
+  - DESIGN.md Layout & Spacing: landlord/portfolio-mode denser register
+    (tighter padding/gaps toward the smaller end of the spacing scale)
+  - DESIGN.md Components: focus-outline token (see .focus-ring-note; no
+    element shown mid-focus, per the renderer's instruction to just note
+    the token exists)
+  - EXPERIENCE.md Component Patterns: Portfolio row (tap → Landlord Home
+    Admin; status tag text label, never color alone; danger tag if any
+    Must task overdue, success tag if fully on-track)
+  - EXPERIENCE.md State Patterns: no cold-load/empty state rendered here
+    (out of scope for this mock — see summary note on Home Admin/broadcast
+    composer, which is a different surface and intentionally not shown)
+  - EXPERIENCE.md Responsive & Platform: tablet/desktop (≥600px) two-column
+    list + selected-Home detail split, the one surface that gains a second
+    column at this breakpoint
+  - EXPERIENCE.md Key Flows: UJ-2 steps 1-2 (Johan scans portfolio rows,
+    notices Bygg A's danger tag) — climax framing: "the portfolio view
+    itself becomes his confirmation"
+  - EXPERIENCE.md Voice and Tone: Landlord register example reused verbatim
+    ("Bygg A — 1 forsinket must-oppgave.")
+*/
+
+:root{
+  --primary:#6E62CC;
+  --secondary:#B67F98;
+  --accent:#5B96B1;
+  --surface-base:#FAF8FF;
+  --surface-raised:#FFFFFF;
+  --ink-primary:#2A2640;
+  --ink-secondary:#6B6480;
+  --success:#267F59;
+  --warning:#9E641F;
+  --danger:#C9404B;
+  --must-bg:#B94A6E;
+  --should-bg:#5D6BBE;
+  --focus-ring:#6E62CC;
+
+  --r-sm:8px;
+  --r-md:14px;
+  --r-lg:20px;
+  --r-full:9999px;
+
+  --sp-1:4px;
+  --sp-2:8px;
+  --sp-3:12px;
+  --sp-4:16px;
+  --sp-5:24px;
+  --sp-6:32px;
+  --sp-7:48px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  padding:var(--sp-6) var(--sp-4);
+  background:#E3E7EA;
+  font-family:var(--font);
+  color:var(--ink-primary);
+  display:flex;
+  justify-content:center;
+}
+
+.browser{
+  width:1040px;
+  max-width:100%;
+  background:#D7DCE0;
+  border-radius:var(--r-lg);
+  box-shadow:0 24px 48px rgba(20,30,35,.18);
+  overflow:hidden;
+}
+.chrome-bar{
+  display:flex;
+  align-items:center;
+  gap:var(--sp-3);
+  padding:var(--sp-3) var(--sp-4);
+  background:#C7CDD2;
+}
+.dots{display:flex; gap:6px;}
+.dot{width:10px; height:10px; border-radius:50%; background:#9AA3AA;}
+.url-pill{
+  flex:1;
+  background:var(--surface-raised);
+  border-radius:var(--r-full);
+  padding:6px var(--sp-4);
+  font-size:0.78125rem;
+  color:var(--ink-secondary);
+  font-weight:500;
+}
+
+.app-shell{
+  background:var(--surface-base);
+  min-height:640px;
+  display:flex;
+  flex-direction:column;
+}
+
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:var(--sp-4) var(--sp-5);
+  border-bottom:1px solid #E3DEF2;
+}
+.topbar-title{
+  font-size:1.5rem;
+  font-weight:700;
+  line-height:1.2;
+}
+.topbar-sub{
+  font-size:0.78125rem;
+  font-weight:500;
+  color:var(--ink-secondary);
+  margin-top:2px;
+}
+.landlord-chip{
+  display:flex;
+  align-items:center;
+  gap:var(--sp-2);
+  font-size:0.78125rem;
+  font-weight:700;
+  color:var(--ink-secondary);
+}
+.landlord-avatar{
+  width:28px; height:28px;
+  border-radius:var(--r-full);
+  background:var(--accent);
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.7rem; font-weight:700;
+}
+
+/* Two-column list + detail (tablet/desktop breakpoint, >=600px) */
+.dashboard{
+  display:flex;
+  flex:1;
+}
+
+.list-col{
+  width:380px;
+  min-width:300px;
+  border-right:1px solid #E3DEF2;
+  padding:var(--sp-4);
+  display:flex;
+  flex-direction:column;
+  gap:var(--sp-2);
+}
+.list-col-label{
+  font-size:0.78125rem;
+  font-weight:700;
+  letter-spacing:0.02em;
+  text-transform:uppercase;
+  color:var(--ink-secondary);
+  margin-bottom:var(--sp-1);
+}
+
+.portfolio-row{
+  background:var(--surface-raised);
+  border-radius:var(--r-sm);
+  padding:var(--sp-3);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--sp-2);
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+  border:2px solid transparent;
+}
+.portfolio-row.selected{
+  border-color:var(--accent);
+}
+.row-main{min-width:0;}
+.row-name{
+  font-size:0.9375rem;
+  font-weight:500;
+  color:var(--ink-primary);
+}
+.row-meta{
+  font-size:0.78125rem;
+  font-weight:500;
+  color:var(--ink-secondary);
+  margin-top:2px;
+}
+
+.status-tag{
+  display:inline-flex;
+  align-items:center;
+  padding:3px var(--sp-2);
+  border-radius:var(--r-full);
+  font-size:0.625rem;
+  font-weight:700;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  color:#fff;
+  white-space:nowrap;
+}
+.status-tag.danger{background:var(--danger);}
+.status-tag.ok{background:var(--success);}
+
+/* Detail column */
+.detail-col{
+  flex:1;
+  padding:var(--sp-5);
+  display:flex;
+  flex-direction:column;
+  gap:var(--sp-4);
+}
+.detail-heading{
+  display:flex;
+  align-items:center;
+  gap:var(--sp-3);
+  flex-wrap:wrap;
+}
+.detail-title{
+  font-size:1.125rem;
+  font-weight:700;
+}
+.voice-line{
+  font-size:0.9375rem;
+  font-weight:500;
+  color:var(--ink-primary);
+}
+
+.detail-grid{
+  display:flex;
+  gap:var(--sp-4);
+  flex-wrap:wrap;
+}
+.stat-card{
+  background:var(--surface-raised);
+  border-radius:var(--r-sm);
+  padding:var(--sp-3);
+  min-width:140px;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+.stat-label{font-size:0.78125rem; color:var(--ink-secondary); font-weight:500;}
+.stat-value{font-size:1.125rem; font-weight:700; margin-top:2px;}
+
+.task-list-mini{
+  display:flex;
+  flex-direction:column;
+  gap:var(--sp-2);
+}
+.mini-row{
+  background:var(--surface-raised);
+  border-radius:var(--r-sm);
+  padding:var(--sp-3);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+.mini-row-name{font-size:0.9375rem; font-weight:500;}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  padding:3px var(--sp-2);
+  border-radius:var(--r-full);
+  font-size:0.625rem;
+  font-weight:700;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  margin-right:var(--sp-2);
+}
+.badge-must{background:var(--must-bg); color:#fff;}
+.mini-due{font-size:0.78125rem; font-weight:700; color:var(--danger);}
+
+.btn-primary{
+  align-self:flex-start;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:var(--r-full);
+  padding:var(--sp-2) var(--sp-5);
+  font-family:var(--font);
+  font-size:0.9375rem;
+  font-weight:500;
+}
+
+.focus-ring-note{
+  font-size:0.7rem;
+  color:var(--ink-secondary);
+  padding:var(--sp-3) var(--sp-5);
+  border-top:1px solid #E3DEF2;
+}
+.focus-ring-note code{
+  background:#fff;
+  padding:1px 5px;
+  border-radius:var(--r-sm);
+  border:1px solid #D7DCE0;
+}
+/* *:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; } */
+</style>
+</head>
+<body>
+
+<div class="browser">
+  <div class="chrome-bar">
+    <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <div class="url-pill">husly.no/portefolje</div>
+  </div>
+
+  <div class="app-shell">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Portefølje</div>
+        <div class="topbar-sub">5 hjem · 1 trenger oppmerksomhet</div>
+      </div>
+      <div class="landlord-chip">
+        <div class="landlord-avatar">J</div>
+        Johan
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <div class="list-col">
+        <div class="list-col-label">Hjem</div>
+
+        <div class="portfolio-row selected">
+          <div class="row-main">
+            <div class="row-name">Bygg A — kollektiv</div>
+            <div class="row-meta">4 leietakere · Sinsen</div>
+          </div>
+          <span class="status-tag danger">Forsinket</span>
+        </div>
+
+        <div class="portfolio-row">
+          <div class="row-main">
+            <div class="row-name">Bygg B — leilighet 4B</div>
+            <div class="row-meta">1 leietaker · Sinsen</div>
+          </div>
+          <span class="status-tag ok">Alt i orden</span>
+        </div>
+
+        <div class="portfolio-row">
+          <div class="row-main">
+            <div class="row-name">Grünerløkka — leilighet 12</div>
+            <div class="row-meta">2 leietakere</div>
+          </div>
+          <span class="status-tag ok">Alt i orden</span>
+        </div>
+
+        <div class="portfolio-row">
+          <div class="row-main">
+            <div class="row-name">Sagene — leilighet 3</div>
+            <div class="row-meta">1 leietaker</div>
+          </div>
+          <span class="status-tag ok">Alt i orden</span>
+        </div>
+
+        <div class="portfolio-row">
+          <div class="row-main">
+            <div class="row-name">Majorstuen — kollektiv</div>
+            <div class="row-meta">3 leietakere</div>
+          </div>
+          <span class="status-tag ok">Alt i orden</span>
+        </div>
+      </div>
+
+      <div class="detail-col">
+        <div class="detail-heading">
+          <div class="detail-title">Bygg A — kollektiv</div>
+          <span class="status-tag danger">Forsinket</span>
+        </div>
+        <div class="voice-line">Bygg A — 1 forsinket must-oppgave.</div>
+
+        <div class="detail-grid">
+          <div class="stat-card">
+            <div class="stat-label">Leietakere</div>
+            <div class="stat-value">4</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Forsinkede must-oppgaver</div>
+            <div class="stat-value">1</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Sist oppdatert</div>
+            <div class="stat-value">29. sep</div>
+          </div>
+        </div>
+
+        <div class="task-list-mini">
+          <div class="mini-row">
+            <div>
+              <span class="badge badge-must">Must</span>
+              <span class="mini-row-name">Vaske fellesareal</span>
+            </div>
+            <span class="mini-due">Forfalt — Martin</span>
+          </div>
+        </div>
+
+        <button class="btn-primary">Åpne husadministrasjon</button>
+      </div>
+    </div>
+
+    <div class="focus-ring-note">Every portfolio row and the detail panel's action button carry the visible 2px <code>#6E62CC</code> focus outline (2px offset) — not shown mid-focus in this static mock. At 320 CSS px / 400% zoom this two-column layout collapses to a single column (list, then detail) with no horizontal scroll.</div>
+  </div>
+</div>
+
+</body>
+</html>

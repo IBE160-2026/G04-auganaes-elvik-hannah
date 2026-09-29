@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<title>Husly — Task Overview (household register)</title>
+<style>
+/*
+  Governs:
+  - DESIGN.md Components: Task card, Must/Should badge (badge-must / badge-should)
+  - DESIGN.md Colors: primary/success/warning/danger darkened-for-AA values; ink-primary/ink-secondary
+  - DESIGN.md Typography: display/title/body/meta/badge roles (rem-based)
+  - DESIGN.md Layout & Spacing: household-mode "larger end of scale" register
+  - DESIGN.md Components: focus-outline token (see .focus-ring-note below; no element is
+    shown mid-focus, this only documents the token exists per the skill's instruction)
+  - EXPERIENCE.md Component Patterns: Task card (checkbox + row = two focus targets,
+    Must-first ordering, sort by due date within tier)
+  - EXPERIENCE.md State Patterns: "Task overdue", "Task due soon", "Task completed",
+    "Empty task list" (household copy variant)
+  - EXPERIENCE.md Key Flows: UJ-1 (Mari & Peter) — Peter's tasks shown completed;
+    Mari's "climax" view is exactly the state rendered in the first frame below
+  - EXPERIENCE.md Accessibility Floor: due-soon/overdue never color-only; checkbox
+    accessible label; 44×44px tap targets
+*/
+
+:root{
+  --primary:#6E62CC;
+  --secondary:#B67F98;
+  --accent:#5B96B1;
+  --surface-base:#FAF8FF;
+  --surface-raised:#FFFFFF;
+  --ink-primary:#2A2640;
+  --ink-secondary:#6B6480;
+  --success:#267F59;
+  --warning:#9E641F;
+  --danger:#C9404B;
+  --must-bg:#B94A6E;
+  --must-ink:#FFFFFF;
+  --should-bg:#5D6BBE;
+  --should-ink:#FFFFFF;
+  --focus-ring:#6E62CC;
+
+  --r-sm:8px;
+  --r-md:14px;
+  --r-lg:20px;
+  --r-full:9999px;
+
+  --sp-1:4px;
+  --sp-2:8px;
+  --sp-3:12px;
+  --sp-4:16px;
+  --sp-5:24px;
+  --sp-6:32px;
+  --sp-7:48px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  padding:var(--sp-6) var(--sp-4);
+  background:#EDEAF7;
+  font-family:var(--font);
+  color:var(--ink-primary);
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--sp-6);
+  align-items:flex-start;
+  justify-content:center;
+}
+
+.frame-block{display:flex; flex-direction:column; align-items:center; gap:var(--sp-3);}
+.frame-caption{
+  font-size:0.78125rem;
+  font-weight:700;
+  letter-spacing:0.02em;
+  color:var(--ink-secondary);
+  text-transform:uppercase;
+}
+
+/* Phone device frame */
+.device{
+  width:360px;
+  height:740px;
+  background:#0E0C1A;
+  border-radius:44px;
+  padding:14px;
+  box-shadow:0 20px 40px rgba(42,38,64,.25);
+}
+.screen{
+  width:100%;
+  height:100%;
+  background:var(--surface-base);
+  border-radius:32px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+.notch{
+  position:absolute;
+  top:0; left:50%; transform:translateX(-50%);
+  width:120px; height:22px;
+  background:#0E0C1A;
+  border-radius:0 0 14px 14px;
+  z-index:5;
+}
+.statusbar{
+  height:34px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  padding:0 var(--sp-4) var(--sp-1);
+  font-size:0.70rem;
+  font-weight:700;
+  color:var(--ink-primary);
+}
+
+/* App header */
+.app-header{
+  padding:var(--sp-4) var(--sp-4) var(--sp-3);
+  background:var(--surface-base);
+}
+.home-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:var(--sp-2);
+}
+.home-name{
+  font-size:0.78125rem;
+  font-weight:500;
+  color:var(--ink-secondary);
+}
+.avatars{display:flex;}
+.avatar{
+  width:26px; height:26px;
+  border-radius:var(--r-full);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.68rem; font-weight:700; color:#fff;
+  border:2px solid var(--surface-base);
+  margin-left:-8px;
+}
+.avatars .avatar:first-child{margin-left:0;}
+.avatar.mari{background:var(--secondary);}
+.avatar.peter{background:var(--primary);}
+
+.screen-title{
+  font-size:1.5rem;
+  font-weight:700;
+  line-height:1.2;
+  margin:0;
+}
+
+/* Task list */
+.task-list{
+  flex:1;
+  overflow-y:auto;
+  padding:var(--sp-3) var(--sp-4) var(--sp-6);
+  display:flex;
+  flex-direction:column;
+  gap:var(--sp-3);
+}
+
+.tier-label{
+  font-size:0.78125rem;
+  font-weight:700;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  color:var(--ink-secondary);
+  margin:var(--sp-2) 0 0;
+}
+
+.task-card{
+  background:var(--surface-raised);
+  border-radius:var(--r-md);
+  padding:var(--sp-4);
+  display:flex;
+  gap:var(--sp-3);
+  align-items:flex-start;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+
+.checkbox{
+  width:24px; height:24px;
+  min-width:24px;
+  border-radius:var(--r-sm);
+  border:2px solid var(--ink-secondary);
+  margin-top:2px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  /* Real tap target is 44x44 via padding on the parent in production;
+     visual box shown at 24px per DESIGN.md task-card spec */
+}
+.checkbox.done{
+  background:var(--success);
+  border-color:var(--success);
+  color:#fff;
+  font-size:0.9rem;
+  font-weight:700;
+}
+
+.task-main{flex:1; min-width:0;}
+.task-title-row{
+  display:flex;
+  align-items:center;
+  gap:var(--sp-2);
+  flex-wrap:wrap;
+}
+.task-title{
+  font-size:0.9375rem;
+  font-weight:500;
+  line-height:1.45;
+  color:var(--ink-primary);
+}
+.task-title.done{
+  text-decoration:line-through;
+  color:var(--ink-secondary);
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  padding:3px var(--sp-2);
+  border-radius:var(--r-full);
+  font-size:0.625rem;
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.badge-must{background:var(--must-bg); color:var(--must-ink);}
+.badge-should{background:var(--should-bg); color:var(--should-ink);}
+
+.task-meta{
+  margin-top:var(--sp-1);
+  font-size:0.78125rem;
+  font-weight:500;
+  line-height:1.4;
+}
+.meta-overdue{color:var(--danger); font-weight:700;}
+.meta-duesoon{color:var(--warning); font-weight:700;}
+.meta-done{color:var(--success); font-weight:500;}
+.meta-normal{color:var(--ink-secondary);}
+
+/* Empty state */
+.empty-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:var(--sp-6);
+  gap:var(--sp-3);
+}
+.empty-emoji{font-size:2.5rem;}
+.empty-copy{
+  font-size:0.9375rem;
+  font-weight:500;
+  color:var(--ink-secondary);
+  max-width:220px;
+  line-height:1.45;
+}
+
+/* Focus ring token note (per DESIGN.md focus-outline component) */
+.focus-ring-note{
+  font-size:0.7rem;
+  color:var(--ink-secondary);
+  max-width:360px;
+  text-align:center;
+  line-height:1.5;
+}
+.focus-ring-note code{
+  background:var(--surface-raised);
+  padding:1px 5px;
+  border-radius:var(--r-sm);
+  border:1px solid #E3DEF2;
+}
+/* Token in effect app-wide but not demonstrated mid-focus in this static mock:
+   *:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; } */
+</style>
+</head>
+<body>
+
+<div class="frame-block">
+  <div class="frame-caption">Task Overview — household register (Mari &amp; Peters hjem)</div>
+  <div class="device">
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><span>🔋 100%</span></div>
+
+      <div class="app-header">
+        <div class="home-row">
+          <span class="home-name">Mari og Peters hjem</span>
+          <div class="avatars">
+            <div class="avatar mari" title="Mari">M</div>
+            <div class="avatar peter" title="Peter">P</div>
+          </div>
+        </div>
+        <h1 class="screen-title">Dagens oppgaver</h1>
+      </div>
+
+      <div class="task-list">
+        <div class="tier-label">Must</div>
+
+        <div class="task-card">
+          <div class="checkbox" aria-label="Merk &quot;Vask bad&quot; som fullført" role="checkbox" aria-checked="false"></div>
+          <div class="task-main">
+            <div class="task-title-row">
+              <span class="task-title">Vask bad</span>
+              <span class="badge badge-must">Must</span>
+            </div>
+            <div class="task-meta meta-overdue">Forfalt — frist var 26. sep</div>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <div class="checkbox done" aria-label="Merk &quot;Ta ut søppel&quot; som fullført" role="checkbox" aria-checked="true">✓</div>
+          <div class="task-main">
+            <div class="task-title-row">
+              <span class="task-title done">Ta ut søppel</span>
+              <span class="badge badge-must">Must</span>
+            </div>
+            <div class="task-meta meta-done">Fullført av Peter</div>
+          </div>
+        </div>
+
+        <div class="tier-label">Should</div>
+
+        <div class="task-card">
+          <div class="checkbox" aria-label="Merk &quot;Støvsuge&quot; som fullført" role="checkbox" aria-checked="false"></div>
+          <div class="task-main">
+            <div class="task-title-row">
+              <span class="task-title">Støvsuge</span>
+              <span class="badge badge-should">Should</span>
+            </div>
+            <div class="task-meta meta-duesoon">Snart forfall — om 5 dager</div>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <div class="checkbox" aria-label="Merk &quot;Tørke støv&quot; som fullført" role="checkbox" aria-checked="false"></div>
+          <div class="task-main">
+            <div class="task-title-row">
+              <span class="task-title">Tørke støv</span>
+              <span class="badge badge-should">Should</span>
+            </div>
+            <div class="task-meta meta-normal">Om 12 dager</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="focus-ring-note">Every checkbox and row is an independent focus stop with a visible <code>2px #6E62CC</code> outline (2px offset) — not shown mid-focus in this static mock.</div>
+</div>
+
+<div class="frame-block">
+  <div class="frame-caption">Task Overview — Empty state (household copy)</div>
+  <div class="device">
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><span>🔋 100%</span></div>
+
+      <div class="app-header">
+        <div class="home-row">
+          <span class="home-name">Saras hjem</span>
+          <div class="avatars">
+            <div class="avatar mari" title="Sara">S</div>
+          </div>
+        </div>
+        <h1 class="screen-title">Dagens oppgaver</h1>
+      </div>
+
+      <div class="empty-wrap">
+        <div class="empty-emoji">🎉</div>
+        <div class="empty-copy">Ingen oppgaver akkurat nå — nyt det! 🎉</div>
+      </div>
+    </div>
+  </div>
+  <div class="focus-ring-note">Empty state renders once loading has completed and genuinely found nothing — distinct from the cold-load skeleton state (not shown here).</div>
+</div>
+
+</body>
+</html>
