@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fargetema — Boligoppgaver (IBE160)</title>
+<style>
+  /*
+    =====================================================================
+    THEME TOKEN DOCUMENTATION
+    Each variation below lists its concrete hex values, one block per
+    theme, for the 12 semantic tokens requested:
+    primary / secondary / accent / background / surface /
+    text-primary / text-secondary / success / warning / danger /
+    must-badge / should-badge
+
+    1) SBANKEN BLUE — light
+       primary #0F4C81  secondary #2E86AB  accent #3FC6B8
+       background #F6F9FC  surface #FFFFFF
+       text-primary #16273D  text-secondary #5C6B7A
+       success #1F9E6D  warning #E8A33D  danger #D64550
+       must-badge bg #0F4C81 / fg #FFFFFF
+       should-badge bg #E7F1F8 / fg #1B5A85 / border #BBD7EA
+
+    1b) SBANKEN BLUE — dark (strongest candidate, dark variant included)
+       primary #5B9BD5  secondary #7FB8DD  accent #4FD9C9
+       background #0B1B2B  surface #132A40
+       text-primary #EAF2FA  text-secondary #9FB4C9
+       success #4ADE9B  warning #F0B84D  danger #F2727C
+       must-badge bg #5B9BD5 / fg #0B1B2B
+       should-badge bg #1C3852 / fg #9FD0EE / border #2E4F6C
+
+    2) FOREST CALM — light
+       primary #1F4B3F  secondary #3E7C59  accent #8CB86A
+       background #F4F7F2  surface #FFFFFF
+       text-primary #1C2B22  text-secondary #5B6B5E
+       success #2E9E6D  warning #D99A3D  danger #C1443C
+       must-badge bg #1F4B3F / fg #FFFFFF
+       should-badge bg #EAF1E6 / fg #3E7C59 / border #C7DCBA
+
+    3) INDIGO TECH — light
+       primary #3A3B8F  secondary #6C4AB6  accent #00B3A4
+       background #F5F5FB  surface #FFFFFF
+       text-primary #201D3E  text-secondary #625E80
+       success #1FA97E  warning #E2A63B  danger #DB4C5D
+       must-badge bg #3A3B8F / fg #FFFFFF
+       should-badge bg #EFEAFB / fg #6C4AB6 / border #D2C3F0
+
+    4) CORAL POP (Sbanken-style warm accent) — light
+       primary #123C4F  secondary #1F6F5C  accent #FF7A59
+       background #FAF9F6  surface #FFFFFF
+       text-primary #13242B  text-secondary #5B6B70
+       success #1F9E6D  warning #E8A33D  danger #D64550
+       must-badge bg #FF7A59 / fg #FFFFFF   (warm accent used sparingly, only here)
+       should-badge bg #E6F2EF / fg #1F6F5C / border #BEDBD2
+
+    4b) CORAL POP — dark (strongest candidate, dark variant included)
+       primary #4FA98F  secondary #6FBFA8  accent #FF9478
+       background #0D1F22  surface #163330
+       text-primary #F1F5F3  text-secondary #A6BDB7
+       success #4ADE9B  warning #F0B84D  danger #F2727C
+       must-badge bg #FF9478 / fg #14201D
+       should-badge bg #1E3A36 / fg #8FD9C4 / border #2C4F49
+
+    5) DEEP PURPLE PRO — light
+       primary #4B2E83  secondary #7A4FC4  accent #2FB4A6
+       background #F6F5FA  surface #FFFFFF
+       text-primary #251B3D  text-secondary #6A6280
+       success #2E9E6D  warning #D99A3D  danger #C1443C
+       must-badge bg #4B2E83 / fg #FFFFFF
+       should-badge bg #EFEAFA / fg #6A3FB0 / border #D3C3EF
+
+    6) MINT FRESH — light
+       primary #0E7C66  secondary #14B8A6  accent #7C5CFC
+       background #F1FBF7  surface #FFFFFF
+       text-primary #0B2B24  text-secondary #4F7268
+       success #16A34A  warning #E2A63B  danger #DC4C4C
+       must-badge bg #0E7C66 / fg #FFFFFF
+       should-badge bg #E6F7F1 / fg #0E7C66 / border #B7E4D5
+    =====================================================================
+  */
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ECEEF1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1C1F24;
+  }
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  .intro {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+    border: 1px solid rgba(0,0,0,.08);
+  }
+  .intro h1 {
+    margin: 0 0 8px;
+    font-size: 22px;
+  }
+  .intro p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: #4B5563;
+    line-height: 1.5;
+  }
+
+  section.variation {
+    margin-bottom: 40px;
+  }
+  .var-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .var-index {
+    font-size: 13px;
+    font-weight: 700;
+    color: #9096A0;
+  }
+  .var-title-row h2 {
+    margin: 0;
+    font-size: 19px;
+  }
+  .var-register {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: #6B7280;
+    font-style: italic;
+  }
+
+  .panels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .panel {
+    flex: 1 1 420px;
+    min-width: 340px;
+    border-radius: 18px;
+    padding: 22px;
+    border: 1px solid rgba(0,0,0,.07);
+    background: var(--bg);
+    color: var(--text-primary);
+  }
+  .panel-mode-label {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    border: 1px solid rgba(0,0,0,.08);
+    margin-bottom: 14px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 18px;
+  }
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px 5px 6px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid rgba(0,0,0,.08);
+    white-space: nowrap;
+  }
+  .chip .swatch {
+    width: 13px;
+    height: 13px;
+    border-radius: 4px;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,.18);
+    flex-shrink: 0;
+  }
+  .chip .lbl {
+    color: var(--text-secondary);
+  }
+
+  .block-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 16px 0 8px;
+  }
+
+  .task-card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 8px 16px;
+    border: 1px solid rgba(0,0,0,.07);
+  }
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0,0,0,.07);
+  }
+  .task-row:last-child { border-bottom: none; }
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 2px solid var(--secondary);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .checkbox.done {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .task-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .task-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .task-name.done {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+  }
+  .badge {
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .badge-must { background: var(--must-bg); color: var(--must-fg); }
+  .badge-should {
+    background: var(--should-bg);
+    color: var(--should-fg);
+    border: 1px solid var(--should-border);
+  }
+  .due {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .due.warn { color: var(--warning); font-weight: 700; }
+  .due.danger { color: var(--danger); font-weight: 700; }
+  .due.ok { color: var(--success); font-weight: 700; }
+
+  .landlord-block {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .landlord-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 10px 14px;
+    border: 1px solid rgba(0,0,0,.07);
+    font-size: 12.5px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .landlord-name {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .landlord-meta {
+    color: var(--text-secondary);
+  }
+  .landlord-status {
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="intro">
+    <h1>Fargetema-utforskning — Boligoppgaver-appen (IBE160)</h1>
+    <p>Seks retninger innenfor mørkeblå / grønn / lilla / hvit-familien. Målet er «Sbanken, ikke DNB»: moderne, vennlig, litt fargerik fintech-følelse — lekent uten å bli barnslig, med restriktiv bruk av farge og emoji og et profesjonelt underlag.</p>
+    <p>Hver retning viser et husholdnings-øyeblikk (Mari/Peter, avkrysning av vaske-oppgaver) og et utdrag fra utleier-porteføljevisningen (Johan, flere bygg). Token-verdier er dokumentert i en kommentar øverst i &lt;style&gt;.</p>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 1. SBANKEN BLUE -->
+  <!-- ============================================================ -->
+  <section class="variation">
+    <div class="var-title-row">
+      <span class="var-index">01</span>
+      <h2>Sbanken Blue</h2>
+    </div>
+    <p class="var-register">Bankrent og tillitsvekkende, men luftig — dyp blå på hvitt, én frisk turkis aksent. Nærmest referansepunktet «Sbanken»: seriøs nok for Johan, varm nok for Mari og Peter.</p>
+
+    <div class="panels">
+      <!-- LIGHT -->
+      <div class="panel" style="
+        --primary:#0F4C81; --secondary:#2E86AB; --accent:#3FC6B8;
+        --bg:#F6F9FC; --surface:#FFFFFF;
+        --text-primary:#16273D; --text-secondary:#5C6B7A;
+        --success:#1F9E6D; --warning:#E8A33D; --danger:#D64550;
+        --must-bg:#0F4C81; --must-fg:#FFFFFF;
+        --should-bg:#E7F1F8; --should-fg:#1B5A85; --should-border:#BBD7EA;
+      ">
+        <span class="panel-mode-label">Light mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#0F4C81"></span><span class="lbl">primary</span> #0F4C81</span>
+          <span class="chip"><span class="swatch" style="background:#2E86AB"></span><span class="lbl">secondary</span> #2E86AB</span>
+          <span class="chip"><span class="swatch" style="background:#3FC6B8"></span><span class="lbl">accent</span> #3FC6B8</span>
+          <span class="chip"><span class="swatch" style="background:#F6F9FC"></span><span class="lbl">bg</span> #F6F9FC</span>
+          <span class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="lbl">surface</span> #FFFFFF</span>
+          <span class="chip"><span class="swatch" style="background:#16273D"></span><span class="lbl">text-1</span> #16273D</span>
+          <span class="chip"><span class="swatch" style="background:#5C6B7A"></span><span class="lbl">text-2</span> #5C6B7A</span>
+          <span class="chip"><span class="swatch" style="background:#1F9E6D"></span><span class="lbl">success</span> #1F9E6D</span>
+          <span class="chip"><span class="swatch" style="background:#E8A33D"></span><span class="lbl">warning</span> #E8A33D</span>
+          <span class="chip"><span class="swatch" style="background:#D64550"></span><span class="lbl">danger</span> #D64550</span>
+          <span class="chip"><span class="swatch" style="background:#0F4C81"></span><span class="lbl">must</span> #0F4C81</span>
+          <span class="chip"><span class="swatch" style="background:#E7F1F8"></span><span class="lbl">should</span> #E7F1F8</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DARK -->
+      <div class="panel" style="
+        --primary:#5B9BD5; --secondary:#7FB8DD; --accent:#4FD9C9;
+        --bg:#0B1B2B; --surface:#132A40;
+        --text-primary:#EAF2FA; --text-secondary:#9FB4C9;
+        --success:#4ADE9B; --warning:#F0B84D; --danger:#F2727C;
+        --must-bg:#5B9BD5; --must-fg:#0B1B2B;
+        --should-bg:#1C3852; --should-fg:#9FD0EE; --should-border:#2E4F6C;
+      ">
+        <span class="panel-mode-label">Dark mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#5B9BD5"></span><span class="lbl">primary</span> #5B9BD5</span>
+          <span class="chip"><span class="swatch" style="background:#7FB8DD"></span><span class="lbl">secondary</span> #7FB8DD</span>
+          <span class="chip"><span class="swatch" style="background:#4FD9C9"></span><span class="lbl">accent</span> #4FD9C9</span>
+          <span class="chip"><span class="swatch" style="background:#0B1B2B"></span><span class="lbl">bg</span> #0B1B2B</span>
+          <span class="chip"><span class="swatch" style="background:#132A40"></span><span class="lbl">surface</span> #132A40</span>
+          <span class="chip"><span class="swatch" style="background:#EAF2FA"></span><span class="lbl">text-1</span> #EAF2FA</span>
+          <span class="chip"><span class="swatch" style="background:#9FB4C9"></span><span class="lbl">text-2</span> #9FB4C9</span>
+          <span class="chip"><span class="swatch" style="background:#4ADE9B"></span><span class="lbl">success</span> #4ADE9B</span>
+          <span class="chip"><span class="swatch" style="background:#F0B84D"></span><span class="lbl">warning</span> #F0B84D</span>
+          <span class="chip"><span class="swatch" style="background:#F2727C"></span><span class="lbl">danger</span> #F2727C</span>
+          <span class="chip"><span class="swatch" style="background:#5B9BD5"></span><span class="lbl">must</span> #5B9BD5</span>
+          <span class="chip"><span class="swatch" style="background:#1C3852"></span><span class="lbl">should</span> #1C3852</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 2. FOREST CALM -->
+  <!-- ============================================================ -->
+  <section class="variation">
+    <div class="var-title-row">
+      <span class="var-index">02</span>
+      <h2>Forest Calm</h2>
+    </div>
+    <p class="var-register">Grønn-ledende, rolig og «husholdning i balanse» — dempet skoggrønn med en myk lime-aksent. Mindre fintech, mer «ta vare på hjemmet ditt».</p>
+
+    <div class="panels">
+      <div class="panel" style="
+        --primary:#1F4B3F; --secondary:#3E7C59; --accent:#8CB86A;
+        --bg:#F4F7F2; --surface:#FFFFFF;
+        --text-primary:#1C2B22; --text-secondary:#5B6B5E;
+        --success:#2E9E6D; --warning:#D99A3D; --danger:#C1443C;
+        --must-bg:#1F4B3F; --must-fg:#FFFFFF;
+        --should-bg:#EAF1E6; --should-fg:#3E7C59; --should-border:#C7DCBA;
+      ">
+        <span class="panel-mode-label">Light mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#1F4B3F"></span><span class="lbl">primary</span> #1F4B3F</span>
+          <span class="chip"><span class="swatch" style="background:#3E7C59"></span><span class="lbl">secondary</span> #3E7C59</span>
+          <span class="chip"><span class="swatch" style="background:#8CB86A"></span><span class="lbl">accent</span> #8CB86A</span>
+          <span class="chip"><span class="swatch" style="background:#F4F7F2"></span><span class="lbl">bg</span> #F4F7F2</span>
+          <span class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="lbl">surface</span> #FFFFFF</span>
+          <span class="chip"><span class="swatch" style="background:#1C2B22"></span><span class="lbl">text-1</span> #1C2B22</span>
+          <span class="chip"><span class="swatch" style="background:#5B6B5E"></span><span class="lbl">text-2</span> #5B6B5E</span>
+          <span class="chip"><span class="swatch" style="background:#2E9E6D"></span><span class="lbl">success</span> #2E9E6D</span>
+          <span class="chip"><span class="swatch" style="background:#D99A3D"></span><span class="lbl">warning</span> #D99A3D</span>
+          <span class="chip"><span class="swatch" style="background:#C1443C"></span><span class="lbl">danger</span> #C1443C</span>
+          <span class="chip"><span class="swatch" style="background:#1F4B3F"></span><span class="lbl">must</span> #1F4B3F</span>
+          <span class="chip"><span class="swatch" style="background:#EAF1E6"></span><span class="lbl">should</span> #EAF1E6</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 3. INDIGO TECH -->
+  <!-- ============================================================ -->
+  <section class="variation">
+    <div class="var-title-row">
+      <span class="var-index">03</span>
+      <h2>Indigo Tech</h2>
+    </div>
+    <p class="var-register">Blå smelter inn i lilla — moderne, litt "app-native", skarpere kontraster. Den mest teknologi-fremoverlente av retningene, fortsatt rolig nok for Johans dashbord.</p>
+
+    <div class="panels">
+      <div class="panel" style="
+        --primary:#3A3B8F; --secondary:#6C4AB6; --accent:#00B3A4;
+        --bg:#F5F5FB; --surface:#FFFFFF;
+        --text-primary:#201D3E; --text-secondary:#625E80;
+        --success:#1FA97E; --warning:#E2A63B; --danger:#DB4C5D;
+        --must-bg:#3A3B8F; --must-fg:#FFFFFF;
+        --should-bg:#EFEAFB; --should-fg:#6C4AB6; --should-border:#D2C3F0;
+      ">
+        <span class="panel-mode-label">Light mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#3A3B8F"></span><span class="lbl">primary</span> #3A3B8F</span>
+          <span class="chip"><span class="swatch" style="background:#6C4AB6"></span><span class="lbl">secondary</span> #6C4AB6</span>
+          <span class="chip"><span class="swatch" style="background:#00B3A4"></span><span class="lbl">accent</span> #00B3A4</span>
+          <span class="chip"><span class="swatch" style="background:#F5F5FB"></span><span class="lbl">bg</span> #F5F5FB</span>
+          <span class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="lbl">surface</span> #FFFFFF</span>
+          <span class="chip"><span class="swatch" style="background:#201D3E"></span><span class="lbl">text-1</span> #201D3E</span>
+          <span class="chip"><span class="swatch" style="background:#625E80"></span><span class="lbl">text-2</span> #625E80</span>
+          <span class="chip"><span class="swatch" style="background:#1FA97E"></span><span class="lbl">success</span> #1FA97E</span>
+          <span class="chip"><span class="swatch" style="background:#E2A63B"></span><span class="lbl">warning</span> #E2A63B</span>
+          <span class="chip"><span class="swatch" style="background:#DB4C5D"></span><span class="lbl">danger</span> #DB4C5D</span>
+          <span class="chip"><span class="swatch" style="background:#3A3B8F"></span><span class="lbl">must</span> #3A3B8F</span>
+          <span class="chip"><span class="swatch" style="background:#EFEAFB"></span><span class="lbl">should</span> #EFEAFB</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 4. CORAL POP -->
+  <!-- ============================================================ -->
+  <section class="variation">
+    <div class="var-title-row">
+      <span class="var-index">04</span>
+      <h2>Coral Pop</h2>
+    </div>
+    <p class="var-register">Kjølig mørk teal-marine base, med én varm korall-aksent brukt sparsomt (kun "must"-status og CTA-øyeblikk). Dette er retningen som mest bokstavelig henter "Sbanken, ikke DNB" — vennlig varme mot et rolig, profesjonelt underlag.</p>
+
+    <div class="panels">
+      <!-- LIGHT -->
+      <div class="panel" style="
+        --primary:#123C4F; --secondary:#1F6F5C; --accent:#FF7A59;
+        --bg:#FAF9F6; --surface:#FFFFFF;
+        --text-primary:#13242B; --text-secondary:#5B6B70;
+        --success:#1F9E6D; --warning:#E8A33D; --danger:#D64550;
+        --must-bg:#FF7A59; --must-fg:#FFFFFF;
+        --should-bg:#E6F2EF; --should-fg:#1F6F5C; --should-border:#BEDBD2;
+      ">
+        <span class="panel-mode-label">Light mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#123C4F"></span><span class="lbl">primary</span> #123C4F</span>
+          <span class="chip"><span class="swatch" style="background:#1F6F5C"></span><span class="lbl">secondary</span> #1F6F5C</span>
+          <span class="chip"><span class="swatch" style="background:#FF7A59"></span><span class="lbl">accent</span> #FF7A59</span>
+          <span class="chip"><span class="swatch" style="background:#FAF9F6"></span><span class="lbl">bg</span> #FAF9F6</span>
+          <span class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="lbl">surface</span> #FFFFFF</span>
+          <span class="chip"><span class="swatch" style="background:#13242B"></span><span class="lbl">text-1</span> #13242B</span>
+          <span class="chip"><span class="swatch" style="background:#5B6B70"></span><span class="lbl">text-2</span> #5B6B70</span>
+          <span class="chip"><span class="swatch" style="background:#1F9E6D"></span><span class="lbl">success</span> #1F9E6D</span>
+          <span class="chip"><span class="swatch" style="background:#E8A33D"></span><span class="lbl">warning</span> #E8A33D</span>
+          <span class="chip"><span class="swatch" style="background:#D64550"></span><span class="lbl">danger</span> #D64550</span>
+          <span class="chip"><span class="swatch" style="background:#FF7A59"></span><span class="lbl">must</span> #FF7A59</span>
+          <span class="chip"><span class="swatch" style="background:#E6F2EF"></span><span class="lbl">should</span> #E6F2EF</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DARK -->
+      <div class="panel" style="
+        --primary:#4FA98F; --secondary:#6FBFA8; --accent:#FF9478;
+        --bg:#0D1F22; --surface:#163330;
+        --text-primary:#F1F5F3; --text-secondary:#A6BDB7;
+        --success:#4ADE9B; --warning:#F0B84D; --danger:#F2727C;
+        --must-bg:#FF9478; --must-fg:#14201D;
+        --should-bg:#1E3A36; --should-fg:#8FD9C4; --should-border:#2C4F49;
+      ">
+        <span class="panel-mode-label">Dark mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#4FA98F"></span><span class="lbl">primary</span> #4FA98F</span>
+          <span class="chip"><span class="swatch" style="background:#6FBFA8"></span><span class="lbl">secondary</span> #6FBFA8</span>
+          <span class="chip"><span class="swatch" style="background:#FF9478"></span><span class="lbl">accent</span> #FF9478</span>
+          <span class="chip"><span class="swatch" style="background:#0D1F22"></span><span class="lbl">bg</span> #0D1F22</span>
+          <span class="chip"><span class="swatch" style="background:#163330"></span><span class="lbl">surface</span> #163330</span>
+          <span class="chip"><span class="swatch" style="background:#F1F5F3"></span><span class="lbl">text-1</span> #F1F5F3</span>
+          <span class="chip"><span class="swatch" style="background:#A6BDB7"></span><span class="lbl">text-2</span> #A6BDB7</span>
+          <span class="chip"><span class="swatch" style="background:#4ADE9B"></span><span class="lbl">success</span> #4ADE9B</span>
+          <span class="chip"><span class="swatch" style="background:#F0B84D"></span><span class="lbl">warning</span> #F0B84D</span>
+          <span class="chip"><span class="swatch" style="background:#F2727C"></span><span class="lbl">danger</span> #F2727C</span>
+          <span class="chip"><span class="swatch" style="background:#FF9478"></span><span class="lbl">must</span> #FF9478</span>
+          <span class="chip"><span class="swatch" style="background:#1E3A36"></span><span class="lbl">should</span> #1E3A36</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 5. DEEP PURPLE PRO -->
+  <!-- ============================================================ -->
+  <section class="variation">
+    <div class="var-title-row">
+      <span class="var-index">05</span>
+      <h2>Deep Purple Pro</h2>
+    </div>
+    <p class="var-register">Lilla-ledet og premium — den mest "voksne" retningen. Passer godt hvis utleier-siden (Johan) skal føles som det tyngste, mest forretningsmessige produktet, med husholdningssiden som en mykere variant av samme merkevare.</p>
+
+    <div class="panels">
+      <div class="panel" style="
+        --primary:#4B2E83; --secondary:#7A4FC4; --accent:#2FB4A6;
+        --bg:#F6F5FA; --surface:#FFFFFF;
+        --text-primary:#251B3D; --text-secondary:#6A6280;
+        --success:#2E9E6D; --warning:#D99A3D; --danger:#C1443C;
+        --must-bg:#4B2E83; --must-fg:#FFFFFF;
+        --should-bg:#EFEAFA; --should-fg:#6A3FB0; --should-border:#D3C3EF;
+      ">
+        <span class="panel-mode-label">Light mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#4B2E83"></span><span class="lbl">primary</span> #4B2E83</span>
+          <span class="chip"><span class="swatch" style="background:#7A4FC4"></span><span class="lbl">secondary</span> #7A4FC4</span>
+          <span class="chip"><span class="swatch" style="background:#2FB4A6"></span><span class="lbl">accent</span> #2FB4A6</span>
+          <span class="chip"><span class="swatch" style="background:#F6F5FA"></span><span class="lbl">bg</span> #F6F5FA</span>
+          <span class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="lbl">surface</span> #FFFFFF</span>
+          <span class="chip"><span class="swatch" style="background:#251B3D"></span><span class="lbl">text-1</span> #251B3D</span>
+          <span class="chip"><span class="swatch" style="background:#6A6280"></span><span class="lbl">text-2</span> #6A6280</span>
+          <span class="chip"><span class="swatch" style="background:#2E9E6D"></span><span class="lbl">success</span> #2E9E6D</span>
+          <span class="chip"><span class="swatch" style="background:#D99A3D"></span><span class="lbl">warning</span> #D99A3D</span>
+          <span class="chip"><span class="swatch" style="background:#C1443C"></span><span class="lbl">danger</span> #C1443C</span>
+          <span class="chip"><span class="swatch" style="background:#4B2E83"></span><span class="lbl">must</span> #4B2E83</span>
+          <span class="chip"><span class="swatch" style="background:#EFEAFA"></span><span class="lbl">should</span> #EFEAFA</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 6. MINT FRESH -->
+  <!-- ============================================================ -->
+  <section class="variation">
+    <div class="var-title-row">
+      <span class="var-index">06</span>
+      <h2>Mint Fresh</h2>
+    </div>
+    <p class="var-register">Lett, luftig og husholdnings-først — grønn/mint-base med en liten lilla dryss for personlighet. Den mest optimistiske og "app for hjemmet" retningen; brukes best hvis Mari/Peter-opplevelsen skal lede merkevaren mer enn Johans dashbord.</p>
+
+    <div class="panels">
+      <div class="panel" style="
+        --primary:#0E7C66; --secondary:#14B8A6; --accent:#7C5CFC;
+        --bg:#F1FBF7; --surface:#FFFFFF;
+        --text-primary:#0B2B24; --text-secondary:#4F7268;
+        --success:#16A34A; --warning:#E2A63B; --danger:#DC4C4C;
+        --must-bg:#0E7C66; --must-fg:#FFFFFF;
+        --should-bg:#E6F7F1; --should-fg:#0E7C66; --should-border:#B7E4D5;
+      ">
+        <span class="panel-mode-label">Light mode</span>
+        <div class="chip-row">
+          <span class="chip"><span class="swatch" style="background:#0E7C66"></span><span class="lbl">primary</span> #0E7C66</span>
+          <span class="chip"><span class="swatch" style="background:#14B8A6"></span><span class="lbl">secondary</span> #14B8A6</span>
+          <span class="chip"><span class="swatch" style="background:#7C5CFC"></span><span class="lbl">accent</span> #7C5CFC</span>
+          <span class="chip"><span class="swatch" style="background:#F1FBF7"></span><span class="lbl">bg</span> #F1FBF7</span>
+          <span class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="lbl">surface</span> #FFFFFF</span>
+          <span class="chip"><span class="swatch" style="background:#0B2B24"></span><span class="lbl">text-1</span> #0B2B24</span>
+          <span class="chip"><span class="swatch" style="background:#4F7268"></span><span class="lbl">text-2</span> #4F7268</span>
+          <span class="chip"><span class="swatch" style="background:#16A34A"></span><span class="lbl">success</span> #16A34A</span>
+          <span class="chip"><span class="swatch" style="background:#E2A63B"></span><span class="lbl">warning</span> #E2A63B</span>
+          <span class="chip"><span class="swatch" style="background:#DC4C4C"></span><span class="lbl">danger</span> #DC4C4C</span>
+          <span class="chip"><span class="swatch" style="background:#0E7C66"></span><span class="lbl">must</span> #0E7C66</span>
+          <span class="chip"><span class="swatch" style="background:#E6F7F1"></span><span class="lbl">should</span> #E6F7F1</span>
+        </div>
+
+        <div class="block-label">Husholdning — dagens oppgaver</div>
+        <div class="task-card">
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Vask bad</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due warn">Forfaller om 2 dager</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div class="task-text">
+              <div class="task-name">Ta ut søppel</div>
+              <div class="task-meta"><span class="badge badge-must">Must</span><span class="due danger">Forfalt i går</span></div>
+            </div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div class="task-text">
+              <div class="task-name done">Støvsuge</div>
+              <div class="task-meta"><span class="badge badge-should">Should</span><span class="due ok">Utført i dag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block-label">Utleier-portefølje</div>
+        <div class="landlord-block">
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--danger)"></span>
+            <span class="landlord-name">Bygg A</span>
+            <span class="landlord-meta">— 3 leiligheter</span>
+            <span class="landlord-status" style="color:var(--danger)">1 forsinket oppgave</span>
+          </div>
+          <div class="landlord-row">
+            <span class="dot" style="background:var(--success)"></span>
+            <span class="landlord-name">Bygg B</span>
+            <span class="landlord-meta">— 5 leiligheter</span>
+            <span class="landlord-status" style="color:var(--success)">Alt i orden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

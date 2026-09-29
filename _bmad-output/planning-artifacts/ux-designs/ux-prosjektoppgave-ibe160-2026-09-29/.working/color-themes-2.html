@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Themes — Round 2</title>
+<style>
+/* =========================================================================
+   GLOBAL / SHARED
+   ========================================================================= */
+:root{
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font);
+  background:#ECEEF3;
+  color:#1a1a1a;
+  padding:28px 16px 72px;
+}
+.page-header{max-width:1120px;margin:0 auto 30px;}
+.page-header h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em;}
+.page-header p{font-size:13.5px;color:#555;margin:0 0 4px;max-width:820px;line-height:1.55;}
+.page-header .feedback{font-size:12.5px;color:#777;max-width:820px;line-height:1.5;margin-top:8px;padding:10px 12px;background:#fff;border-radius:10px;border:1px solid rgba(0,0,0,.08);}
+
+.theme{max-width:1120px;margin:0 auto 44px;border-radius:18px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 2px 6px rgba(0,0,0,.05);}
+.theme-inner{background:var(--bg);color:var(--text);padding:26px 26px 22px;}
+.theme-head{margin-bottom:18px;}
+.theme-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);font-weight:700;margin:0 0 4px;}
+.theme-head h2{margin:0 0 5px;font-size:20px;color:var(--text);}
+.theme-head p.register{margin:0;font-size:13.5px;color:var(--text2);max-width:680px;line-height:1.45;}
+
+/* token chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 20px;}
+.chip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid rgba(0,0,0,.08);border-radius:20px;padding:5px 12px 5px 6px;font-size:11.5px;color:var(--text);}
+.swatch{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none;}
+.chip .label{font-weight:600;}
+.chip .hex{color:var(--text2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;}
+
+/* preview grid: household card + landlord card */
+.preview-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;}
+@media(max-width:760px){.preview-grid{grid-template-columns:1fr;}}
+
+.card{background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid rgba(0,0,0,.06);}
+.card-title{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);font-weight:700;}
+
+.task{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);}
+.task:last-child{border-bottom:none;}
+.task input[type=checkbox]{accent-color:var(--primary);width:16px;height:16px;flex:none;}
+.task .body{flex:1;min-width:0;}
+.task .title-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.task .title{font-size:14px;font-weight:600;color:var(--text);}
+.task .due{font-size:11.5px;margin-top:2px;color:var(--text2);}
+.task .due.due-soon{color:var(--warning);font-weight:700;}
+.task.done .title{text-decoration:line-through;color:var(--text2);font-weight:500;}
+.task.done .due{color:var(--success);font-weight:600;}
+
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.03em;}
+.badge-must{background:var(--must);color:var(--must-text);}
+.badge-should{background:var(--should);color:var(--should-text);}
+
+.portfolio-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(0,0,0,.07);}
+.portfolio-row:last-child{border-bottom:none;}
+.portfolio-row .bname{font-size:13.5px;font-weight:600;color:var(--text);}
+.portfolio-row .bsub{font-size:11.5px;color:var(--text2);margin-top:1px;}
+.tag-danger{background:var(--danger);color:var(--danger-text);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.tag-success{background:var(--success);color:var(--success-text);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+
+.note{margin-top:16px;font-size:12px;color:var(--text2);line-height:1.55;background:var(--surface);border-radius:12px;padding:11px 14px;border:1px solid rgba(0,0,0,.06);}
+.note b{color:var(--text);}
+
+.dark-panel{margin-top:20px;border-radius:14px;padding:22px;background:var(--bg);color:var(--text);}
+.dark-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin:0 0 12px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Household task app — color exploration, round 2</h1>
+  <p>Five palette directions, all light-leaning, built directly off round&nbsp;1 feedback. Each keeps the household (playful) and landlord/portfolio (professional) modes sharing one token set, tonally aimed at "Sbanken over DNB" — friendly and colorful, not candy‑coated, not stiff.</p>
+  <div class="feedback">Round&nbsp;1 feedback addressed: (1) overall lighter tones across every variation — no more dark‑blue‑dominant bases; (2) pink and light lavender/purple now play real, functional roles (badges, primary hues) in most variations, not just accent dots — while blue/green/purple presence is kept to stay connected to round&nbsp;1 and to hold the professional register in landlord mode.</div>
+</div>
+
+<!-- =========================================================================
+     THEME 1 — LAVENDER AIR
+     primary #7B6EE3 | secondary #F0A8C9 | accent #6FB8D9
+     background #FAF8FF | surface #FFFFFF
+     text-primary #2A2640 | text-secondary #6B6480
+     success #2F9E6E | warning/due-soon #D98A2B | danger/overdue #D64550
+     must-badge #E85D8A (text #FFFFFF) | should-badge #6E7FE0 (text #FFFFFF)
+     ========================================================================= -->
+<section class="theme theme-1" style="
+  --primary:#7B6EE3; --secondary:#F0A8C9; --accent:#6FB8D9;
+  --bg:#FAF8FF; --surface:#FFFFFF;
+  --text:#2A2640; --text2:#6B6480;
+  --success:#2F9E6E; --success-text:#FFFFFF;
+  --warning:#D98A2B;
+  --danger:#D64550; --danger-text:#FFFFFF;
+  --must:#E85D8A; --must-text:#FFFFFF;
+  --should:#6E7FE0; --should-text:#FFFFFF;
+">
+  <div class="theme-inner">
+    <div class="theme-head">
+      <p class="theme-eyebrow">Theme 1</p>
+      <h2>Lavender Air</h2>
+      <p class="register">Airy, calm, and clean — lavender leads as the primary voice with a gentle pink secondary; sky blue steps in only for the "should" badge, keeping a quiet link back to round 1's blue.</p>
+    </div>
+
+    <div class="chips">
+      <div class="chip"><span class="swatch" style="background:#7B6EE3"></span><span class="label">primary</span><span class="hex">#7B6EE3</span></div>
+      <div class="chip"><span class="swatch" style="background:#F0A8C9"></span><span class="label">secondary</span><span class="hex">#F0A8C9</span></div>
+      <div class="chip"><span class="swatch" style="background:#6FB8D9"></span><span class="label">accent</span><span class="hex">#6FB8D9</span></div>
+      <div class="chip"><span class="swatch" style="background:#FAF8FF"></span><span class="label">background</span><span class="hex">#FAF8FF</span></div>
+      <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="label">surface</span><span class="hex">#FFFFFF</span></div>
+      <div class="chip"><span class="swatch" style="background:#2A2640"></span><span class="label">text-primary</span><span class="hex">#2A2640</span></div>
+      <div class="chip"><span class="swatch" style="background:#6B6480"></span><span class="label">text-secondary</span><span class="hex">#6B6480</span></div>
+      <div class="chip"><span class="swatch" style="background:#2F9E6E"></span><span class="label">success</span><span class="hex">#2F9E6E</span></div>
+      <div class="chip"><span class="swatch" style="background:#D98A2B"></span><span class="label">warning/due-soon</span><span class="hex">#D98A2B</span></div>
+      <div class="chip"><span class="swatch" style="background:#D64550"></span><span class="label">danger/overdue</span><span class="hex">#D64550</span></div>
+      <div class="chip"><span class="swatch" style="background:#E85D8A"></span><span class="label">must-badge</span><span class="hex">#E85D8A</span></div>
+      <div class="chip"><span class="swatch" style="background:#6E7FE0"></span><span class="label">should-badge</span><span class="hex">#6E7FE0</span></div>
+    </div>
+
+    <div class="preview-grid">
+      <div class="card">
+        <p class="card-title">🏠 Dagens oppgaver</p>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+            <div class="due due-soon">Forfaller om 2 dager</div>
+          </div>
+        </div>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Støvsuge</span><span class="badge badge-should">Should</span></div>
+            <div class="due">Om 5 dager</div>
+          </div>
+        </div>
+        <div class="task done">
+          <input type="checkbox" checked disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+            <div class="due">Fullført i dag</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Porteføljeoversikt</p>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+          <span class="tag-danger">1 forsinket</span>
+        </div>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+          <span class="tag-success">Alle fullført</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><b>Contrast check:</b> text-primary #2A2640 on background #FAF8FF is ~14:1 — excellent. White on must-badge #E85D8A lands around 3.3:1: fine for bold, small badge text but would not pass strict AA for body copy, so badge labels should stay short and bold as shown here.</p>
+  </div>
+</section>
+
+<!-- =========================================================================
+     THEME 2 — BLUSH SIGNAL  (includes dark-mode panel)
+     LIGHT:
+     primary #4C6FD9 | secondary #8B7FE0 | accent #5BB8A6
+     background #F5F6FC | surface #FFFFFF
+     text-primary #22273D | text-secondary #5B6178
+     success #2E9E6B | warning/due-soon #D9932B | danger/overdue #C43B4E
+     must-badge #E0507C (text #FFFFFF, functional pink = urgency signal) | should-badge #4C6FD9 (text #FFFFFF)
+     DARK:
+     background #1B1E2E | surface #262A3D
+     text-primary #EDEFFA | text-secondary #A8ADC4
+     primary #8AA0F0 | secondary #B6A8F0 | accent #6FD1BC
+     success #4FCB93 (text #0B1B14) | warning #F0B84D | danger #F0707E (text #2B0A0E)
+     must-badge #F286A8 (text #2B0A14) | should-badge #8AA0F0 (text #0B1330)
+     ========================================================================= -->
+<section class="theme theme-2" style="
+  --primary:#4C6FD9; --secondary:#8B7FE0; --accent:#5BB8A6;
+  --bg:#F5F6FC; --surface:#FFFFFF;
+  --text:#22273D; --text2:#5B6178;
+  --success:#2E9E6B; --success-text:#FFFFFF;
+  --warning:#D9932B;
+  --danger:#C43B4E; --danger-text:#FFFFFF;
+  --must:#E0507C; --must-text:#FFFFFF;
+  --should:#4C6FD9; --should-text:#FFFFFF;
+">
+  <div class="theme-inner">
+    <div class="theme-head">
+      <p class="theme-eyebrow">Theme 2</p>
+      <h2>Blush Signal</h2>
+      <p class="register">Confident and functional — pink is reserved almost entirely for the Must badge, so it reads as a real urgency signal rather than decoration, against a cool blue‑lavender base.</p>
+    </div>
+
+    <div class="chips">
+      <div class="chip"><span class="swatch" style="background:#4C6FD9"></span><span class="label">primary</span><span class="hex">#4C6FD9</span></div>
+      <div class="chip"><span class="swatch" style="background:#8B7FE0"></span><span class="label">secondary</span><span class="hex">#8B7FE0</span></div>
+      <div class="chip"><span class="swatch" style="background:#5BB8A6"></span><span class="label">accent</span><span class="hex">#5BB8A6</span></div>
+      <div class="chip"><span class="swatch" style="background:#F5F6FC"></span><span class="label">background</span><span class="hex">#F5F6FC</span></div>
+      <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="label">surface</span><span class="hex">#FFFFFF</span></div>
+      <div class="chip"><span class="swatch" style="background:#22273D"></span><span class="label">text-primary</span><span class="hex">#22273D</span></div>
+      <div class="chip"><span class="swatch" style="background:#5B6178"></span><span class="label">text-secondary</span><span class="hex">#5B6178</span></div>
+      <div class="chip"><span class="swatch" style="background:#2E9E6B"></span><span class="label">success</span><span class="hex">#2E9E6B</span></div>
+      <div class="chip"><span class="swatch" style="background:#D9932B"></span><span class="label">warning/due-soon</span><span class="hex">#D9932B</span></div>
+      <div class="chip"><span class="swatch" style="background:#C43B4E"></span><span class="label">danger/overdue</span><span class="hex">#C43B4E</span></div>
+      <div class="chip"><span class="swatch" style="background:#E0507C"></span><span class="label">must-badge</span><span class="hex">#E0507C</span></div>
+      <div class="chip"><span class="swatch" style="background:#4C6FD9"></span><span class="label">should-badge</span><span class="hex">#4C6FD9</span></div>
+    </div>
+
+    <div class="preview-grid">
+      <div class="card">
+        <p class="card-title">🏠 Dagens oppgaver</p>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+            <div class="due due-soon">Forfaller om 2 dager</div>
+          </div>
+        </div>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Støvsuge</span><span class="badge badge-should">Should</span></div>
+            <div class="due">Om 5 dager</div>
+          </div>
+        </div>
+        <div class="task done">
+          <input type="checkbox" checked disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+            <div class="due">Fullført i dag</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Porteføljeoversikt</p>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+          <span class="tag-danger">1 forsinket</span>
+        </div>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+          <span class="tag-success">Alle fullført</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><b>Contrast check:</b> must-badge white-on-#E0507C is ~3.6:1 (solid for bold badge text, borderline for regular body text). Danger #C43B4E is kept a true brick‑red rather than pink‑adjacent, so the Must‑pink and Overdue‑red stay visually distinct even though both sit in the warm range.</p>
+
+    <div class="dark-panel theme-2" style="
+      --primary:#8AA0F0; --secondary:#B6A8F0; --accent:#6FD1BC;
+      --bg:#1B1E2E; --surface:#262A3D;
+      --text:#EDEFFA; --text2:#A8ADC4;
+      --success:#4FCB93; --success-text:#0B1B14;
+      --warning:#F0B84D;
+      --danger:#F0707E; --danger-text:#2B0A0E;
+      --must:#F286A8; --must-text:#2B0A14;
+      --should:#8AA0F0; --should-text:#0B1330;
+    ">
+      <p class="dark-label">Dark mode</p>
+      <div class="chips">
+        <div class="chip"><span class="swatch" style="background:#8AA0F0"></span><span class="label">primary</span><span class="hex">#8AA0F0</span></div>
+        <div class="chip"><span class="swatch" style="background:#B6A8F0"></span><span class="label">secondary</span><span class="hex">#B6A8F0</span></div>
+        <div class="chip"><span class="swatch" style="background:#6FD1BC"></span><span class="label">accent</span><span class="hex">#6FD1BC</span></div>
+        <div class="chip"><span class="swatch" style="background:#1B1E2E"></span><span class="label">background</span><span class="hex">#1B1E2E</span></div>
+        <div class="chip"><span class="swatch" style="background:#262A3D"></span><span class="label">surface</span><span class="hex">#262A3D</span></div>
+        <div class="chip"><span class="swatch" style="background:#EDEFFA"></span><span class="label">text-primary</span><span class="hex">#EDEFFA</span></div>
+        <div class="chip"><span class="swatch" style="background:#A8ADC4"></span><span class="label">text-secondary</span><span class="hex">#A8ADC4</span></div>
+        <div class="chip"><span class="swatch" style="background:#4FCB93"></span><span class="label">success</span><span class="hex">#4FCB93</span></div>
+        <div class="chip"><span class="swatch" style="background:#F0B84D"></span><span class="label">warning/due-soon</span><span class="hex">#F0B84D</span></div>
+        <div class="chip"><span class="swatch" style="background:#F0707E"></span><span class="label">danger/overdue</span><span class="hex">#F0707E</span></div>
+        <div class="chip"><span class="swatch" style="background:#F286A8"></span><span class="label">must-badge</span><span class="hex">#F286A8</span></div>
+        <div class="chip"><span class="swatch" style="background:#8AA0F0"></span><span class="label">should-badge</span><span class="hex">#8AA0F0</span></div>
+      </div>
+      <div class="preview-grid">
+        <div class="card">
+          <p class="card-title">🏠 Dagens oppgaver</p>
+          <div class="task">
+            <input type="checkbox" disabled>
+            <div class="body">
+              <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+              <div class="due due-soon">Forfaller om 2 dager</div>
+            </div>
+          </div>
+          <div class="task">
+            <input type="checkbox" disabled>
+            <div class="body">
+              <div class="title-row"><span class="title">Støvsuge</span><span class="badge badge-should">Should</span></div>
+              <div class="due">Om 5 dager</div>
+            </div>
+          </div>
+          <div class="task done">
+            <input type="checkbox" checked disabled>
+            <div class="body">
+              <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+              <div class="due">Fullført i dag</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <p class="card-title">Porteføljeoversikt</p>
+          <div class="portfolio-row">
+            <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+            <span class="tag-danger">1 forsinket</span>
+          </div>
+          <div class="portfolio-row">
+            <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+            <span class="tag-success">Alle fullført</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================================
+     THEME 3 — PASTEL TRIO
+     primary #4FA377 | secondary #8B7FD9 | accent #E888AA
+     background #F8FAF7 | surface #FFFFFF
+     text-primary #23262B | text-secondary #5C6169
+     success #2F9E6E | warning/due-soon #C98A2E | danger/overdue #C13F4E
+     must-badge #D9567E (text #FFFFFF) | should-badge #6E7FCB (text #FFFFFF)
+     ========================================================================= -->
+<section class="theme theme-3" style="
+  --primary:#4FA377; --secondary:#8B7FD9; --accent:#E888AA;
+  --bg:#F8FAF7; --surface:#FFFFFF;
+  --text:#23262B; --text2:#5C6169;
+  --success:#2F9E6E; --success-text:#FFFFFF;
+  --warning:#C98A2E;
+  --danger:#C13F4E; --danger-text:#FFFFFF;
+  --must:#D9567E; --must-text:#FFFFFF;
+  --should:#6E7FCB; --should-text:#FFFFFF;
+">
+  <div class="theme-inner">
+    <div class="theme-head">
+      <p class="theme-eyebrow">Theme 3</p>
+      <h2>Pastel Trio</h2>
+      <p class="register">Mint, lavender and pink in roughly equal pastel measure — the most playful of the five, deliberately anchored by a near‑black text color instead of a soft grey so it doesn't wash out.</p>
+    </div>
+
+    <div class="chips">
+      <div class="chip"><span class="swatch" style="background:#4FA377"></span><span class="label">primary</span><span class="hex">#4FA377</span></div>
+      <div class="chip"><span class="swatch" style="background:#8B7FD9"></span><span class="label">secondary</span><span class="hex">#8B7FD9</span></div>
+      <div class="chip"><span class="swatch" style="background:#E888AA"></span><span class="label">accent</span><span class="hex">#E888AA</span></div>
+      <div class="chip"><span class="swatch" style="background:#F8FAF7"></span><span class="label">background</span><span class="hex">#F8FAF7</span></div>
+      <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="label">surface</span><span class="hex">#FFFFFF</span></div>
+      <div class="chip"><span class="swatch" style="background:#23262B"></span><span class="label">text-primary</span><span class="hex">#23262B</span></div>
+      <div class="chip"><span class="swatch" style="background:#5C6169"></span><span class="label">text-secondary</span><span class="hex">#5C6169</span></div>
+      <div class="chip"><span class="swatch" style="background:#2F9E6E"></span><span class="label">success</span><span class="hex">#2F9E6E</span></div>
+      <div class="chip"><span class="swatch" style="background:#C98A2E"></span><span class="label">warning/due-soon</span><span class="hex">#C98A2E</span></div>
+      <div class="chip"><span class="swatch" style="background:#C13F4E"></span><span class="label">danger/overdue</span><span class="hex">#C13F4E</span></div>
+      <div class="chip"><span class="swatch" style="background:#D9567E"></span><span class="label">must-badge</span><span class="hex">#D9567E</span></div>
+      <div class="chip"><span class="swatch" style="background:#6E7FCB"></span><span class="label">should-badge</span><span class="hex">#6E7FCB</span></div>
+    </div>
+
+    <div class="preview-grid">
+      <div class="card">
+        <p class="card-title">🏠 Dagens oppgaver</p>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+            <div class="due due-soon">Forfaller om 2 dager</div>
+          </div>
+        </div>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Støvsuge</span><span class="badge badge-should">Should</span></div>
+            <div class="due">Om 5 dager</div>
+          </div>
+        </div>
+        <div class="task done">
+          <input type="checkbox" checked disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+            <div class="due">Fullført i dag</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Porteføljeoversikt</p>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+          <span class="tag-danger">1 forsinket</span>
+        </div>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+          <span class="tag-success">Alle fullført</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><b>Contrast check:</b> text-primary #23262B on background #F8FAF7 is ~15:1 — deliberately dark to counter three pastel brand hues. Weakest spot: must‑badge #D9567E and danger #C13F4E are both rose‑toned and sit closer together than in the other themes — if this theme is chosen, consider nudging danger toward orange‑red to separate "must" from "overdue" faster at a glance.</p>
+  </div>
+</section>
+
+<!-- =========================================================================
+     THEME 4 — DUAL REGISTER  (household + desaturated landlord, incl. dark panels)
+     HOUSEHOLD LIGHT:
+     primary #8B6FE0 | secondary #F0A0C4 | accent #6FB0D9
+     background #FAF8FE | surface #FFFFFF
+     text-primary #2B2740 | text-secondary #6A6480
+     success #2F9E6E | warning #D98A2B | danger #D6454F
+     must-badge #E85D8A (text #FFFFFF) | should-badge #7C8CE0 (text #FFFFFF)
+     LANDLORD LIGHT (same tokens, desaturated toward blue-grey):
+     primary #6B7280 | secondary #8A93A3 | accent #5E8CA6
+     background #F4F5F7 | surface #FFFFFF
+     text-primary #23262E | text-secondary #626878
+     success #2E8F63 | warning #C98630 | danger #C34450
+     must-badge #B25C7A (text #FFFFFF) | should-badge #6B78A3 (text #FFFFFF)
+     ========================================================================= -->
+<section class="theme theme-4" style="
+  --primary:#8B6FE0; --secondary:#F0A0C4; --accent:#6FB0D9;
+  --bg:#FAF8FE; --surface:#FFFFFF;
+  --text:#2B2740; --text2:#6A6480;
+  --success:#2F9E6E; --success-text:#FFFFFF;
+  --warning:#D98A2B;
+  --danger:#D6454F; --danger-text:#FFFFFF;
+  --must:#E85D8A; --must-text:#FFFFFF;
+  --should:#7C8CE0; --should-text:#FFFFFF;
+">
+  <div class="theme-inner">
+    <div class="theme-head">
+      <p class="theme-eyebrow">Theme 4</p>
+      <h2>Dual Register</h2>
+      <p class="register">One token family, two visible registers: household mode leads with lavender and pink; the landlord/portfolio view desaturates the very same tokens toward blue‑grey so the professional context reads instantly, without changing app.</p>
+    </div>
+
+    <p class="dark-label" style="margin-top:0;color:var(--text2);">Household mode — light</p>
+    <div class="chips">
+      <div class="chip"><span class="swatch" style="background:#8B6FE0"></span><span class="label">primary</span><span class="hex">#8B6FE0</span></div>
+      <div class="chip"><span class="swatch" style="background:#F0A0C4"></span><span class="label">secondary</span><span class="hex">#F0A0C4</span></div>
+      <div class="chip"><span class="swatch" style="background:#6FB0D9"></span><span class="label">accent</span><span class="hex">#6FB0D9</span></div>
+      <div class="chip"><span class="swatch" style="background:#FAF8FE"></span><span class="label">background</span><span class="hex">#FAF8FE</span></div>
+      <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="label">surface</span><span class="hex">#FFFFFF</span></div>
+      <div class="chip"><span class="swatch" style="background:#2B2740"></span><span class="label">text-primary</span><span class="hex">#2B2740</span></div>
+      <div class="chip"><span class="swatch" style="background:#6A6480"></span><span class="label">text-secondary</span><span class="hex">#6A6480</span></div>
+      <div class="chip"><span class="swatch" style="background:#2F9E6E"></span><span class="label">success</span><span class="hex">#2F9E6E</span></div>
+      <div class="chip"><span class="swatch" style="background:#D98A2B"></span><span class="label">warning/due-soon</span><span class="hex">#D98A2B</span></div>
+      <div class="chip"><span class="swatch" style="background:#D6454F"></span><span class="label">danger/overdue</span><span class="hex">#D6454F</span></div>
+      <div class="chip"><span class="swatch" style="background:#E85D8A"></span><span class="label">must-badge</span><span class="hex">#E85D8A</span></div>
+      <div class="chip"><span class="swatch" style="background:#7C8CE0"></span><span class="label">should-badge</span><span class="hex">#7C8CE0</span></div>
+    </div>
+
+    <div class="card" style="max-width:520px;">
+      <p class="card-title">🏠 Dagens oppgaver</p>
+      <div class="task">
+        <input type="checkbox" disabled>
+        <div class="body">
+          <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+          <div class="due due-soon">Forfaller om 2 dager</div>
+        </div>
+      </div>
+      <div class="task">
+        <input type="checkbox" disabled>
+        <div class="body">
+          <div class="title-row"><span class="title">Støvsuge</span><span class="badge badge-should">Should</span></div>
+          <div class="due">Om 5 dager</div>
+        </div>
+      </div>
+      <div class="task done">
+        <input type="checkbox" checked disabled>
+        <div class="body">
+          <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+          <div class="due">Fullført i dag</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="dark-label" style="margin-top:22px;color:var(--text2);">Landlord mode — light, desaturated toward blue‑grey</p>
+    <div class="dark-panel theme-4" style="
+      --primary:#6B7280; --secondary:#8A93A3; --accent:#5E8CA6;
+      --bg:#F4F5F7; --surface:#FFFFFF;
+      --text:#23262E; --text2:#626878;
+      --success:#2E8F63; --success-text:#FFFFFF;
+      --warning:#C98630;
+      --danger:#C34450; --danger-text:#FFFFFF;
+      --must:#B25C7A; --must-text:#FFFFFF;
+      --should:#6B78A3; --should-text:#FFFFFF;
+      padding:22px;
+    ">
+      <div class="chips" style="margin-top:0;">
+        <div class="chip"><span class="swatch" style="background:#6B7280"></span><span class="label">primary</span><span class="hex">#6B7280</span></div>
+        <div class="chip"><span class="swatch" style="background:#8A93A3"></span><span class="label">secondary</span><span class="hex">#8A93A3</span></div>
+        <div class="chip"><span class="swatch" style="background:#5E8CA6"></span><span class="label">accent</span><span class="hex">#5E8CA6</span></div>
+        <div class="chip"><span class="swatch" style="background:#F4F5F7"></span><span class="label">background</span><span class="hex">#F4F5F7</span></div>
+        <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="label">surface</span><span class="hex">#FFFFFF</span></div>
+        <div class="chip"><span class="swatch" style="background:#23262E"></span><span class="label">text-primary</span><span class="hex">#23262E</span></div>
+        <div class="chip"><span class="swatch" style="background:#626878"></span><span class="label">text-secondary</span><span class="hex">#626878</span></div>
+        <div class="chip"><span class="swatch" style="background:#2E8F63"></span><span class="label">success</span><span class="hex">#2E8F63</span></div>
+        <div class="chip"><span class="swatch" style="background:#C98630"></span><span class="label">warning/due-soon</span><span class="hex">#C98630</span></div>
+        <div class="chip"><span class="swatch" style="background:#C34450"></span><span class="label">danger/overdue</span><span class="hex">#C34450</span></div>
+        <div class="chip"><span class="swatch" style="background:#B25C7A"></span><span class="label">must-badge</span><span class="hex">#B25C7A</span></div>
+        <div class="chip"><span class="swatch" style="background:#6B78A3"></span><span class="label">should-badge</span><span class="hex">#6B78A3</span></div>
+      </div>
+      <div class="card" style="max-width:420px;">
+        <p class="card-title">Porteføljeoversikt</p>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+          <span class="tag-danger">1 forsinket</span>
+        </div>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+          <span class="tag-success">Alle fullført</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><b>Contrast check:</b> the landlord must‑badge white‑on‑#B25C7A is ~3.4:1, close to the household badge's ~3.3:1 — contrast is intentionally held steady across modes; it's the drop in chroma (bright pink → muted mauve, lavender → blue‑grey) that signals "professional," not a contrast change.</p>
+
+    <p class="dark-label" style="margin-top:22px;color:var(--text2);">Dark mode — household &amp; landlord</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="dark-panel theme-4" style="
+        --primary:#B6A3F0; --secondary:#F2AECF; --accent:#7FC3EA;
+        --bg:#211D33; --surface:#2B2645;
+        --text:#F2EEFB; --text2:#B0A8C9;
+        --success:#4FCB93; --success-text:#0B1B14;
+        --warning:#F0B84D;
+        --danger:#F0808A; --danger-text:#2B0A0E;
+        --must:#F286A8; --must-text:#2B0A14;
+        --should:#A6B2F0; --should-text:#10143A;
+        padding:18px;margin-top:0;
+      ">
+        <p class="dark-label">Household — dark</p>
+        <div class="card">
+          <p class="card-title">🏠 Dagens oppgaver</p>
+          <div class="task">
+            <input type="checkbox" disabled>
+            <div class="body">
+              <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+              <div class="due due-soon">Forfaller om 2 dager</div>
+            </div>
+          </div>
+          <div class="task done">
+            <input type="checkbox" checked disabled>
+            <div class="body">
+              <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+              <div class="due">Fullført i dag</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dark-panel theme-4" style="
+        --primary:#9AA2B4; --secondary:#7C8698; --accent:#7FAFC7;
+        --bg:#1E2024; --surface:#282B31;
+        --text:#EEF0F3; --text2:#A2A8B4;
+        --success:#4FA97C; --success-text:#0B1B14;
+        --warning:#E3AA5C;
+        --danger:#E37E88; --danger-text:#2B0A0E;
+        --must:#C989A2; --must-text:#2B0A14;
+        --should:#8E9BC2; --should-text:#10143A;
+        padding:18px;margin-top:0;
+      ">
+        <p class="dark-label">Landlord — dark</p>
+        <div class="card">
+          <p class="card-title">Porteføljeoversikt</p>
+          <div class="portfolio-row">
+            <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+            <span class="tag-danger">1 forsinket</span>
+          </div>
+          <div class="portfolio-row">
+            <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+            <span class="tag-success">Alle fullført</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================================
+     THEME 5 — SBANKEN BLUSH
+     primary #2C8C8C | secondary #6E7FE0 | accent #E08BB0
+     background #F5FAF9 | surface #FFFFFF
+     text-primary #1F2937 | text-secondary #5B6472
+     success #2F9E6E | warning/due-soon #D98A2B | danger/overdue #C0392B
+     must-badge #E08BB0 (text #FFFFFF, functional pink) | should-badge #8B7FD9 (text #FFFFFF, functional lavender)
+     ========================================================================= -->
+<section class="theme theme-5" style="
+  --primary:#2C8C8C; --secondary:#6E7FE0; --accent:#E08BB0;
+  --bg:#F5FAF9; --surface:#FFFFFF;
+  --text:#1F2937; --text2:#5B6472;
+  --success:#2F9E6E; --success-text:#FFFFFF;
+  --warning:#D98A2B;
+  --danger:#C0392B; --danger-text:#FFFFFF;
+  --must:#E08BB0; --must-text:#FFFFFF;
+  --should:#8B7FD9; --should-text:#FFFFFF;
+">
+  <div class="theme-inner">
+    <div class="theme-head">
+      <p class="theme-eyebrow">Theme 5</p>
+      <h2>Sbanken Blush</h2>
+      <p class="register">The closest read to the stated reference — a teal‑blue backbone carries the professional weight while lavender and pink do real badge work, restrained enough for a landlord dashboard, lively enough for the household view.</p>
+    </div>
+
+    <div class="chips">
+      <div class="chip"><span class="swatch" style="background:#2C8C8C"></span><span class="label">primary</span><span class="hex">#2C8C8C</span></div>
+      <div class="chip"><span class="swatch" style="background:#6E7FE0"></span><span class="label">secondary</span><span class="hex">#6E7FE0</span></div>
+      <div class="chip"><span class="swatch" style="background:#E08BB0"></span><span class="label">accent</span><span class="hex">#E08BB0</span></div>
+      <div class="chip"><span class="swatch" style="background:#F5FAF9"></span><span class="label">background</span><span class="hex">#F5FAF9</span></div>
+      <div class="chip"><span class="swatch" style="background:#FFFFFF"></span><span class="label">surface</span><span class="hex">#FFFFFF</span></div>
+      <div class="chip"><span class="swatch" style="background:#1F2937"></span><span class="label">text-primary</span><span class="hex">#1F2937</span></div>
+      <div class="chip"><span class="swatch" style="background:#5B6472"></span><span class="label">text-secondary</span><span class="hex">#5B6472</span></div>
+      <div class="chip"><span class="swatch" style="background:#2F9E6E"></span><span class="label">success</span><span class="hex">#2F9E6E</span></div>
+      <div class="chip"><span class="swatch" style="background:#D98A2B"></span><span class="label">warning/due-soon</span><span class="hex">#D98A2B</span></div>
+      <div class="chip"><span class="swatch" style="background:#C0392B"></span><span class="label">danger/overdue</span><span class="hex">#C0392B</span></div>
+      <div class="chip"><span class="swatch" style="background:#E08BB0"></span><span class="label">must-badge</span><span class="hex">#E08BB0</span></div>
+      <div class="chip"><span class="swatch" style="background:#8B7FD9"></span><span class="label">should-badge</span><span class="hex">#8B7FD9</span></div>
+    </div>
+
+    <div class="preview-grid">
+      <div class="card">
+        <p class="card-title">🏠 Dagens oppgaver</p>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Vask bad</span><span class="badge badge-must">Must</span></div>
+            <div class="due due-soon">Forfaller om 2 dager</div>
+          </div>
+        </div>
+        <div class="task">
+          <input type="checkbox" disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Støvsuge</span><span class="badge badge-should">Should</span></div>
+            <div class="due">Om 5 dager</div>
+          </div>
+        </div>
+        <div class="task done">
+          <input type="checkbox" checked disabled>
+          <div class="body">
+            <div class="title-row"><span class="title">Ta ut søppel</span><span class="badge badge-must">Must</span></div>
+            <div class="due">Fullført i dag</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Porteføljeoversikt</p>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg A</div><div class="bsub">3 leiligheter</div></div>
+          <span class="tag-danger">1 forsinket</span>
+        </div>
+        <div class="portfolio-row">
+          <div><div class="bname">Bygg B</div><div class="bsub">5 leiligheter</div></div>
+          <span class="tag-success">Alle fullført</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><b>Contrast check:</b> must‑badge white‑on‑#E08BB0 (~3.1:1) and should‑badge white‑on‑#8B7FD9 (~3.9:1) are both mid‑saturation rather than pastel, so the must/should split stays legible at small sizes — the lightest element in this theme is the background, never a functional color, which is what keeps it feeling closest to the "Sbanken, not DNB" brief.</p>
+  </div>
+</section>
+
+</body>
+</html>
