@@ -1,0 +1,59 @@
+# PRD Quality Review — prd-prosjektoppgave-ibe160-2026-09-29
+
+## Overall verdict
+
+This is a genuinely well-built chain-top PRD: the three UJs are load-bearing (every feature and FR traces back to one), Non-Goals are earned rather than templated, and real trade-offs (permanent trust-based completion for Household Members, deferred scope risk) are surfaced rather than smoothed over. The two things at risk before this feeds UX/architecture: a role-model gap where "Owner" is used as an actor in FR-1/FR-2 but never reconciled with FR-3's closed set of three Roles, and a done-ness gap around the AI assistant (FR-14/FR-15) — the product's namesake feature has no accuracy, safety, or failure-mode bound anywhere in the document. Neither is fatal, but both should be resolved before an engineer or UX designer treats this as ready-to-build.
+
+## Decision-readiness — adequate
+
+The PRD does the hard parts of this dimension well: the Completion/trust-based-by-default decision is stated as a decision with the give-up named explicitly ("does not verify or audit Household Member... task completion in any way — that tier is permanently trust-based by design, not a v1 limitation to be lifted later," §5 Non-Goals), and Open Questions 2–4 (§8) are genuinely unresolved, not rhetorical.
+
+Where it's weaker: Open Question 1 (§8) — whether FR-11, FR-16, FR-18/19, or FR-20 should be deferred given the brief's own scope-risk flag — is the single highest-leverage call in the document (4 of 21 FRs, added on top of a brief that already flagged risk for a 3-person/13-week build) and the PRD does not make it. It's honestly flagged via `[NOTE FOR PM]` (§6.1) and indexed in the Assumptions Index (§9), which is the right mechanism, but the PRD stops short of giving even a conditional fallback ("if X, cut Y first"). A decision-maker reading this still has to originate the scope call from scratch at Architecture/Sprint Planning.
+
+### Findings
+- **medium** Scope-risk decision deferred without a fallback (§6.1 `[NOTE FOR PM]`, §8 OQ-1) — the PRD correctly surfaces that 4 journey-derived FRs stack on top of an already-flagged timeline risk, but offers no prioritized fallback if the team runs out of runway. *Fix:* add a one-line ranked cut order (e.g., "if scope must shrink, drop FR-20 first, then FR-16") so the deferred decision isn't a blank slate later.
+
+## Substance over theater — strong
+
+No persona theater: three personas (Mari/Peter, Johan, Martin), each driving distinct FRs, well under the four-persona ceiling the rubric flags. No innovation-theater differentiation section. The Vision (§1) is specific to this product's mechanics (Must/Should split, one Home mechanic serving four living situations, locked Tenant inheritance) rather than swappable boilerplate. Cross-Cutting NFRs mostly avoid "must be scalable/secure" boilerplate — "Notification reliability" is framed around a real product consequence (a missed notification undermines the core forgetting-prevention value prop) rather than a generic adjective. No findings.
+
+## Strategic coherence — strong
+
+The thesis — irregular, no-fixed-rhythm tasks get forgotten and that forgetting causes real harm, so the product needs shared visibility plus automatic rescheduling plus low-friction trust — is stated in §1 and every feature grouping in §4 traces back to it. SM-1 (§7) validates the thesis directly (end-to-end core loop across both Home types) rather than measuring raw activity, and the directional signals are framed around forgetting-prevention and retention, not vanity metrics.
+
+### Findings
+- **low** No counter-metrics named (§7) — "willingness to leave positive reviews" and "continued/repeat usage" are named as directional signals with no corresponding counter-metric (e.g., notification fatigue/opt-out rate as a counter to reminder frequency, uninstall/abandonment as a counter to "repeat usage"). Low severity because SMs are explicitly non-targeted this round. *Fix:* name at least one counter-signal per directional metric when this section gets quantified.
+
+## Done-ness clarity — adequate
+
+Most FRs clear the bar: FR-9's reschedule-from-completion-date-not-due-date rule, FR-19's photo auto-replace/access-restriction rules, and FR-6's must-first ordering all have consequences an engineer could write a test against without guessing. But three concentrated gaps stand out.
+
+### Findings
+- **high** "Owner" is used as an actor with exclusive permissions but is never reconciled with the closed Role set (§4.1 FR-1: "A user can create a Home, becoming its Owner"; FR-2: "An Owner can generate a shareable invite link"; vs. FR-3: "Each Member of a Home has exactly one Role: Household Member, Landlord, or Tenant" — no "Owner" option listed). The Glossary (§3, "Home" entry) only defines Owner implicitly ("Created by one Owner (a Household Member acting as creator, or a Landlord)"), never as its own term. This leaves it genuinely ambiguous whether invite-link generation is an Owner-only privilege that survives after Home creation, or whether it's available to any Household Member (whose Glossary entry says they have "equal permissions to other Household Members" — which would seem to include inviting). Given the Cross-Cutting NFRs explicitly demand server-side permission enforcement (§Cross-Cutting NFRs), this ambiguity is directly testable-consequence-blocking. *Fix:* either add "Owner" as a fourth enumerated concept in FR-3 with explicit persistent permissions, or restate FR-2 as "any Household Member" / "the Landlord" to match the three-Role model, and give Owner its own Glossary entry.
+- **high** AI assistant has no accuracy, safety, or failure-mode bound (§4.5 FR-14, FR-15). FR-14's only testable consequence is that "?" "returns a relevant answer without leaving the task view" — "relevant" is exactly the kind of adjective the rubric calls out, and there is no Cross-Cutting NFR addressing AI answer quality, hallucination tolerance, or escalation when the assistant doesn't know an answer. This matters more than average here: the product's own Vision cites mold and (implicitly, via cleaning tasks) chemical-safety scenarios as the harm being prevented, and there is no review step on AI answers analogous to the Landlord-review step given to photo evidence (FR-19). *Fix:* add a testable consequence to FR-14 (e.g., grounding source, fallback behavior on low-confidence answers) and a Cross-Cutting NFR for AI answer safety, even if qualitative for this round.
+- **medium** FR-10 and FR-11 have their done-ness explicitly deferred to unresolved Open Questions — FR-10's push-notification delivery window ("see Open Questions for exact timing," §4.4) depends on OQ-2, and FR-11's "rarely or never performed completions" threshold depends on OQ-4. This is honestly flagged (not silent), but it means two FRs currently have no testable consequence an engineer can build against. *Fix:* resolve OQ-2/OQ-4 before these FRs enter sprint planning, or add provisional defaults marked `[ASSUMPTION]`.
+- **medium** FR-21 / Responsiveness NFR reference "common phone, tablet, and desktop breakpoints" (§4.8 FR-21; Cross-Cutting NFRs "Responsiveness") without stating actual viewport values. *Fix:* name concrete breakpoints (or defer explicitly to the UX doc, since this is a chain-top PRD).
+- **low** "Notification reliability" NFR (Cross-Cutting NFRs) is well-framed around product consequence but carries no numeric delivery-reliability bound (e.g., an SLA or acceptable miss rate) — currently an adjective ("reliably enough") standing in for a threshold.
+
+## Scope honesty — strong
+
+Non-Goals (§5) do real work, each with a stated reason rather than a bare list — e.g., "does not verify or audit Household Member... completion... that tier is permanently trust-based by design, not a v1 limitation to be lifted later" is exactly the honest de-scoping the rubric asks for. The `[NOTE FOR PM]` in §6.1 and its Assumptions Index entry (§9) correctly surface the scope-creep tension rather than letting it ride silently.
+
+### Findings
+- **medium** Photo-evidence content-safety scoping has no stated enforcement mechanism (§4.6 FR-18; §Constraints Privacy: "Landlords should not be able to configure photo evidence for task types that would incidentally capture private spaces or belongings"). It's unclear whether this is enforced by a curated, system-controlled list of eligible task types or left to Landlord judgment with no system check — the Constraints section says it's "not merely a UX suggestion," implying enforcement, but no mechanism or consequence is specified. This is an inference the PRD is making without an `[ASSUMPTION]` tag. *Fix:* either tag it `[ASSUMPTION: enforcement mechanism TBD at architecture]` or specify who curates eligible task types.
+- **low** The AI-answer-safety gap noted under Done-ness clarity is not flagged anywhere as a Non-Goal, Open Question, or Assumption — it's a silent gap rather than an honestly-scoped one. Cross-referenced here because scope-honesty is specifically about omissions being explicit.
+
+## Downstream usability — strong
+
+This is a chain-top PRD (feeds UX and architecture next), so this dimension carries real weight, and it holds up. Glossary (§3) is comprehensive and terms are used consistently in capitalization and meaning across Features, Non-Goals, and Constraints. FR IDs (FR-1–FR-21) and UJ IDs (UJ-1–UJ-3) are contiguous with no gaps or duplicates. "Realizes UJ-X" tags are attached to every feature and FR and are accurate on spot-check (e.g., FR-18/19's Landlord-review-photo-evidence consequences correctly map to UJ-2 and UJ-3's respective beats). Cross-references (e.g., FR-19's "see §Constraints and Guardrails") resolve. The one structural weak point — the "Owner" term not getting its own Glossary entry despite being used as a capitalized actor in FR-1/FR-2 — is captured above under Done-ness clarity and in Mechanical notes below, since it's as much a glossary-completeness issue as a permissions-logic one.
+
+## Shape fit — strong
+
+This is a consumer / multi-stakeholder product (household members, landlords, tenants each with materially different permissions), which is exactly the shape where the rubric says UJs with named protagonists are load-bearing — and here they are: three personas, each under the four-persona ceiling, each driving distinct FRs rather than existing for show. The PRD correctly keeps UX-level interaction detail out of scope (appropriate for a document that feeds a UX pass next) while still giving Features enough behavioral specificity to be useful standalone. No over- or under-formalization observed.
+
+## Mechanical notes
+
+- **Glossary gap:** "Owner" is used as a capitalized actor in FR-1 ("becoming its Owner") and FR-2 ("An Owner can generate...") but has no bolded Glossary entry of its own — it's only defined implicitly inside the "Home" entry (§3). Every other capitalized term in the document gets its own entry; this one doesn't, which is the root of the Done-ness finding above.
+- **Assumptions Index roundtrip is stretched:** the sole entry in §9 sources from a `[NOTE FOR PM]` tag at §6.1, not from an inline `[ASSUMPTION: ...]` tag. No literal `[ASSUMPTION: ...]` marker appears anywhere in the document body, so the Index's own naming convention doesn't have a same-syntax inline counterpart to round-trip to.
+- **SM numbering inconsistency:** only "SM-1" is ID'd (§7); the three "directional signals" underneath are unlabeled. Low impact since they're explicitly non-targeted this round, but inconsistent with the rest of the document's strict ID discipline.
+- Otherwise clean: FR-1 through FR-21 contiguous and unique, UJ-1 through UJ-3 contiguous with named protagonists carrying context inline, Open Questions 1–4 contiguous, and cross-section references (§Constraints and Guardrails, §Cross-Cutting NFRs, brief citations) all resolve.
