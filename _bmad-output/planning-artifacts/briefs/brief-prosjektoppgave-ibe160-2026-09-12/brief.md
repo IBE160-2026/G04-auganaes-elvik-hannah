@@ -2,7 +2,7 @@
 title: "Product Brief: AI-Driven Household Task App"
 status: ready
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-10-04
 ---
 
 # Product Brief: AI-Driven Household Task App
@@ -83,7 +83,7 @@ Supporting signals worth tracking as the product matures:
 
 ## Scope
 
-**Team:** 3 people. **Timeline:** now through mid-December 2026 (~13 weeks). **Stack:** Python backend, JavaScript/Node.js frontend.
+**Team:** 3 people. **Timeline:** now through mid-December 2026 (~13 weeks). **Stack:** Python backend, React (JavaScript) frontend.
 
 **In scope for v1:**
 - Create a "home" and invite members — supporting all 4 segments (single, samboer, kollektiv, landlord-tenant)

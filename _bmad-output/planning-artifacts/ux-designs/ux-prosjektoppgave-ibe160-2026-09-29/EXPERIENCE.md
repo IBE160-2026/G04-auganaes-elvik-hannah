@@ -4,14 +4,14 @@ status: final
 sources:
   - _bmad-output/planning-artifacts/prds/prd-prosjektoppgave-ibe160-2026-09-29/prd.md
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
-updated: 2026-09-29
+updated: 2026-10-04
 ---
 
 # Husly (placeholder name) — Experience Spine
 
 ## Foundation
 
-`DESIGN.md` is the visual identity reference; this spine is the behavior. Responsive single web app — phone, tablet, and desktop (PRD FR-21) — no native app in v1. No UI system named; the team's stack is a Python backend with a Node.js/JavaScript frontend, framework unspecified at this stage. No dark mode in v1 (DESIGN.md).
+`DESIGN.md` is the visual identity reference; this spine is the behavior. Responsive single web app — phone, tablet, and desktop (PRD FR-21) — no native app in v1. No UI system named; the team's stack is a Python backend with a React (JavaScript) frontend. No dark mode in v1 (DESIGN.md).
 
 Three Roles read the same surfaces differently throughout, per PRD §2 Glossary: **Household Member** (single, samboer, kollektiv — full read/write on their Home), **Landlord** (elevated, multi-Home), and **Tenant** (locked-down, single Home). Every surface below states which roles reach it and how permissions change what they see.
 
@@ -122,11 +122,9 @@ Behavioral. Visual contrast lives in `DESIGN.md` — all functional colors (prim
 
 ## Responsive & Platform
 
-Mobile-first. Committed breakpoints (provisional — revisit once the frontend framework is chosen, but not left open in the meantime): **phone** up to 599px, **tablet** 600–1023px, **desktop** 1024px and above. Task Overview and Task Detail are single-column at every width — the core loop should never require a wider screen to use comfortably. The Landlord Portfolio Dashboard is the one surface that meaningfully gains a second column, at the tablet breakpoint and above: a building list alongside the selected building's detail, rather than list-then-navigate, since Landlords are more likely to be on a laptop scanning a portfolio than mid-task on a phone.
+Mobile-first. Committed breakpoints: **phone** up to 599px, **tablet** 600–1023px, **desktop** 1024px and above. The frontend framework (React, confirmed 2026-10-04) does not impose its own breakpoint convention, so these device-width-based values stand as the team decision — no further revisit pending. Task Overview and Task Detail are single-column at every width — the core loop should never require a wider screen to use comfortably. The Landlord Portfolio Dashboard is the one surface that meaningfully gains a second column, at the tablet breakpoint and above: a building list alongside the selected building's detail, rather than list-then-navigate, since Landlords are more likely to be on a laptop scanning a portfolio than mid-task on a phone.
 
 At 320 CSS px width / 400% browser zoom, every surface — including the two-column Dashboard — collapses to single-column with no horizontal scroll.
-
-`[NOTE FOR UX]` These three breakpoints are a reasonable v1 default informed by common device widths, not a team decision — confirm or adjust once real devices/testing are in play.
 
 ## Key Flows
 
