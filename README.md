@@ -9,3 +9,10 @@ Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og
 - Eirik Auganæs
 - Steffen Elvik
 - Hannah Linnea Elvestad Mattsson
+
+## Dokumentasjon
+
+- [Planleggingsdokumenter (BMAD)](_bmad-output/planning-artifacts/): product brief, PRD, UX, arkitektur og epics
+- [KI-logg](docs/ki-logg/README.md): prompts fra alle KI-økter, koblet til commits
+- [Eksempler på styring og korrigering av KI](docs/ki-logg/korrigeringer.md)
+- [Sensorveiledning, del 1](docs/sensorveiledning.md): kriteriene vi jobber etter

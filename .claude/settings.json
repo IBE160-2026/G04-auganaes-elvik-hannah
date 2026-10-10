@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/ki-logg/eksporter_okter.py\" --hook",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
