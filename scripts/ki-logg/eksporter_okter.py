@@ -138,7 +138,7 @@ def commits_i_okta(tider):
             ["git", "-C", str(REPO), "log", "--all", "--date=format-local:%Y-%m-%d %H:%M",
              f"--since={start.isoformat()}", f"--until={(slutt + timedelta(minutes=15)).isoformat()}",
              "--format=%h|%ad|%an|%s"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         for linje in resultat.stdout.splitlines():
             if linje:
@@ -147,7 +147,7 @@ def commits_i_okta(tider):
 
 
 def git_bruker():
-    navn = subprocess.run(["git", "-C", str(REPO), "config", "user.name"], capture_output=True, text=True).stdout.strip()
+    navn = subprocess.run(["git", "-C", str(REPO), "config", "user.name"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
     return navn or "ukjent"
 
 
@@ -193,7 +193,16 @@ def eksporter(sti, forfatter):
 
 
 def prosjektmappe():
-    return Path.home() / ".claude" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(REPO))
+    """Claude Code navngir mappa etter repo-stien med alle andre tegn enn bokstaver/tall byttet til '-'."""
+    projects = Path.home() / ".claude" / "projects"
+    navn = re.sub(r"[^A-Za-z0-9]", "-", str(REPO))
+    if (projects / navn).is_dir():
+        return projects / navn
+    # Windows: stasjonsbokstaven kan ha ulik store/små bokstaver
+    for mappe in projects.glob("*"):
+        if mappe.name.lower() == navn.lower():
+            return mappe
+    return projects / navn
 
 
 def main():
@@ -204,7 +213,12 @@ def main():
 
     if args.hook:
         try:
-            sti = Path(json.load(sys.stdin)["transcript_path"])
+            try:
+                sys.stdin.reconfigure(encoding="utf-8")
+                sti = Path(json.load(sys.stdin)["transcript_path"])
+            except (ValueError, KeyError):
+                # Mangler hook-data: ta den sist endrede økta
+                sti = max(prosjektmappe().glob("*.jsonl"), key=lambda f: f.stat().st_mtime)
             if sti.exists():
                 eksporter(sti, forfatter)
         except Exception as feil:  # hooken skal aldri stoppe arbeidet

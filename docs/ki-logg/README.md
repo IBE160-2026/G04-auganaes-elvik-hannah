@@ -12,7 +12,9 @@ Her ligger sporene etter hvordan gruppen har brukt og styrt KI i prosjektet.
 Claude Code lagrer hver økt lokalt som en transkripsjon. Skriptet [`scripts/ki-logg/eksporter_okter.py`](../../scripts/ki-logg/eksporter_okter.py) gjør transkripsjonen om til Markdown:
 
 - **Automatisk:** en Stop-hook i [`.claude/settings.json`](../../.claude/settings.json) kjører skriptet etter hvert svar fra Claude. Da holdes loggen for økta oppdatert mens vi jobber.
-- **Manuelt:** `python3 scripts/ki-logg/eksporter_okter.py` eksporterer alle økter på maskinen din for dette repoet. Hvert gruppemedlem kjører dette én gang for å få med økter fra før hooken ble lagt inn.
+- **Manuelt:** `python3 scripts/ki-logg/eksporter_okter.py` eksporterer alle økter på maskinen din for dette repoet. På Windows heter kommandoen `python` i stedet for `python3`. Hvert gruppemedlem kjører dette én gang for å få med økter fra før hooken ble lagt inn.
+
+Krav: Python 3.8 eller nyere. På Windows må også Git for Windows (Git Bash) være installert, fordi Claude Code kjører hooken der. Hooken prøver først `python3` og deretter `python`.
 
 Filene får navn etter dato, git-brukernavn og økt-ID, så økter fra ulike maskiner kommer ikke i konflikt. Skriptet fjerner personlige stier, e-postadresser og alt som ligner API-nøkler. Les likevel gjennom filene før de committes.
 
