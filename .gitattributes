@@ -1,0 +1,18 @@
+# Felles linjeskift for Mac og Windows: lagres alltid som LF i repoet,
+# slik at samme fil ikke ser endret ut bare fordi den ble lagret på en annen maskin.
+* text=auto eol=lf
+
+# Windows-skript må ha CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binærfiler
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
