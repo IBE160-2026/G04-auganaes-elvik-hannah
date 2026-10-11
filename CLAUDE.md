@@ -34,7 +34,7 @@ Gruppa jobber på både Mac (Eirik, Hannah) og Windows (Steffen, med Git Bash).
 
 ## Status
 
-Planleggingen (brief → PRD → UX → arkitektur → 6 epics / 20 stories) er ferdig. **Neste steg** er å følge opp faglærers tilbakemelding med `bmad-correct-course` på en egen branch (`plan/tilbakemelding-faglaerer`) med PR. Etter det kommer `bmad-sprint-planning`.
+Planleggingen (brief → PRD → UX → arkitektur → 6 epics / 23 stories) er ferdig, og faglærers tilbakemelding er fulgt opp med `bmad-correct-course` (se `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-11.md`). v1 er delt i Trinn 1 og Trinn 2, og appen skal kunne kjøres lokalt med Docker (FR-22, AD-15). **Neste steg** er å slå sammen PR-en, teste at den fungerer på Mac, og deretter kjøre `bmad-sprint-planning`.
 
 ## KI-logg
 
