@@ -90,3 +90,5 @@ Each proposal below was presented in old → new form and approved one document 
 **Not done here.** `sprint-status.yaml` does not exist yet, so checklist item 6.4 does not apply; it is created by `bmad-sprint-planning`.
 
 **Follow-ups noticed during the analysis.** The primary colour in AD-13 differed from DESIGN.md and epics (`#7B6EE3` vs `#6E62CC`); the architecture was corrected. The story count of 20 in CLAUDE.md was wrong (22 before, 23 now) and is corrected in the status section.
+
+**Review fixes (PR #1, 2026-10-11).** Eirik's review from Mac found that replacing the old catch-all SM-1 left FR-1, FR-4 and FR-21 without a success criterion; they are now covered by brief criteria 3 and 5 and PRD SM-3 and SM-5, so every Trinn 1 FR is validated by a criterion. Remaining "FR-1 through FR-21" references in the architecture scope and `epics.md` were updated to FR-22, and the brief's stack line now says TypeScript, matching the architecture.

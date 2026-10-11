@@ -4,7 +4,7 @@ type: architecture-spine
 purpose: build-substrate
 altitude: initiative
 paradigm: 'Layered client-server: SPA client + REST API service'
-scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 8 PRD features / FR-1 through FR-21'
+scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 9 PRD features / FR-1 through FR-22'
 status: final
 created: '2026-10-04'
 updated: '2026-10-11'

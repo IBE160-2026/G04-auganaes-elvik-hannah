@@ -27,7 +27,7 @@ Trinn 1 is the minimal core flow that must be finished and stable first, so a co
 
 Epic 5 is split between the stages: the quick-answer (5.1) is Trinn 1, the chat (5.2) and onboarding guide (5.3) are Trinn 2. The Tenant locks in Stories 1.4, 2.3 and 1.5 are Trinn 1 on purpose: they are the product's differentiator and its most testable rules, even though the household is the primary user for Trinn 1.
 
-Note on numbering: the PRD, Architecture, and UX documents all use the hyphenated form `FR-1`...`FR-21` as the canonical requirement IDs (also used in the Architecture's `binds:` frontmatter and Capability → Architecture Map). This document keeps that exact numbering rather than renumbering to `FR1` to preserve traceability across documents.
+Note on numbering: the PRD, Architecture, and UX documents all use the hyphenated form `FR-1`...`FR-22` as the canonical requirement IDs (also used in the Architecture's `binds:` frontmatter and Capability → Architecture Map). This document keeps that exact numbering rather than renumbering to `FR1` to preserve traceability across documents.
 
 ## Requirements Inventory
 

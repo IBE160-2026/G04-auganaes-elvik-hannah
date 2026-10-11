@@ -78,9 +78,9 @@ Tenants are the ones executing tasks, much like household members, but their tas
 *Trinn 1 (must be finished and stable):*
 1. A Tenant cannot change a Must/Should classification or Frequency set by a Landlord; the server rejects the request (403).
 2. Completing a task with Frequency N days schedules the next instance N days after the actual completion date, also when the task is completed late.
-3. The task list always shows Must tasks before Should tasks.
+3. Every new task gets an app-recommended Must or Should classification, the task list always shows Must tasks before Should tasks, and the core flows are usable at phone, tablet and desktop widths.
 4. When one Member completes a shared task, every Member of that Home sees it as complete, and the completion records who did it.
-5. Only permitted roles can generate invite links; a Tenant's attempt is rejected, and an expired or used link shows a clear message.
+5. A user can create a Home without belonging to any other Home and becomes its Household Member or Landlord. Only permitted roles can generate invite links; a Tenant's attempt is rejected, and an expired or used link shows a clear message.
 6. A user with a Membership in one Home cannot read or change another Home's data.
 7. The "?" quick answer shows an answer with a visible disclaimer, and works with mock answers when no API key is set.
 8. A reviewer can run the app locally from the README using Docker, without the team's accounts or keys, and the automated tests pass.
@@ -95,7 +95,7 @@ Tenants are the ones executing tasks, much like household members, but their tas
 
 ## Scope
 
-**Team:** 3 people. **Timeline:** now through mid-December 2026 (~13 weeks). **Stack:** Python backend, React (JavaScript) frontend.
+**Team:** 3 people. **Timeline:** now through mid-December 2026 (~13 weeks). **Stack:** Python backend, React (TypeScript) frontend.
 
 v1 is delivered in two stages, so that a complete app exists even if Trinn 2 is not finished.
 
