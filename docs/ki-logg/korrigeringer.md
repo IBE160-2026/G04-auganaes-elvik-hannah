@@ -18,6 +18,7 @@ Forkortelser: **B44** = [økt 12.09–04.10](okter/2026-09-12_eirik_44c18c13.md)
 | 8 | KI spurte om brief skulle brukes som input til epics. | Vi ba om fordeler og ulemper og bestemte at brief holdes utenfor, fordi PRD allerede dekker den og brief nevner v2-ting. (A29 #30–31, E19 #2) | `epics.md`, kildeliste |
 | 9 | KI foreslo SQLite som lokal database for sensor. | Vi spurte om det ikke var mer naturlig med Docker, som faget har lært oss for å jobbe på tvers av maskiner. Vi valgte Postgres i Docker, slik at databasen blir den samme lokalt som i drift. (S11 #9) | `ARCHITECTURE-SPINE.md` AD-15, PRD FR-22 |
 | 10 | KI foreslo hvordan KI-funksjonen skulle deles mellom trinn 1 og trinn 2. | Vi spurte hvor krevende hurtigsvar og chat er, og hva sensor trenger for at det skal virke, før vi godtok bare hurtigsvar i trinn 1 med mock-modus uten nøkkel. (S11 #11–12) | PRD §6 og FR-14, epics Story 5.1 |
+| 11 | KI foreslo å skrive den anbefalte oppgavelista rett inn i Story 2.1. | Vi gjorde den til en versjonert `TaskType`-katalog i repoet, slik at bildebevis-flagget (AD-6) bare finnes ett sted. Eirik vurderte startlista og beholdt også gulvvask, fordi den er lett å glemme. (S11, PR #2) | `epics.md` Story 2.1 |
 
 ## Kvalitetssikring av KI-generert innhold (reviews)
 
@@ -40,6 +41,9 @@ Vi har bedt KI om uavhengige gjennomganger av sitt eget arbeid før dokumentene 
 | Dokumentene sa 20 stories, men det fantes 22, og nå 23. | Kryssjekk under correct course (S11). | `77ed396`, `41170f2` |
 | Etter at suksesskriteriene fikk nye nummer, pekte motvektene SM-C1/C2 fortsatt på de gamle numrene. | Kryssjekk under correct course (S11). | `29615bf` |
 | Da det gamle samlekriteriet SM-1 ble erstattet, mistet FR-1 (opprette hjem), FR-4 (anbefalt Must/Should) og FR-21 (responsivt) sporingen til et suksesskriterium. «FR-1 through FR-21» sto igjen i arkitektur og epics etter at FR-22 kom til, og briefen sa JavaScript mens arkitekturen har TypeScript. | Eirik gjennomgikk PR #1 fra Mac før merge. | Brief kriterium 3 og 5, PRD SM-3 og SM-5, arkitektur `scope`, `epics.md` (PR #1) |
+
+| Story 1.6 (lokal kjøring) krevde KI-tjenestens mock-modus, men KI-tjenesten bygges først i Story 5.1. Denne forover-avhengigheten kom inn med KI-forslaget i PR #1. | Readiness-sjekken i `bmad-sprint-planning` (S11). | Mock-kravet flyttet til Story 5.1, og seed-data utvides av 1.3 og 2.1 (`546d913`, PR #2) |
+| CORS var låst til Vercel-adressen, så innlogging ville feilet ved lokal kjøring (FR-22). | Readiness-sjekken i `bmad-sprint-planning` (S11). | `CORS_ORIGINS` fra miljøvariabel, i arkitektur AD-7 og Story 1.2 (`1059cb5`, `546d913`, PR #2) |
 
 ## Ekstern tilbakemelding
 
