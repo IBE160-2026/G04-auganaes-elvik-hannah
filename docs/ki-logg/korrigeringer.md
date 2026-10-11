@@ -33,6 +33,7 @@ Vi har bedt KI om uavhengige gjennomganger av sitt eget arbeid før dokumentene 
 |---|---|---|
 | YAML-frontmatter i brief knakk på grunn av kolon i tittelen («mapping values are not allowed»). | GitHub viste feilmelding, og vi spurte KI hva den betydde (B44 #28). | `215dc33` |
 | KI fant ikke frontend-valget og antok at det var tatt. | Vi spurte «Klarer du å finne de?» (A29 #2). Det viste seg at valget aldri var tatt. | Låst i `75186a6` |
+| Eksporten av KI-loggen (`eksporter_okter.py`) tok med hele skriptfilen som «Avviste KI-forslag». Sjekken lette etter avslagsteksten hvor som helst i et verktøyresultat, og skriptet inneholder selv den teksten. | Vi testet autolagringen og leste den genererte loggfila (økt 11.10, 13:05). | Sjekken krever nå at resultatet *begynner* med avslagsteksten (PR #1, `scripts/ki-logg/eksporter_okter.py`). |
 
 ## Ekstern tilbakemelding
 
