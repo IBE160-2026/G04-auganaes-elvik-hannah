@@ -14,6 +14,28 @@ Alt arbeid vurderes etter sensorveiledningen i [`docs/sensorveiledning.md`](docs
 - **Kjørbar for sensor.** Appen skal kunne kjøres lokalt etter README, uten gruppens kontoer eller nøkler (lokal database, seed-data og mock-modus for KI og push). README og `.env.example` oppdateres i samme PR som endringen som krever det.
 - **Rent repo.** Ingen hemmeligheter, `.env`, `node_modules`, `venv` eller byggeartefakter. Ingen død kode eller utkommenterte rester fra forkastede forsøk.
 
+## Arbeidsform i gruppa
+
+- **Språk:** snakk norsk med oss. BMAD-dokumentene (brief, PRD, UX, arkitektur, epics) skrives på engelsk, som konfigurert. Prosessdokumentasjon for sensor i `docs/` skrives på norsk.
+- **Coaching path** i BMAD-skills. Vi vil bli tatt gjennom seksjon for seksjon og utfordret på tynne svar, ikke få et ferdig utkast fullt av antagelser.
+- **Reviewer gates skal kjøres**, ikke hoppes over.
+- **«Er det noe vi har glemt?»** betyr at du skal sjekke artefaktet på nytt mot kildene oppstrøms (brukerreiser UJ-1..4, åpne spørsmål i PRD, tidligere dokumenter). Det er ikke nok å gjenta at skillens sjekkliste passerte. Gjør gjerne denne sjekken uoppfordret.
+- **Gjenoppta arbeid fra `.memlog.md`** i hver artefaktmappe. Den har hele beslutningshistorikken og går foran `review-*.md`-filene, som er øyeblikksbilder fra utkaststadiet.
+
+## Mac og Windows
+
+Gruppa jobber på både Mac (Eirik, Hannah) og Windows (Steffen, med Git Bash).
+
+- Kjør `git pull` før du starter, og `git fetch` før push. Hvis noen andre har pushet, gjør du rebase. Aldri force-push.
+- Linjeskift styres av `.gitattributes`. Hvis `git status` viser mange filer som endret uten at de er redigert, må det undersøkes før commit.
+- To personer skal ikke redigere samme planleggingsdokument samtidig på hver sin maskin.
+- Personlige BMAD-innstillinger ligger i `_bmad/custom/config.user.toml` (gitignored).
+- Skript og kommandoer skal fungere i både zsh (Mac) og Git Bash (Windows). På Windows heter Python ofte `python` i stedet for `python3`.
+
+## Status
+
+Planleggingen (brief → PRD → UX → arkitektur → 6 epics / 20 stories) er ferdig. **Neste steg** er å følge opp faglærers tilbakemelding med `bmad-correct-course` på en egen branch (`plan/tilbakemelding-faglaerer`) med PR. Etter det kommer `bmad-sprint-planning`.
+
 ## KI-logg
 
 Prompts fra Claude Code-økter eksporteres automatisk til `docs/ki-logg/okter/` av en Stop-hook (`.claude/settings.json` → `scripts/ki-logg/eksporter_okter.py`). Commit loggfilene sammen med arbeidet de hører til. Når en økt er ferdig, legger du til en linje om den i sammendragstabellen i [`docs/ki-logg/README.md`](docs/ki-logg/README.md).
