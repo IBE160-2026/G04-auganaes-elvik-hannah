@@ -104,12 +104,12 @@ def tolk_okt(sti):
                 resultat = tekst_fra_innhold(blokk.get("content"))
                 navn = verktoy_navn.get(blokk.get("tool_use_id"))
                 if navn == "AskUserQuestion":
-                    if AVSLATT_MARKOR in resultat:
+                    if resultat.lstrip().startswith(AVSLATT_MARKOR):
                         resultat = "_(valgte ingen av alternativene, svarte med egne ord i neste prompt)_"
                     resultat = re.sub(r"^(User has answered your questions|Your questions have been answered|The user answered):\s*", "", resultat.strip())
                     resultat = re.sub(r"\s*(You can now continue with (the user's|these) answers in mind|Read the answers carefully\b.*)\.?$", "", resultat)
                     hendelser.append((tid, "svar", resultat.strip()))
-                elif AVSLATT_MARKOR in resultat:
+                elif resultat.lstrip().startswith(AVSLATT_MARKOR):
                     grunn = resultat.split("the user said:", 1)
                     grunn = grunn[1].strip() if len(grunn) > 1 else ""
                     hendelser.append((tid, "avslag", f"Avviste `{navn}`" + (f": {grunn}" if grunn else "")))

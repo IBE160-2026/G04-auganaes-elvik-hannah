@@ -5,6 +5,7 @@ inputDocuments:
   - _bmad-output/planning-artifacts/architecture/architecture-prosjektoppgave-ibe160-2026-10-04/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/ux-designs/ux-prosjektoppgave-ibe160-2026-09-29/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-prosjektoppgave-ibe160-2026-09-29/EXPERIENCE.md
+updated: 2026-10-11
 ---
 
 # Husly - Epic Breakdown
@@ -13,7 +14,20 @@ inputDocuments:
 
 This document provides the complete epic and story breakdown for Husly (placeholder name — an AI-driven household task management web app), decomposing the requirements from the PRD, the DESIGN.md/EXPERIENCE.md UX design contract, and the ARCHITECTURE-SPINE.md into implementable stories.
 
-Note on numbering: the PRD, Architecture, and UX documents all use the hyphenated form `FR-1`...`FR-21` as the canonical requirement IDs (also used in the Architecture's `binds:` frontmatter and Capability → Architecture Map). This document keeps that exact numbering rather than renumbering to `FR1` to preserve traceability across documents.
+> **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see `sprint-change-proposal-2026-10-11.md`). Every story now carries a **Stage** (Trinn 1 or Trinn 2), a new Story 1.6 makes the app runnable locally (FR-22), and acceptance criteria for README/`.env.example` and mock modes were added to existing stories. Story numbers are unchanged so that traceability is kept. The document now has 23 stories (the earlier "20" was a miscount of the 22 that existed).
+
+### Delivery stages
+
+Trinn 1 is the minimal core flow that must be finished and stable first, so a complete app exists even if Trinn 2 is not finished.
+
+| Stage | Stories |
+|---|---|
+| **Trinn 1** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 5.1 |
+| **Trinn 2** | 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 5.2, 5.3, 6.1 |
+
+Epic 5 is split between the stages: the quick-answer (5.1) is Trinn 1, the chat (5.2) and onboarding guide (5.3) are Trinn 2. The Tenant locks in Stories 1.4, 2.3 and 1.5 are Trinn 1 on purpose: they are the product's differentiator and its most testable rules, even though the household is the primary user for Trinn 1.
+
+Note on numbering: the PRD, Architecture, and UX documents all use the hyphenated form `FR-1`...`FR-22` as the canonical requirement IDs (also used in the Architecture's `binds:` frontmatter and Capability → Architecture Map). This document keeps that exact numbering rather than renumbering to `FR1` to preserve traceability across documents.
 
 ## Requirements Inventory
 
@@ -61,6 +75,8 @@ FR-20: Portfolio-level status dashboard. A Landlord with more than one Home sees
 
 FR-21: Responsive layout across device classes. The web application renders a usable, complete layout on phone, tablet, and desktop viewport widths.
 
+FR-22: Run locally without external accounts. The application runs on a developer's or reviewer's machine using a local Docker-based database, seed data and mock modes for the external services (AI, and in Trinn 2 push), with no account or key from the team.
+
 ### NonFunctional Requirements
 
 NFR1: Permission enforcement. Role-based restrictions (Tenant cannot alter Landlord-locked Must/Frequency settings; only Household Members/Landlords can adjust classification) must be enforced server-side, not only hidden in the UI (binds FR-3, FR-5, FR-8).
@@ -74,6 +90,8 @@ NFR4: AI chemical-answer disclaimer, no accuracy bound. The AI assistant can ans
 NFR5: Photo Evidence privacy scoping. Photo Evidence is restricted by design to task types where completion is objectively visible without capturing sensitive or private content; each photo is auto-replaced on the next completion (no accumulating history); access is restricted to the Home's Landlord and the product's own support staff only — no other Tenant, other Landlord, or third party can view it (binds FR-18, FR-19).
 
 NFR6: Tenant data visibility scoping. Tenant data (task history, Photo Evidence, completion records) is visible to that Tenant's Landlord by design but must not be visible to other Tenants or other Landlords outside the relevant Home.
+
+NFR7: Runnable without external accounts. The app, its seed data and its automated tests must run on a reviewer's own machine without any account or key from the team; external services have mock modes used when no key is set (binds FR-22, AD-15).
 
 ### Additional Requirements
 
@@ -90,11 +108,12 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 - **PWA shell:** `frontend/` includes a `manifest.json` and a registered service worker from day one, plus one shared "Add to Home Screen" install-prompt component shown once per Member per device (tracked client-side) — required for Web Push to reach iOS Safari (iOS 16.4+ only supports Web Push for a Home-Screen-installed PWA) (AD-12, binds FR-10, FR-21).
 - **Design tokens:** DESIGN.md's tokens are implemented once as CSS custom properties generated/copied from DESIGN.md's frontmatter — no component file contains a literal hex color, px size, or border-radius value, only `var(--...)` references (AD-13).
 - **Naming/data conventions:** Entity names match the PRD Glossary verbatim (`Home`, `Member`, `Role`, `Task`, `TaskInstance`, `Frequency`, `PhotoEvidence`, `NotificationCadence` — never `User` for the Home-scoped actor). IDs are UUIDv4 everywhere. Dates/times are ISO 8601 UTC on the wire. Errors use FastAPI's default `{"detail": "..."}` shape; validation errors use the standard Pydantic 422 body.
-- **Schema changes:** Every schema change is an Alembic migration committed to the repo — never a manual change against the shared Supabase instance; a schema change is announced to the other two developers before pushing it (single shared dev database, no isolation).
-- **Deployment/infrastructure:** React/Vite SPA static build on Vercel; FastAPI/uvicorn on Render (free tier); Postgres + Storage bucket via Supabase (free tier); external cron via cron-job.org; Google Gemini API for AI. One shared environment covers both development and the course demo/submission — no separate staging.
+- **Schema changes:** Every schema change is an Alembic migration committed to the repo — never a manual change to any database. Each developer has their own local Docker database (AD-15), so whoever pulls a migration runs it before starting work.
+- **Local running (AD-15):** `docker compose up` starts a local PostgreSQL database; one documented command applies the Alembic migrations and loads seed data; all configuration comes from environment variables with `.env.example` as the template. AI, push (Trinn 2) and Photo Evidence storage (Trinn 2) sit behind adapters with a mock/local implementation that is selected automatically when the key is missing. The automated test suite always runs offline against the mock adapters.
+- **Deployment/infrastructure (optional hosted demo):** React/Vite SPA static build on Vercel; FastAPI/uvicorn on Render (free tier); Postgres + Storage bucket via Supabase (free tier); external cron via cron-job.org; Google Gemini API for AI. This is an optional demo deployment of the same code, not a requirement for running the app, and Trinn 1 needs none of cron, push or Storage there.
 - **Secrets:** Gemini key, VAPID keys, DB URL, JWT signing key via environment variables only, never committed.
 - **Core entities (names/relationships only):** User, Membership (scoped to one Role per Home), Home, InviteLink (own validity state: token, target Role, used/expired/revoked, distinct from Membership), Task, TaskType (system-seeded catalog carrying `photo_evidence_eligible`), TaskInstance, MemberCompletion (attribution), PhotoEvidence (per-Task), NotificationCadenceSetting (Landlord Homes), PushSubscription (per User, one per device). `[ASSUMPTION carried from Architecture, confirm with team before building]`: invite link default policy is single-use + 7-day expiry, regenerable by whoever can invite.
-- **Explicitly deferred by Architecture (flag for sprint planning, not pre-decided):** observability/logging strategy (left to Render/Supabase defaults + basic logging); automated testing strategy (pytest/Vitest suggested, not binding); rate-limiting/abuse protection on AI endpoints (none beyond the one-service chokepoint + Gemini's own free-tier cap); internationalization infrastructure (not needed — Norwegian-only v1 per UX).
+- **Explicitly deferred by Architecture (flag for sprint planning, not pre-decided):** observability/logging strategy (left to Render/Supabase defaults + basic logging); automated testing strategy (pytest/Vitest suggested, not binding — the one binding rule is that the suite runs offline against the mock adapters, AD-15); rate-limiting/abuse protection on AI endpoints (none beyond the one-service chokepoint + Gemini's own free-tier cap); internationalization infrastructure (not needed — Norwegian-only v1 per UX).
 
 ### UX Design Requirements
 
@@ -187,32 +206,41 @@ FR-18: Epic 4 - Landlord-required Photo Evidence
 FR-19: Epic 4 - Auto-approve with Landlord review, auto-replacing storage
 FR-20: Epic 6 - Portfolio-level status dashboard
 FR-21: Epic 1 (foundation: responsive app shell, design tokens, PWA) - Epic 6 (dashboard-specific two-column breakpoint behavior)
+FR-22: Epic 1 (Story 1.6 - local run with Docker, seed data and mock modes; README and `.env.example` from Story 1.1)
+
+Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22. Trinn 2 = FR-10 to FR-13, FR-15, FR-16, FR-18 to FR-20, FR-21 (dashboard behavior).
 
 ## Epic List
 
 ### Epic 1: Foundation — Accounts, Homes & Roles
 Users can register and log in, create a Home (Household or Landlord), invite others via a scoped link, and have their Role (Household Member, Landlord, Tenant) correctly enforced server-side everywhere. This epic also establishes the responsive, installable app shell (design tokens as CSS custom properties per AD-13, PWA manifest + service worker + install prompt per AD-12, phone/tablet/desktop breakpoints per FR-21/UX-DR44) that every later epic's screens build on, plus the domain-service/permission-dependency layering (AD-1, AD-2, AD-3 scaffold) and JWT auth split (AD-7).
-**FRs covered:** FR-1, FR-2, FR-3 (+ FR-21 at the shell level)
+**FRs covered:** FR-1, FR-2, FR-3, FR-22 (+ FR-21 at the shell level)
+**Stage:** Trinn 1
 
 ### Epic 2: Task Management Core Loop
 Household Members, Tenants, and Landlords can see a Must-first task list for their Home, (for Household Members/Landlords) adjust a task's Must/Should classification and Frequency inline, self-checkoff a task in one tap, see shared completion status update immediately with per-member attribution, and have the next occurrence auto-scheduled from the actual completion date. Includes the Task Setup step at Home creation (reviewing/accepting the app's recommended task list). Implements the single `complete_task_instance` domain function (AD-3) that Epic 4 (Photo Evidence) will later extend.
 **FRs covered:** FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-17
+**Stage:** Trinn 1
 
 ### Epic 3: Notifications
 Members receive a push notification when a task becomes due or overdue, with fairness-based targeting when one Member has fallen behind on a shared task; Landlords can send ad-hoc broadcast messages to their Tenants and configure how strictly Tenants are reminded. Implements the external cron-driven due-check endpoint (AD-8), the fairness-nudge rule (AD-9), and the direct/synchronous broadcast path (AD-14).
 **FRs covered:** FR-10, FR-11, FR-12, FR-13
+**Stage:** Trinn 2
 
 ### Epic 4: Photo Evidence
 A Landlord can flag a specific Must task (restricted to system-eligible task types) as requiring Photo Evidence; a Tenant uploads a photo from their phone and the task auto-approves immediately, with the photo staying available for Landlord review and being auto-replaced on the next completion. Extends Epic 2's completion domain function and photo-eligibility gating (AD-5, AD-6).
 **FRs covered:** FR-18, FR-19
+**Stage:** Trinn 2
 
 ### Epic 5: AI Assistant
 Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat for follow-up questions, and a new Tenant receives an AI-generated onboarding guide tailored to their Home's unit type when they join. Implements the single server-mediated AI service (AD-4) wrapping all Gemini calls behind one structured response shape.
 **FRs covered:** FR-14, FR-15, FR-16
+**Stage:** FR-14 (Story 5.1) is Trinn 1; FR-15 and FR-16 (Stories 5.2, 5.3) are Trinn 2
 
 ### Epic 6: Landlord Portfolio Dashboard
 A Landlord who owns more than one Home sees a single aggregated view of on-track/behind status across all their Homes and units, letting them triage without a site visit — including the dashboard's own tablet-and-up two-column (list + detail) responsive behavior.
 **FRs covered:** FR-20 (+ FR-21 dashboard-specific behavior)
+**Stage:** Trinn 2
 
 ## Epic 1: Foundation — Accounts, Homes & Roles
 
@@ -221,6 +249,8 @@ Users can register and log in, create a Home (Household or Landlord), invite oth
 `[ASSUMPTION carried from PRD Open Question 3 / EXPERIENCE.md's Foundation note, unresolved at the PRD level]`: v1 does not design a Home-switcher UI. A Landlord may own and switch between multiple Homes via the Portfolio Dashboard (Epic 6) — that mechanism is Landlord-specific and already scoped. A Household Member or Tenant is assumed to belong to at most one Home for the main self-service flow (Story 1.3); nothing technically prevents them from also accepting a second invite link (Story 1.4) into another Home, but no UI exists for switching between multiple simultaneous non-Landlord Memberships. If this turns out to matter for the team's actual usage, revisit before Epic 1 is built — it is a scope decision, not an oversight.
 
 ### Story 1.1: Project Scaffold, Design Tokens & Responsive App Shell
+
+**Stage:** Trinn 1
 
 As a visitor opening the app for the first time,
 I want it to load with the product's visual identity and work well on my device,
@@ -268,7 +298,13 @@ So that I can trust and use it comfortably regardless of phone/tablet/desktop.
 **When** its states are inspected
 **Then** default, pressed (8% darker overlay), disabled (`ink-secondary` background), and in-flight ("Sender…" text swap, never a spinner alone) are all implemented, with the disabled state carrying an accessible reason via `aria-describedby` when the disable condition is non-obvious (UX-DR4)
 
+**Given** the repository after this story
+**When** a developer or reviewer opens it
+**Then** a `README.md` and a `.env.example` exist at the repo root (no secrets), and every later story that changes how the app is set up or run updates them in the same pull request (FR-22, AD-15)
+
 ### Story 1.2: Account Registration & Login
+
+**Stage:** Trinn 1
 
 As a new user,
 I want to register an account and log in,
@@ -298,6 +334,8 @@ So that I can access my Homes securely.
 
 ### Story 1.3: Create a Home (Household or Landlord)
 
+**Stage:** Trinn 1
+
 As an authenticated user with no Home yet,
 I want to create a Home as either a Household Home or a Landlord Home,
 So that I can start organizing tasks for my living situation or property.
@@ -325,6 +363,8 @@ So that I can start organizing tasks for my living situation or property.
 **Then** the Create Home flow runs again and a new Landlord Home is added to their portfolio — Landlords are never blocked from creating additional Homes, since Epic 6's Portfolio Dashboard depends on this being possible
 
 ### Story 1.4: Invite Members via Scoped Link & Accept Invite
+
+**Stage:** Trinn 1
 
 As a Household Member or Landlord,
 I want to generate an invite link scoped to my Home,
@@ -366,6 +406,8 @@ So that I can bring others in with the right Role.
 
 ### Story 1.5: View Home Members List & Enforce Role-Based Permissions
 
+**Stage:** Trinn 1
+
 As a Member of a Home,
 I want to see who else is in my Home and trust that permissions are enforced server-side,
 So that Tenant-locked actions can never be bypassed.
@@ -392,11 +434,47 @@ So that Tenant-locked actions can never be bypassed.
 **When** inspected
 **Then** it never also contains a Landlord/Tenant row, and vice versa
 
+### Story 1.6: Run Locally with Docker, Seed Data and Mock Modes
+
+**Stage:** Trinn 1
+
+As a developer or course reviewer,
+I want to run the whole app on my own machine without the team's accounts or keys,
+So that I can try it, test it and review it.
+
+**Acceptance Criteria:**
+
+**Given** a machine with Docker installed and the repository cloned
+**When** the README's steps are followed (`docker compose up`, then one command for migrations and seed data)
+**Then** a local PostgreSQL database is running with the schema applied and seed data loaded: an example Household Home with a recommended task list and at least two example users (FR-22, AD-15)
+
+**Given** no `GEMINI_API_KEY` is set
+**When** the AI service is called
+**Then** the mock provider answers in the same `{status, answer, disclaimer}` structure, and the real Gemini provider is used only when the key is present (AD-4, AD-15)
+
+**Given** `.env.example`
+**When** inspected
+**Then** it lists every environment variable the app reads, with placeholder values and no secrets, and `.env` is ignored by git
+
+**Given** the automated test suite
+**When** it is run without network access and without any key
+**Then** it passes, using the mock adapters only
+
+**Given** the README
+**When** a reviewer reads it
+**Then** it states the prerequisites (Docker), the exact start-up, seed and test commands, how mock mode is shown in the UI, and how to add real keys optionally — and the steps work on both macOS and Windows
+
+**Given** the seed data
+**When** it is loaded twice
+**Then** it does not create duplicates (idempotent), so a reviewer can re-run it safely
+
 ## Epic 2: Task Management Core Loop
 
 Household Members, Tenants, and Landlords can see a Must-first task list, adjust classification/Frequency where permitted, self-checkoff a task in one tap with shared status and attribution, and have the next occurrence auto-scheduled from the actual completion date.
 
 ### Story 2.1: Task Setup at Home Creation
+
+**Stage:** Trinn 1
 
 As a user setting up a new Home,
 I want to review the app's recommended Must/Should task list (with recommended Frequency) and accept or adjust it,
@@ -425,6 +503,8 @@ So that my Home starts with a sensible, personalized task list instead of an emp
 **Then** the Tasks are created and ready, independent of Tenant presence
 
 ### Story 2.2: Must-First Task Overview
+
+**Stage:** Trinn 1
 
 As a Household Member, Tenant, or Landlord,
 I want to see my Home's tasks with Must tasks listed first,
@@ -474,6 +554,8 @@ So that I always know what's non-negotiable before what's optional.
 
 ### Story 2.3: Adjust Task Classification & Frequency
 
+**Stage:** Trinn 1
+
 As a Household Member or Landlord,
 I want to change a task's Must/Should classification and Frequency,
 So that the task list matches my Home's real priorities, while Tenants see a stable, locked view.
@@ -509,6 +591,8 @@ So that the task list matches my Home's real priorities, while Tenants see a sta
 **Then** an inline error with a retry affordance shows at the field — not a silent failure (UX-DR30)
 
 ### Story 2.4: Self-Checkoff Completion with Shared Status & Attribution
+
+**Stage:** Trinn 1
 
 As any Member of a Home,
 I want to mark a task instance complete with one tap and trust that it's recorded,
@@ -550,6 +634,8 @@ So that my housemates immediately see it's done without me needing to tell them.
 
 ### Story 2.5: Auto-Reschedule on Completion
 
+**Stage:** Trinn 1
+
 As any Member completing a recurring task,
 I want the next occurrence scheduled automatically,
 So that I never have to remember to set a reminder for an irregular task myself.
@@ -578,6 +664,8 @@ Members receive a push notification when a task becomes due or overdue, with fai
 
 ### Story 3.1: Push Notification Permission & Device Registration
 
+**Stage:** Trinn 2
+
 As a Member using the app on a device,
 I want to grant push notification permission and have my device registered,
 So that I can actually receive due/overdue reminders and broadcasts.
@@ -602,6 +690,8 @@ So that I can actually receive due/overdue reminders and broadcasts.
 
 ### Story 3.2: Due/Overdue Push Notifications via Due-Check Job
 
+**Stage:** Trinn 2
+
 As a Member with a task due or overdue,
 I want to be notified by push without having to check the app myself,
 So that I never silently miss a task.
@@ -624,7 +714,13 @@ So that I never silently miss a task.
 **When** they tap it
 **Then** it deep-links directly to that task's Task Detail — no in-app notification inbox exists
 
+**Given** no VAPID keys are configured (local running)
+**When** the due-check endpoint is called by hand or by a script
+**Then** the mock push sender records the notifications it would have sent instead of delivering them, so the due/overdue logic can be run and tested without external accounts (FR-22, AD-15)
+
 ### Story 3.3: Fairness-Based Targeted Notification
+
+**Stage:** Trinn 2
 
 As a Member who already did a shared recurring task multiple times,
 I want the reminder to go to whoever hasn't done it, not to everyone,
@@ -645,6 +741,8 @@ So that completion feels fair rather than me nagging my housemates.
 **Then** the copy is indistinguishable in tone from a normal due/overdue reminder — no "you're the only one" framing
 
 ### Story 3.4: Landlord Ad-Hoc Broadcast Message
+
+**Stage:** Trinn 2
 
 As a Landlord,
 I want to send a free-form message to all Tenants of one Home right away,
@@ -669,6 +767,8 @@ So that I can flag something without waiting for the next scheduled check.
 **Then** the composer shows an inline error with a retry affordance rather than silently discarding the message
 
 ### Story 3.5: Landlord-Controlled Notification Cadence
+
+**Stage:** Trinn 2
 
 As a Landlord,
 I want to configure how strictly Tenants of a Home are reminded about due/overdue Must tasks,
@@ -698,6 +798,8 @@ A Landlord can flag a specific Must task (restricted to system-eligible task typ
 
 ### Story 4.1: Landlord Requires Photo Evidence on Eligible Must Tasks
 
+**Stage:** Trinn 2
+
 As a Landlord,
 I want to require Photo Evidence on specific Must tasks whose completion is objectively visible,
 So that I can trust completion was actually done without visiting in person.
@@ -721,6 +823,8 @@ So that I can trust completion was actually done without visiting in person.
 **Then** no Photo Evidence requirement option is exposed at all — that tier remains fully trust-based
 
 ### Story 4.2: Tenant Uploads Photo Evidence with Immediate Auto-Approval
+
+**Stage:** Trinn 2
 
 As a Tenant completing a task that requires Photo Evidence,
 I want to upload a photo and have the task marked done right away,
@@ -752,7 +856,13 @@ So that I'm never blocked waiting on my Landlord.
 **When** the underlying completion path is inspected
 **Then** it calls the same `complete_task_instance` domain function as the plain checkbox (Epic 2.5's AD-3), not a separate/duplicated completion path
 
+**Given** no Supabase Storage credentials are configured (local running)
+**When** a photo is uploaded
+**Then** it is stored through the local filesystem adapter under the same fixed per-task key, so Photo Evidence can be run and tested without external accounts (FR-22, AD-15)
+
 ### Story 4.3: Landlord Reviews Evidence & Auto-Replacing Photo Storage
+
+**Stage:** Trinn 2
 
 As a Landlord,
 I want to see the current photo evidence for a task and trust old photos don't pile up or leak,
@@ -785,6 +895,8 @@ So that I can review after the fact without the system becoming a privacy liabil
 Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat, and a new Tenant receives an AI-generated onboarding guide tailored to their Home's unit type when they join.
 
 ### Story 5.1: Contextual Quick-Answer ("?")
+
+**Stage:** Trinn 1
 
 As any Member unsure how to do a task step,
 I want to tap "?" and get an immediate, specific answer without leaving the task,
@@ -820,7 +932,13 @@ So that I can get unstuck right when I need it.
 **When** it renders
 **Then** it is in Norwegian only, matching the page's declared `lang` — the AI is instructed to never mix languages in a response (UX-DR48)
 
+**Given** no AI API key is configured
+**When** a Member taps "?"
+**Then** the mock provider returns a canned, task-specific answer in the same structure with the disclaimer, and the UI marks it as demo mode — the feature can be run and tested without any external account (FR-22, AD-15)
+
 ### Story 5.2: Escalate to Full AI Chat
+
+**Stage:** Trinn 2
 
 As a Member who needs more than a quick answer,
 I want to continue the conversation in a full chat,
@@ -841,6 +959,8 @@ So that I can ask follow-up questions about the same task.
 **Then** it uses the same shared AI service (AD-4) as the quick-answer — not a separate implementation
 
 ### Story 5.3: AI-Generated Onboarding Guide for New Tenants
+
+**Stage:** Trinn 2
 
 As a new Tenant joining a Home,
 I want a short guide tailored to this specific Home/unit type,
@@ -869,6 +989,8 @@ So that I understand how the app and my obligations work without asking my Landl
 A Landlord who owns more than one Home sees a single aggregated view of on-track/behind status across all their Homes and units, letting them triage without a site visit.
 
 ### Story 6.1: Landlord Portfolio Dashboard
+
+**Stage:** Trinn 2
 
 As a Landlord who owns multiple Homes,
 I want a single view summarizing status across all of them,

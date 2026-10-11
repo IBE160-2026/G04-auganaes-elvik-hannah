@@ -4,11 +4,11 @@ type: architecture-spine
 purpose: build-substrate
 altitude: initiative
 paradigm: 'Layered client-server: SPA client + REST API service'
-scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 8 PRD features / FR-1 through FR-21'
+scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 9 PRD features / FR-1 through FR-22'
 status: final
 created: '2026-10-04'
-updated: '2026-10-04'
-binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21]
+updated: '2026-10-11'
+binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
   - _bmad-output/planning-artifacts/prds/prd-prosjektoppgave-ibe160-2026-09-29/prd.md
@@ -18,6 +18,8 @@ companions: []
 ---
 
 # Architecture Spine — Husly
+
+> **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see `sprint-change-proposal-2026-10-11.md`): new AD-15 makes local Docker-based running the primary path (FR-22); AD-4 gets a provider interface with a mock implementation; the single shared Supabase development database is replaced by one local database per developer; hosting becomes an optional demo setup; decisions that only apply to Trinn 2 are tagged with a **Stage**; AD-13's primary colour is corrected to match DESIGN.md (`#6E62CC`).
 
 ## Design Paradigm
 
@@ -63,17 +65,19 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 - **Binds:** FR-14, FR-15, FR-16
 - **Prevents:** the chemical-caution disclaimer (FR-14/15) drifting or disappearing on one of the two AI entry points; the Gemini API key leaking to the client; uncontrolled client-side call volume against the free-tier rate limit.
-- **Rule:** React never calls the Gemini API directly. One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation) and injects the disclaimer from a single shared constant. Every AI response is a structured object — `{status: "ok" | "low_confidence" | "error", answer: string, disclaimer: string}` — with the disclaimer always its own field, never concatenated into `answer`. This way no AI surface can silently drop the disclaimer by string-handling it differently, and EXPERIENCE.md's three AI UI treatments render consistently off the same `status` value regardless of which component calls it. The onboarding guide (FR-16) is generated once per Home at provisioning time and persisted, not regenerated on every view — keeps content stable and avoids burning the free-tier Gemini quota on repeat views.
+- **Rule:** React never calls the Gemini API directly. One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation) and injects the disclaimer from a single shared constant. Every AI response is a structured object — `{status: "ok" | "low_confidence" | "error", answer: string, disclaimer: string}` — with the disclaimer always its own field, never concatenated into `answer`. This way no AI surface can silently drop the disclaimer by string-handling it differently, and EXPERIENCE.md's three AI UI treatments render consistently off the same `status` value regardless of which component calls it. The onboarding guide (FR-16) is generated once per Home at provisioning time and persisted, not regenerated on every view — keeps content stable and avoids burning the free-tier Gemini quota on repeat views. The service sits behind a provider interface with two implementations: the Gemini provider and a mock provider that returns canned answers in the same structure; the mock is selected automatically when `GEMINI_API_KEY` is not set (AD-15). Automated tests always use the mock provider.
 
 ### AD-5 — Photo Evidence belongs to the Task, not the Task Instance
 
 - **Binds:** FR-19
+- **Stage:** Trinn 2
 - **Prevents:** a per-TaskInstance PhotoEvidence record implying a photo history (contradicting FR-19's "no accumulating history"), and the ambiguity of which instance's evidence record points at the single stored photo after a recurring task's 2nd+ completion.
 - **Rule:** `PhotoEvidence` is 1:1 with `Task` (the recurring task definition), not with `TaskInstance` — it represents "the current evidence for this Task," with a field recording which `TaskInstance` most recently produced it (for the Landlord's "when/by whom" review). Each task's required photo is stored under a fixed, server-computed key (`tasks/{task_id}/evidence.jpg`) in Supabase Storage; a new upload overwrites that key and updates the pointer — no code path appends a new key or a new PhotoEvidence row per completion.
 
 ### AD-6 — Photo Evidence eligibility is enforced in the data layer
 
 - **Binds:** FR-18, PRD Privacy Constraints
+- **Stage:** Trinn 2
 - **Prevents:** a direct API call letting a Landlord require Photo Evidence on a privacy-sensitive task type, bypassing a UI-only restriction.
 - **Rule:** Task types carry a system-seeded `photo_evidence_eligible` flag, not Landlord-editable. The endpoint that sets FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible.
 
@@ -86,12 +90,14 @@ Layers may only depend downward (UI → routes → permission → domain → per
 ### AD-8 — Due-check runs on an external cron trigger, not an in-process scheduler
 
 - **Binds:** FR-10, FR-11, FR-12, FR-13, Cross-Cutting NFR "Notification reliability"
+- **Stage:** Trinn 2. Locally (AD-15) the due-check endpoint is called by hand or by a small script instead of cron-job.org; the cron service is only used in the optional hosted demo.
 - **Prevents:** an in-process scheduler (e.g. APScheduler) never firing because Render's free tier spins the service down after 15 minutes idle.
 - **Rule:** A dedicated `POST /internal/run-due-check` endpoint runs the due/overdue scan (push notifications, FR-11's fairness nudge) and is the only thing that triggers it. An external free cron service (cron-job.org) calls it every 10–14 minutes, which also keeps the Render instance awake and incidentally keeps Supabase's free-tier project from auto-pausing after 7 days of DB inactivity (web-verified; the due-check job touches the DB every cycle). The endpoint is safe to call concurrently or more often than scheduled: it tracks, per Task Instance, whether a notification has already been sent for the current due/overdue window, so a duplicate or overlapping trigger never double-sends. `[ADOPTED]` — resolves PRD Open Question 2 (delivery window = "checked every ~10–14 min," not immediate, unless upgraded to the paid tier). `[ASSUMPTION: Render's own docs call this pattern unsupported/not guaranteed — acceptable risk for a course project; reversible to Render's paid tier without any code change if it proves unreliable. Note: keeping the service always-on this way consumes nearly all of Render's 750 free instance-hours/month (~720-744h/month) — fine if this is the only free Render service in use, but leaves no headroom for a second one on the same account.]`
 
 ### AD-9 — FR-11 fairness-nudge rule
 
 - **Binds:** FR-11
+- **Stage:** Trinn 2
 - **Prevents:** an unbounded/vague "rarely or never" trigger that can't be tested.
 - **Rule:** The due-check job (AD-8) fires a targeted nudge to a Member who has 0 completions in the last 3 instances of a given recurring shared task, provided at least one other Member completed at least one of those 3. `[ADOPTED]` — resolves PRD Open Question 4.
 
@@ -110,20 +116,28 @@ Layers may only depend downward (UI → routes → permission → domain → per
 ### AD-12 — The app ships as an installable PWA
 
 - **Binds:** FR-10, FR-21
+- **Stage:** the installable shell (manifest, service worker, install prompt) is Trinn 1; Web Push itself is Trinn 2.
 - **Prevents:** building Web Push (AD-8) without the one prerequisite that makes it work on iPhone at all, and three developers each guessing differently at whether/how install is prompted.
 - **Rule:** `frontend/` includes a `manifest.json` and a registered service worker from day one (not added later), plus a single shared "Add to Home Screen" install-prompt component shown once per Member **per device** (tracked client-side, e.g. `localStorage` — a Member's second device gets its own prompt). This is required for AD-8's Web Push to reach iOS Safari users (web-verified: iOS 16.4+ only supports Web Push for a Home-Screen-installed PWA).
 
 ### AD-13 — Design tokens are implemented as one generated source, never hardcoded
 
 - **Binds:** FR-21, Cross-Cutting NFR "Responsiveness", DESIGN.md's color/typography/spacing/rounded tokens
-- **Prevents:** one developer hardcoding a hex/px value (e.g. `#7B6EE3`) while another references a token, causing silent visual drift across the three developers' components.
-- **Rule:** DESIGN.md's tokens are implemented once as CSS custom properties (`:root { --color-primary: #7B6EE3; ... }`) generated/copied directly from DESIGN.md's frontmatter, not re-typed per component. No component file contains a literal hex color, px size, or border-radius value — only a `var(--...)` reference.
+- **Prevents:** one developer hardcoding a hex/px value (e.g. `#6E62CC`) while another references a token, causing silent visual drift across the three developers' components.
+- **Rule:** DESIGN.md's tokens are implemented once as CSS custom properties (`:root { --color-primary: #6E62CC; ... }`) generated/copied directly from DESIGN.md's frontmatter, not re-typed per component. No component file contains a literal hex color, px size, or border-radius value — only a `var(--...)` reference.
 
 ### AD-14 — Landlord broadcast (FR-12) is a direct, immediate send — not routed through the due-check job
 
 - **Binds:** FR-12
+- **Stage:** Trinn 2
 - **Prevents:** a Landlord's ad-hoc message silently inheriting AD-8's 10–14 minute cron cadence, when the PRD expects it sent as soon as the Landlord submits it.
 - **Rule:** The broadcast endpoint calls the push-sending domain function directly and synchronously on request, independent of the `/internal/run-due-check` job. AD-8 governs only the due/overdue scan and FR-11's fairness nudge, never FR-12.
+
+### AD-15 — Local Docker-based running is the primary path
+
+- **Binds:** FR-22, Cross-Cutting NFR "Runnable without external accounts"; depends on AD-4
+- **Prevents:** an app that only runs against the team's shared Supabase project and external accounts, so a reviewer (or a new team member on Mac or Windows) cannot run or test it.
+- **Rule:** `docker compose up` starts a local PostgreSQL database; one documented command applies the Alembic migrations and loads seed data. All configuration comes from environment variables, with `.env.example` as the template and no secrets in the repo. Every external service sits behind an adapter with a mock implementation that is selected automatically when its key is missing: the AI service (AD-4, mock when `GEMINI_API_KEY` is unset), the push sender (Trinn 2, mock when the VAPID keys are unset) and Photo Evidence storage (Trinn 2, local filesystem instead of Supabase Storage). The automated test suite always runs against the mock adapters, with no network and no keys. The hosted setup (Vercel, Render, Supabase, cron-job.org) is an optional demo deployment of the same code, never a requirement for running it. `[ADOPTED]` — resolves the teacher's feedback on local runnability.
 
 ## Consistency Conventions
 
@@ -132,7 +146,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | Naming (entities, files, interfaces, events) | Entity names match the PRD Glossary verbatim: `Home`, `Member`, `Role`, `Task`, `TaskInstance`, `Frequency`, `PhotoEvidence`, `NotificationCadence`. No synonyms (e.g. never `User` for the Home-scoped actor — that's `Member`; `User` is the account row). |
 | Data & formats (ids, dates, error shapes, envelopes) | IDs: UUIDv4 everywhere. Dates/times: ISO 8601 in UTC on the wire, converted client-side for display. Errors: FastAPI's default `{"detail": "..."}` shape; validation errors use FastAPI/Pydantic's standard 422 body, never a bespoke envelope. |
 | State & cross-cutting (mutation, errors, logging, config, auth) | Mutations only via domain services (AD-3). Auth via the `require_role` dependency (AD-2). Secrets (Gemini key, VAPID keys, DB URL, JWT signing key) via environment variables only, never committed. Frontend API types generated from the backend's OpenAPI schema (`openapi-typescript`), never hand-written. |
-| Schema changes (single shared dev database) | Every schema change is an Alembic migration committed to the repo — never a manual change against the shared Supabase instance. Whoever pulls a migration runs it before starting work; announce a schema change to the other two before pushing it, since all three share one dev database with no isolation. |
+| Schema changes (one local database per developer) | Every schema change is an Alembic migration committed to the repo — never a manual change to any database. Each developer has their own local Docker database (AD-15), so whoever pulls a migration runs it before starting work; no announcement is needed because nothing is shared. The optional hosted demo database is only migrated by the person who deploys. |
 
 ## Stack
 
@@ -142,7 +156,8 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | FastAPI | latest 0.14x (0.141.x current at authoring, Oct 2026 — pin exact patch at setup time) |
 | SQLModel | latest (0.0.47+; tracks SQLAlchemy 2.0.5x since v0.0.19 — no 1.x pin, web-verified Oct 2026) |
 | Alembic | latest (schema migrations for SQLModel/SQLAlchemy) |
-| PostgreSQL | via Supabase managed Postgres |
+| PostgreSQL | local Docker image for development, tests and review (AD-15); Supabase managed Postgres only in the optional hosted demo. Pin the same major version in both. |
+| Docker / Docker Compose | current stable; runs the local database (AD-15) |
 | pywebpush | latest (VAPID Web Push) |
 | google-genai | latest (official Gemini SDK; supersedes deprecated `google-generativeai`) |
 | React | latest 19.x (19.2 current at authoring — pin exact minor at setup time) |
@@ -154,6 +169,10 @@ Layers may only depend downward (UI → routes → permission → domain → per
 ## Structural Seed
 
 ### Deployment & environments
+
+**Primary path — local (AD-15):** `docker compose up` runs PostgreSQL; backend and frontend run on the host (or in Compose later); AI, push and storage use mock adapters when no keys are set. This is how the team develops and how a reviewer runs the app.
+
+**Optional — hosted demo:** the same code deployed as shown below. It is not required to run, test or review the app, and Trinn 1 needs none of cron, push or Storage there.
 
 ```mermaid
 graph TB
@@ -176,7 +195,7 @@ graph TB
   CRON -->|ping every 10-14 min| BE
 ```
 
-One shared environment covers both development and the course demo/submission — no separate staging, given the 3-person/13-week scope. All three developers point at the same Supabase project.
+The hosted demo is a single environment — no separate staging, given the 3-person/13-week scope. Development does not use it: each developer runs their own local database.
 
 ### Core entities (names + relationships only)
 
@@ -203,6 +222,9 @@ erDiagram
 
 ```text
 /
+  docker-compose.yml # local PostgreSQL (AD-15)
+  .env.example       # every environment variable, no secrets (AD-15)
+  README.md          # local setup, seed, tests, mock modes (AD-15)
   frontend/          # React + Vite + TypeScript SPA
     public/
       manifest.json   # PWA manifest (AD-12)
@@ -218,27 +240,31 @@ erDiagram
       domain/         # domain services (AD-3, AD-4); the only mutation path
       permissions/    # require_role dependency (AD-2)
       models/         # SQLModel entities
-      ai/             # Gemini-wrapping AI service (AD-4)
+      ai/             # AI service with Gemini and mock providers (AD-4, AD-15)
+      seed/           # seed data for local running (AD-15)
       notifications/  # pywebpush sender + due-check job (AD-8)
 ```
 
 ## Capability → Architecture Map
 
-| Capability / Area | Lives in | Governed by |
-| --- | --- | --- |
-| Homes & Membership (FR-1–3) | `backend/app/domain`, `models` | AD-1, AD-2 |
-| Task Overview & Must/Should (FR-4–7) | `backend/app/domain`, `frontend/src/components` | AD-3, AD-11 |
-| Frequency & Scheduling (FR-8–9) | `backend/app/domain` | AD-3 |
-| Notifications (FR-10–13) | `backend/app/notifications` | AD-8, AD-9, AD-14 |
-| AI Assistant (FR-14–16) | `backend/app/ai` | AD-4 |
-| Completion & Photo Evidence (FR-17–19) | `backend/app/domain` | AD-3, AD-5, AD-6, AD-11 |
-| Landlord Portfolio Dashboard (FR-20) | `frontend/src/routes`, `backend/app/routes` | AD-11 |
-| Responsive Platform (FR-21) | `frontend/` (PWA shell, design tokens) | AD-12, AD-13 |
+| Capability / Area | Stage | Lives in | Governed by |
+| --- | --- | --- | --- |
+| Homes & Membership (FR-1–3) | Trinn 1 | `backend/app/domain`, `models` | AD-1, AD-2 |
+| Task Overview & Must/Should (FR-4–7) | Trinn 1 | `backend/app/domain`, `frontend/src/components` | AD-3, AD-11 |
+| Frequency & Scheduling (FR-8–9) | Trinn 1 | `backend/app/domain` | AD-3 |
+| Notifications (FR-10–13) | Trinn 2 | `backend/app/notifications` | AD-8, AD-9, AD-14, AD-15 |
+| AI Assistant: quick-answer (FR-14) | Trinn 1 | `backend/app/ai` | AD-4, AD-15 |
+| AI Assistant: chat, onboarding guide (FR-15–16) | Trinn 2 | `backend/app/ai` | AD-4, AD-15 |
+| Self-checkoff (FR-17) | Trinn 1 | `backend/app/domain` | AD-3, AD-11 |
+| Photo Evidence (FR-18–19) | Trinn 2 | `backend/app/domain` | AD-3, AD-5, AD-6, AD-11, AD-15 |
+| Landlord Portfolio Dashboard (FR-20) | Trinn 2 | `frontend/src/routes`, `backend/app/routes` | AD-11 |
+| Responsive Platform (FR-21) | Trinn 1 | `frontend/` (PWA shell, design tokens) | AD-12, AD-13 |
+| Local runnability (FR-22) | Trinn 1 | repo root (`docker-compose.yml`, `.env.example`, README), `backend/app` (seed, mock adapters) | AD-15 |
 
 ## Deferred
 
 - **Observability/logging strategy** — not fixed at this altitude; left to whatever Render/Supabase provide by default plus `print`/basic logging for this course project's scale. Revisit if the team hits a debugging wall.
-- **Automated testing strategy** — not fixed here (pytest for backend, Vitest for frontend are the obvious defaults but not binding); left to sprint planning/story level.
+- **Automated testing strategy** — not fixed here (pytest for backend, Vitest for frontend are the obvious defaults but not binding); left to sprint planning/story level. The one binding rule is AD-15: the suite runs offline against the mock adapters.
 - **PRD Open Question 1 (scope cut order)** — explicitly a PM/scope call, not an architecture one; the PRD's own provisional cut order stands.
 - **Rate-limiting/abuse protection on the AI endpoints** — beyond "one backend service" (AD-4) and the Gemini free-tier's own cap, no additional throttling is designed; acceptable at this user scale.
 - **Internationalization/localization infrastructure** — UX's Norwegian-only-for-v1 assumption stands; no i18n library wired in.

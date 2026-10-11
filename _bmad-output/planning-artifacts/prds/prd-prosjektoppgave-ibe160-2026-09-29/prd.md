@@ -2,14 +2,16 @@
 title: "PRD: AI-Driven Household Task App"
 status: final
 created: 2026-09-29
-updated: 2026-09-29
+updated: 2026-10-11
 ---
+
+> **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see the brief's `tilbakemelding-product-brief.md` and `sprint-change-proposal-2026-10-11.md`): MVP scope is split into Trinn 1 and Trinn 2, a new FR-22 makes the app runnable without external accounts, success metrics are replaced by testable criteria, and the household is the primary user for Trinn 1.
 
 # PRD: AI-Driven Household Task App
 
 ## 0. Document Purpose
 
-This PRD translates the product brief (`brief-prosjektoppgave-ibe160-2026-09-12`) into implementable requirements for the 3-person IBE160 team. It is structured around three key user journeys, a shared glossary, and features with nested, globally numbered functional requirements (FR-1 through FR-21). It builds on the brief rather than repeating it — problem framing, competitive positioning, and long-term vision live there.
+This PRD translates the product brief (`brief-prosjektoppgave-ibe160-2026-09-12`) into implementable requirements for the 3-person IBE160 team. It is structured around three key user journeys, a shared glossary, and features with nested, globally numbered functional requirements (FR-1 through FR-22). It builds on the brief rather than repeating it — problem framing, competitive positioning, and long-term vision live there.
 
 ## 1. Vision
 
@@ -37,7 +39,7 @@ One core mechanic — create a Home, invite others into it — serves four kinds
 
 ## 3. Target User
 
-The Landlord is this product's primary user — the one whose needs it is designed around, per the brief's §Who This Serves. That's why Landlord-facing capabilities (Portfolio Dashboard, Photo Evidence, AI onboarding guide, broadcast messaging) make up the largest share of added scope in §4. Household Members remain a fully-served, equally real segment; the weighting reflects design priority, not lesser investment in the household experience.
+For Trinn 1 the Household is this product's primary user, per the brief's §Who This Serves: design and the demo flow are built around Household Members. The Landlord–Tenant role model (FR-3, FR-5, FR-8) is still part of Trinn 1 because it is the product's structural differentiator and its most testable rule set. The Landlord-facing oversight capabilities (Portfolio Dashboard, Photo Evidence, AI onboarding guide, broadcast messaging, notification cadence) make up the largest share of added scope in §4 and are delivered in Trinn 2 (see §6).
 
 `[ASSUMPTION: the JTBD and journeys below are grounded in the team's own lived experience of shared living, not formal user research — see brief §The Problem. Treat user-need statements as founder intuition to validate, not confirmed findings.]`
 
@@ -213,6 +215,7 @@ Any task offers a "?" affordance that returns an immediate, task-specific answer
 **Consequences (testable):**
 - Tapping "?" on a task returns an answer without leaving the task view.
 - Every AI-generated answer displays a visible disclaimer that the AI can be wrong and that the user should exercise caution, particularly with chemical products (for example, cleaning agents).
+- With no AI API key configured, the quick-answer still returns an answer in the same structure from mock data, so the feature can be run and tested without external accounts (FR-22).
 
 #### FR-15: Escalate to full AI chat
 From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions. Realizes UJ-1.
@@ -291,6 +294,21 @@ The web application renders a usable, complete layout on phone, tablet, and desk
 
 **Notes:** Exact breakpoint values (px) are intentionally left to the UX pass (`bmad-ux`) rather than fixed here — this PRD sets the requirement, UX sets the pixels.
 
+### 4.9 Local Runnability
+
+**Description:** The app can be run and tested by anyone, including a course reviewer, without the team's accounts or keys. Added after the teacher's feedback of 2026-10-06, which rated this the largest risk to the project.
+
+**Functional Requirements:**
+
+#### FR-22: Run locally without external accounts
+The application runs on a developer's or reviewer's own machine using a local Docker-based database, seed data and mock modes for the external services (AI, and in Trinn 2 push), with no account or key from the team.
+
+**Consequences (testable):**
+- Following the README, `docker compose up` starts a local PostgreSQL database, and one further command applies the migrations and loads seed data.
+- With no `GEMINI_API_KEY` set the AI assistant uses mock answers in the same `{status, answer, disclaimer}` structure; with no VAPID keys set (Trinn 2) push uses a mock sender.
+- `.env.example` lists every environment variable, with no secrets, and the README describes setup from the first story onward.
+- The automated test suite runs without network access and without any key.
+
 ## 5. Non-Goals (Explicit)
 
 - Payment processing or subscription billing, deferred to v2+ — the brief's Vision describes a future tiered-subscription model (individual/household vs. professional Landlord) as a later direction, not a v1 commitment.
@@ -302,38 +320,58 @@ The web application renders a usable, complete layout on phone, tablet, and desk
 
 ## 6. MVP Scope
 
-- Home creation, link-based invites, and Role assignment (Household Member, Landlord, Tenant) — FR-1 to FR-3
+The MVP is delivered in two stages, so that a complete app exists even if Trinn 2 is not finished.
+
+### Trinn 1 — minimal core flow (finished and stable first)
+
+- Home creation, link-based invites, and Role assignment (Household Member, Landlord, Tenant) — FR-1 to FR-3. The Tenant locks in FR-3, FR-5 and FR-8 are deliberately in Trinn 1: they are the product's differentiator and its most testable rules.
 - Must/Should recommendation, adjustment, Must-first ordering, and per-member completion tracking — FR-4 to FR-7
 - Frequency recommendation, adjustment, and auto-rescheduling — FR-8, FR-9
-- Push notifications: due/overdue, targeted-to-individual, Landlord broadcast, Landlord-configured cadence — FR-10 to FR-13
-- AI assistant: contextual quick-answer, full chat escalation, AI-generated tailored onboarding guide — FR-14 to FR-16
-- Self-checkoff completion; Landlord-required Photo Evidence with auto-approval and review access — FR-17 to FR-19
-- Landlord portfolio dashboard across multiple Homes — FR-20
+- AI assistant: contextual quick-answer — FR-14
+- Self-checkoff completion — FR-17
 - Responsive web layout across phone, tablet, desktop — FR-21
+- Local runnability: Docker database, seed data, mock modes, README — FR-22
 
-`[NOTE FOR PM]` — This PRD's journey work surfaced four features beyond the brief's original scope — see Open Question 1 for the list and a provisional cut order.
+### Trinn 2 — added once Trinn 1 is stable
+
+- Push notifications: due/overdue, targeted-to-individual, Landlord broadcast, Landlord-configured cadence — FR-10 to FR-13
+- AI assistant: full chat escalation and AI-generated tailored onboarding guide — FR-15, FR-16
+- Landlord-required Photo Evidence with auto-approval and review access — FR-18, FR-19
+- Landlord portfolio dashboard across multiple Homes — FR-20
+
+`[NOTE FOR PM]` — This PRD's journey work surfaced four features beyond the brief's original scope (portfolio dashboard, Photo Evidence, targeted notifications, AI onboarding guide). They are all placed in Trinn 2; see Open Question 1.
 
 ## 7. Success Metrics
 
-No quantitative targets are set for this round — there is no IBE160 grading rubric yet, and the brief's own Success Criteria are qualitative for this semester (see brief §Success Criteria).
+The primary metrics are the testable criteria from the brief's §Success Criteria, each traced to the requirements it validates. Each can become an automated test.
 
-**Primary**
-- **SM-1**: The core loop functions end-to-end for both a Household Member Home and a Landlord/Tenant Home (create Home → invite → task overview → notification → completion, including AI assistant use). Validates FR-1 through FR-21 collectively.
+**Primary (Trinn 1)**
+- **SM-1**: A Tenant cannot change a Must/Should classification or Frequency set by a Landlord; the server rejects the request (403). Validates FR-3, FR-5, FR-8.
+- **SM-2**: Completing a task with Frequency N days schedules the next instance N days after the actual completion date, also when completed late. Validates FR-9.
+- **SM-3**: Every new task gets an app-recommended Must or Should classification, the task list always shows Must tasks before Should tasks, and the core flows are usable at phone, tablet and desktop widths. Validates FR-4, FR-6, FR-21.
+- **SM-4**: When one Member completes a shared task, every Member of that Home sees it as complete, and the completion records who did it. Validates FR-7, FR-17.
+- **SM-5**: A user can create a Home without belonging to any other Home and becomes its Household Member or Landlord. Only permitted roles can generate invite links; a Tenant's attempt is rejected, and an expired or used link shows a clear message. Validates FR-1, FR-2.
+- **SM-6**: A user with a Membership in one Home cannot read or change another Home's data. Validates FR-3.
+- **SM-7**: The "?" quick answer shows an answer with a visible disclaimer, and works with mock answers when no API key is set. Validates FR-14, FR-22.
+- **SM-8**: A reviewer can run the app locally from the README using Docker, without the team's accounts or keys, and the automated tests pass. Validates FR-22.
 
-**Directional signals** (tracked qualitatively, not targeted numerically this round)
-- **SM-2**: Fewer irregular tasks going overdue or forgotten over time.
-- **SM-3**: Continued/repeat usage rather than one-time setup and abandonment.
-- **SM-4**: Willingness of users to leave positive reviews/ratings affirming the app holds up in practice (see brief).
-- **SM-5**: For kollektiv Households — fewer chore-related conflicts reported, and improved trivsel (household contentment), the emotional stake behind the fairness mechanic (FR-7, FR-11).
-- **SM-6**: For Landlords — fewer maintenance surprises or deposit disputes tied to neglected upkeep.
+**Primary (Trinn 2)**
+- **SM-9**: A Landlord broadcast reaches all Tenants of the targeted Home (FR-12); the due-check never sends a duplicate notification for the same task instance and window (FR-10); Photo Evidence cannot be required on task types that are not flagged eligible (FR-18); the portfolio dashboard lists the Homes with overdue Must tasks (FR-20).
+
+**Directional signals** (tracked qualitatively, not measured in the course)
+- **SM-10**: Fewer irregular tasks going overdue or forgotten over time.
+- **SM-11**: Continued/repeat usage rather than one-time setup and abandonment.
+- **SM-12** *(long-term)*: Willingness of users to leave positive reviews/ratings affirming the app holds up in practice.
+- **SM-13** *(long-term)*: For kollektiv Households — fewer chore-related conflicts reported, and improved trivsel (household contentment), the emotional stake behind the fairness mechanic (FR-7, FR-11).
+- **SM-14** *(long-term)*: For Landlords — fewer maintenance surprises or deposit disputes tied to neglected upkeep.
 
 **Counter-metrics (do not optimize in isolation)**
-- **SM-C1**: Notification opt-out or fatigue rate — counterbalances SM-2/SM-3; more reminders should not be pursued at the cost of users muting or abandoning the app.
-- **SM-C2**: Uninstall/abandonment rate — counterbalances SM-4; a positive review from an early enthusiastic user means little if most users quietly stop returning.
+- **SM-C1**: Notification opt-out or fatigue rate — counterbalances SM-10/SM-11; more reminders should not be pursued at the cost of users muting or abandoning the app.
+- **SM-C2**: Uninstall/abandonment rate — counterbalances SM-12; a positive review from an early enthusiastic user means little if most users quietly stop returning.
 
 ## 8. Open Questions
 
-1. Given the brief's own scope-risk flag plus four journey-derived additions (portfolio dashboard, photo evidence, targeted notifications, AI onboarding guide), should any of FR-11, FR-16, FR-18/19, or FR-20 be explicitly deferred past the mid-December deadline? Recommend revisiting at Architecture/Sprint Planning once effort is better understood. If scope must shrink, a provisional cut order (lowest-value-first, pending team validation): (1) FR-20 Portfolio Dashboard — nice-to-have oversight, not blocking the core loop for a single Landlord; (2) FR-16 AI onboarding guide — a Landlord can substitute a manual message short-term; (3) FR-11 fairness-based targeting — degrades gracefully to broadcast-only reminders (FR-10/FR-12); FR-18/19 Photo Evidence is deliberately last, since it's the most distinctive Landlord-Tenant trust mechanism named in the brief's differentiation case.
+1. `[PARTLY RESOLVED 2026-10-11]` The four journey-derived additions (portfolio dashboard, photo evidence, targeted notifications, AI onboarding guide) are now placed in Trinn 2 (see §6), so Trinn 1 is a complete app without them. The question that remains is whether Trinn 2 itself will fit before the mid-December deadline; if scope must shrink there, a provisional cut order (lowest-value-first, pending team validation): (1) FR-20 Portfolio Dashboard — nice-to-have oversight, not blocking the core loop for a single Landlord; (2) FR-16 AI onboarding guide — a Landlord can substitute a manual message short-term; (3) FR-11 fairness-based targeting — degrades gracefully to broadcast-only reminders (FR-10/FR-12); FR-18/19 Photo Evidence is deliberately last, since it's the most distinctive Landlord-Tenant trust mechanism named in the brief's differentiation case.
 2. FR-10: what is the acceptable delivery window for due/overdue push notifications (immediate, daily batch, and so on)?
 3. FR-3: can a Landlord also be a Household Member of their own separate personal Home — that is, can one user hold both Roles across different Homes — or is a user's Role fixed account-wide?
 4. FR-11: what threshold defines "rarely or never performed completions" for fairness-based targeting (for example, zero completions in the last N instances)? Needs a concrete rule before implementation.
@@ -354,4 +392,5 @@ No quantitative targets are set for this round — there is no IBE160 grading ru
 
 - **Permission enforcement:** Role-based restrictions (Tenant cannot alter Landlord-locked Must/Frequency settings; only Household Members/Landlords can adjust classification) must be enforced server-side, not only hidden in the UI (see FR-3, FR-5, FR-8).
 - **Notification reliability:** Push notifications (FR-10 to FR-13) must be delivered reliably enough that a Household Member or Tenant can trust the absence of a notification to mean "nothing due" — a missed notification undermines the product's core value proposition (avoiding forgotten tasks).
+- **Runnable without external accounts:** The app, its seed data and its automated tests must run on a reviewer's own machine without any account or key from the team; external services (AI, push, file storage) have mock modes that are used when no key is set (FR-22).
 - **Responsiveness:** All core flows must remain fully usable at common phone, tablet, and desktop breakpoints (FR-21) — this is not a "nice to have" polish pass but a stated v1 requirement.
