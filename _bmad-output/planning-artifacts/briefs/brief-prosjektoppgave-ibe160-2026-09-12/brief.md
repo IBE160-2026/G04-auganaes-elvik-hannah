@@ -2,8 +2,10 @@
 title: "Product Brief: AI-Driven Household Task App"
 status: ready
 created: 2026-09-12
-updated: 2026-10-04
+updated: 2026-10-11
 ---
+
+> **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (`tilbakemelding-product-brief.md`): v1 is split into Trinn 1 and Trinn 2, success criteria are rewritten as testable criteria, the household is the primary user for Trinn 1, and local runnability is added to scope. See `sprint-change-proposal-2026-10-11.md`.
 
 # Product Brief: AI-Driven Household Task App
 
@@ -65,33 +67,54 @@ Success for this group: fewer forgotten irregular tasks, less friction over who 
 
 **Landlords, and their tenants**
 
-The landlord is the primary user — the one whose needs the product is designed around, and the one who creates the home and invites tenants into it. For landlords, this is closer to a professional oversight tool: visibility into whether maintenance-critical tasks are actually happening across units they don't visit often, plus the ability to push required tasks directly to tenants. Success here is cost reduction — catching neglect before it becomes a repair bill or a deposit dispute — and less time spent manually chasing tenants.
+For the first release stage (Trinn 1) the primary user is the household — single, samboer and kollektiv — and design and the demo flow are built around them. The Landlord–Tenant role model (locked Must tasks and Frequency) is still part of Trinn 1, because it is the product's structural differentiator and its most testable rule set. The landlord is the one who creates a landlord home and invites tenants into it. The Landlord oversight tools (broadcast, notification cadence, Photo Evidence, portfolio dashboard) follow in Trinn 2. For landlords, this is closer to a professional oversight tool: visibility into whether maintenance-critical tasks are actually happening across units they don't visit often, plus the ability to push required tasks directly to tenants. Success here is cost reduction — catching neglect before it becomes a repair bill or a deposit dispute — and less time spent manually chasing tenants.
 
 Tenants are the ones executing tasks, much like household members, but their task list includes landlord-assigned musts they don't get to deprioritize.
 
 ## Success Criteria
 
-**Academic (this semester):** A usable, working product — not a mockup or pitch deck. The core loop (create a home, invite members, see the must/should task overview, receive notifications, use the AI bot) needs to actually function end-to-end.
+**Academic (this semester):** A usable, working product — not a mockup or pitch deck. Each criterion below is written so that it can become an automated test case.
 
-**Product (vision-level):** The clearest signal of success is real usage that holds up under real conditions — the app keeps working as households actually use it, evidenced by users leaving positive reviews or ratings that confirm it in practice.
+*Trinn 1 (must be finished and stable):*
+1. A Tenant cannot change a Must/Should classification or Frequency set by a Landlord; the server rejects the request (403).
+2. Completing a task with Frequency N days schedules the next instance N days after the actual completion date, also when the task is completed late.
+3. The task list always shows Must tasks before Should tasks.
+4. When one Member completes a shared task, every Member of that Home sees it as complete, and the completion records who did it.
+5. Only permitted roles can generate invite links; a Tenant's attempt is rejected, and an expired or used link shows a clear message.
+6. A user with a Membership in one Home cannot read or change another Home's data.
+7. The "?" quick answer shows an answer with a visible disclaimer, and works with mock answers when no API key is set.
+8. A reviewer can run the app locally from the README using Docker, without the team's accounts or keys, and the automated tests pass.
 
-Supporting signals worth tracking as the product matures:
-- Fewer irregular tasks going overdue or forgotten over time
-- Continued or repeat usage rather than a one-time setup and abandonment
-- For kollektiv households: fewer chore-related conflicts reported
-- For landlords: fewer maintenance surprises or deposit disputes tied to neglected upkeep
+*Trinn 2 (added once Trinn 1 is stable):*
+- A Landlord broadcast reaches all Tenants of the targeted Home.
+- The due-check never sends a duplicate notification for the same task instance and window.
+- Photo Evidence cannot be required on task types that are not flagged eligible.
+- The portfolio dashboard lists the Homes that have overdue Must tasks.
+
+**Product (vision-level):** Real usage, positive reviews, fewer chore conflicts and fewer deposit disputes cannot be measured within the course. They are kept as long-term signals in the Vision section, not as success criteria for this semester.
 
 ## Scope
 
 **Team:** 3 people. **Timeline:** now through mid-December 2026 (~13 weeks). **Stack:** Python backend, React (JavaScript) frontend.
 
-**In scope for v1:**
+v1 is delivered in two stages, so that a complete app exists even if Trinn 2 is not finished.
+
+**Trinn 1 — minimal core flow (must be finished and stable first):**
 - Create a "home" and invite members — supporting all 4 segments (single, samboer, kollektiv, landlord-tenant)
 - Must/should task overview, with landlord-set tasks locked against tenant edits
-- App-recommended frequency for irregular tasks, adjustable by the user or landlord (not by tenants)
-- Push notifications, including a dedicated landlord-to-tenant channel for must-do tasks
-- AI bot: contextual "?" quick-answer plus full chat for follow-up questions
+- App-recommended frequency for irregular tasks, adjustable by the user or landlord (not by tenants), and automatic rescheduling after completion
+- Self-checkoff with shared status and per-member attribution
+- AI bot: contextual "?" quick-answer, with mock answers when no API key is set
 - Responsive design across phone, tablet, and PC
+- Local run: Docker-based local database, seed data, `.env.example` and a README, so a reviewer needs none of the team's accounts or keys
+
+**Trinn 2 — added once Trinn 1 is stable:**
+- Push notifications, including due/overdue, fairness-targeted reminders, a Landlord broadcast and Landlord-controlled cadence
+- Photo Evidence for Landlord-required Must tasks
+- Landlord portfolio dashboard
+- AI chat for follow-up questions and the AI-generated onboarding guide
+
+Photo Evidence and the portfolio dashboard were not in the original brief. They came in through the PRD user journeys (UJ-2, UJ-3) to realise the Landlord oversight value, and are placed in Trinn 2 because they are not needed for the core loop.
 
 **Explicitly out of scope for v1:**
 - Payment processing
@@ -102,11 +125,14 @@ Supporting signals worth tracking as the product matures:
 
 - No confirmed partnership or integration agreement exists with Hybel.no or similar platforms — deeper integration is a stated future direction, not a validated one.
 - The review/rating mechanism proposed as a product-success signal is a hypothesis for measurement, not yet a validated or built feature.
-- This is a full scope for a 3-person, 13-week build. The AI bot and multi-role permission model are likely the highest-effort pieces — worth revisiting once the team moves into PRD/sprint planning.
+- This is a full scope for a 3-person, 13-week build. The AI bot and multi-role permission model are likely the highest-effort pieces. The Trinn 1 / Trinn 2 split is the mitigation: Trinn 1 is a complete app on its own.
+- The app must be runnable by a reviewer without the team's accounts or keys. Trinn 1 therefore runs locally with Docker, seed data and mock modes for AI and push. Hosting (Vercel, Render, Supabase, cron-job.org) is an optional demo setup, not a requirement for running the app.
 
 ## Vision
 
 In 2-3 years, this becomes the default way both sides of home-living stay on top of upkeep: private households (single, samboer, kollektiv) use it as a friction-free habit for shared living, while landlords and property managers rely on it as a serious oversight tool across multiple properties — cutting maintenance costs and tenant friction at scale.
+
+Long-term signals of success, which cannot be measured within the course: users leaving positive reviews or ratings, fewer irregular tasks going overdue over time, repeat usage rather than abandonment, fewer chore-related conflicts in kollektiv households, and fewer maintenance surprises or deposit disputes for landlords.
 
 Monetization runs on subscription, likely tiered between individual and household users and professional landlords managing several properties.
 
