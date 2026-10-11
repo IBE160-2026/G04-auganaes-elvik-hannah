@@ -85,7 +85,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 - **Binds:** all authenticated routes; Cross-Cutting NFR "Permission enforcement"
 - **Prevents:** storing a JWT in `localStorage` (XSS-exposed) or relying on a same-origin assumption that breaks once frontend (Vercel) and backend (Render) are on different domains.
-- **Rule:** A short-lived JWT access token is returned in the login response body and kept only in React memory. A long-lived refresh token is set as an `httpOnly`, `Secure`, `SameSite=None` cookie, exchanged only at a dedicated `/refresh` endpoint. Both halves of cross-origin credentialed cookies are named explicitly so neither is forgotten: the backend's CORS config lists the exact Vercel origin with `allow_credentials=True` (never a wildcard origin, which browsers reject when credentials are involved), and the one generated API client (AD-11) sends every request with `credentials: "include"`.
+- **Rule:** A short-lived JWT access token is returned in the login response body and kept only in React memory. A long-lived refresh token is set as an `httpOnly`, `Secure`, `SameSite=None` cookie, exchanged only at a dedicated `/refresh` endpoint. Both halves of cross-origin credentialed cookies are named explicitly so neither is forgotten: the backend's CORS config lists the exact origin(s) from the `CORS_ORIGINS` environment variable (the local frontend origin by default, the Vercel origin in the optional hosted demo) with `allow_credentials=True` (never a wildcard origin, which browsers reject when credentials are involved), and the one generated API client (AD-11) sends every request with `credentials: "include"`.
 
 ### AD-8 — Due-check runs on an external cron trigger, not an in-process scheduler
 
