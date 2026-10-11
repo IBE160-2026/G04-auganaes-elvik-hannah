@@ -1,9 +1,9 @@
 # KI-økt 2026-10-11 – Steffen Elvik
 
 - **Økt-ID:** `f2e2dde9-33b9-4284-9d7b-5852ef2b6ee9`
-- **Tidsrom:** 2026-10-11 13:04 – 2026-10-11 14:18
+- **Tidsrom:** 2026-10-11 13:04 – 2026-10-11 14:40
 - **Verktøy:** Claude Code
-- **Antall prompts:** 19
+- **Antall prompts:** 25
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -18,6 +18,14 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `41170f2` 2026-10-11 14:05 (Steffen Elvik) Oppdater status i CLAUDE.md etter correct course
 - `12a540a` 2026-10-11 14:05 (Steffen Elvik) Legg til sprint change proposal for faglærers tilbakemelding
 - `bd6b5d4` 2026-10-11 14:16 (Steffen Elvik) Rett falsk avslag i eksport av KI-logg
+- `4a477d0` 2026-10-11 14:18 (Steffen Elvik) Legg til KI-logg for økta 11.10 (correct course)
+- `4d8e768` 2026-10-11 14:21 (Eirik) Oppdater Eiriks KI-logg for økt 10.–11.10 (PR-gjennomgang)
+- `9ab4edc` 2026-10-11 14:21 (Eirik) Før KI-rettinger fra correct course og PR-gjennomgang inn i korrigeringer.md
+- `8e5ea0d` 2026-10-11 14:21 (Eirik) Rett funn fra PR-gjennomgang: sporing av FR-1/4/21 og FR-22-referanser
+- `152df0d` 2026-10-11 14:24 (EirikAuganaes) Merge PR #1: Følg opp faglærers tilbakemelding på product brief (correct course)
+- `d023422` 2026-10-11 14:38 (Steffen Elvik) Generer sprint-status.yaml med bmad-sprint-planning
+- `1059cb5` 2026-10-11 14:38 (Steffen Elvik) Gjør CORS-origin konfigurerbar i AD-7
+- `546d913` 2026-10-11 14:38 (Steffen Elvik) Rett hull i epics funnet i readiness-sjekken før sprint planning
 
 ## Logg
 
@@ -104,4 +112,28 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 21. Prompt · 2026-10-11 14:18
 
 > Økta er ferdig, commit loggen
+
+### 22. Prompt · 2026-10-11 14:28
+
+> Eirik har sjekket kommentarer og merget, ser alt riktig ut?
+
+### 23. Prompt · 2026-10-11 14:30
+
+> Hvorfor anbefaler du å slette branchen?
+
+### 24. Prompt · 2026-10-11 14:31
+
+> ja, bytt til main, hent siste og slett branch som du nevner her
+
+### 25. Prompt · 2026-10-11 14:34
+
+> kjør bmad-sprint-planning på ny branch. Du kan også slette de gamle branchen i github
+
+### 26. Prompt · 2026-10-11 14:37
+
+> Ja, rett punkt 1–4 først
+
+### 27. Prompt · 2026-10-11 14:40
+
+> ja, push og åpne PR med loggfilen
 

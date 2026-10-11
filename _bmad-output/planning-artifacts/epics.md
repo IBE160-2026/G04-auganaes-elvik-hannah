@@ -16,6 +16,13 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see `sprint-change-proposal-2026-10-11.md`). Every story now carries a **Stage** (Trinn 1 or Trinn 2), a new Story 1.6 makes the app runnable locally (FR-22), and acceptance criteria for README/`.env.example` and mock modes were added to existing stories. Story numbers are unchanged so that traceability is kept. The document now has 23 stories (the earlier "20" was a miscount of the 22 that existed).
 
+### Known open points (from the readiness check, 2026-10-11)
+
+These do not block Trinn 1 but must be resolved before the stories they touch are built.
+
+- **Screens without an owning story (Trinn 2).** "Landlord Home Admin" is used by Stories 3.4, 3.5, 4.1 and 6.1, and "Settings" by Stories 3.1 and 5.3, but no story builds the screen itself. Decide before Epic 3: either the first story that needs the screen builds its shell, or a small shell story is added.
+- **Invite link policy is unconfirmed.** "Single-use plus 7-day expiry" in Story 1.4 and the architecture is an assumption the team has not confirmed. Confirm it in the pull request for Story 1.4.
+
 ### Delivery stages
 
 Trinn 1 is the minimal core flow that must be finished and stable first, so a complete app exists even if Trinn 2 is not finished.
@@ -101,7 +108,7 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 - **Task completion:** One domain function (`complete_task_instance`) is the sole code path marking a Task instance complete, recording attribution, and triggering the FR-9 reschedule; it is idempotent on retried requests (AD-3).
 - **AI service:** One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation); every response is a structured object `{status: "ok" | "low_confidence" | "error", answer, disclaimer}` with the disclaimer always its own field (AD-4). The onboarding guide is generated once per Home at provisioning time and persisted, not regenerated per view (AD-4, FR-16).
 - **Photo Evidence storage:** `PhotoEvidence` is 1:1 with `Task` (not `TaskInstance`); each task's photo is stored under a fixed key (`tasks/{task_id}/evidence.jpg`) in Supabase Storage, overwritten on each new upload — no per-completion history row (AD-5). Task types carry a system-seeded, non-Landlord-editable `photo_evidence_eligible` flag; the endpoint setting FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible (AD-6).
-- **Auth:** Short-lived JWT access token returned in the login response body and kept only in React memory (never `localStorage`); long-lived refresh token as an `httpOnly`/`Secure`/`SameSite=None` cookie, exchanged only at a dedicated `/refresh` endpoint. CORS lists the exact Vercel origin with `allow_credentials=True` (never a wildcard); the generated API client sends every request with `credentials: "include"` (AD-7).
+- **Auth:** Short-lived JWT access token returned in the login response body and kept only in React memory (never `localStorage`); long-lived refresh token as an `httpOnly`/`Secure`/`SameSite=None` cookie, exchanged only at a dedicated `/refresh` endpoint. CORS lists the exact origin(s) from the `CORS_ORIGINS` environment variable (the local frontend origin by default, the Vercel origin in the hosted demo) with `allow_credentials=True` (never a wildcard); the generated API client sends every request with `credentials: "include"` (AD-7).
 - **Due/notification job:** A dedicated `POST /internal/run-due-check` endpoint runs the due/overdue scan (FR-10, FR-11's fairness nudge); an external free cron service (cron-job.org) calls it every 10–14 minutes. The endpoint is safe to call concurrently/more often than scheduled — it tracks per-Task-Instance whether a notification was already sent for the current window (AD-8). Fairness-nudge rule: fire a targeted nudge to a Member with 0 completions in the last 3 instances of a recurring shared task, provided at least one other Member completed at least one of those 3 (AD-9, resolves PRD Open Question 4). Landlord broadcast (FR-12) is sent directly and synchronously on request, independent of the due-check cron (AD-14).
 - **No real-time layer:** Freshness comes from TanStack Query refetching on mount/window-focus — no WebSocket/SSE infrastructure (AD-10).
 - **Frontend data layer:** No component calls `fetch`/`axios` directly or holds server data in local `useState` — all server reads/writes go through TanStack Query hooks backed by one generated API client (from the backend's OpenAPI schema via `openapi-typescript`, never hand-written types). The self-checkoff mutation (FR-17) uses TanStack Query's optimistic-update pattern; the photo-evidence-upload mutation (FR-19) is deliberately pessimistic — the UI waits for the upload-and-auto-approve response before showing complete (AD-11).
@@ -272,7 +279,11 @@ So that I can trust and use it comfortably regardless of phone/tablet/desktop.
 
 **Given** the backend scaffold
 **When** a developer runs the FastAPI service locally
-**Then** a health-check endpoint responds 200, Alembic is wired for migrations, and the source tree matches the committed layout (`backend/app/{routes,domain,permissions,models}`, `frontend/src/{api,components,routes,styles}`)
+**Then** a health-check endpoint responds 200, Alembic is wired for migrations against the local Docker PostgreSQL started by the repo's `docker-compose.yml`, and the source tree matches the committed layout (`backend/app/{routes,domain,permissions,models}`, `frontend/src/{api,components,routes,styles}`)
+
+**Given** the scaffold
+**When** the test commands are run
+**Then** pytest (backend) and Vitest (frontend) are configured, each with one passing example test, and both run offline without any key — so every later story can add automated tests for its own logic from the start (AD-15)
 
 **Given** any frontend component
 **When** its styling is inspected
@@ -329,8 +340,8 @@ So that I can access my Homes securely.
 **Then** the frontend calls `/refresh` using the httpOnly cookie to get a new access token transparently, without forcing re-login
 
 **Given** the backend CORS configuration
-**When** a request arrives from the deployed Vercel origin
-**Then** it is accepted with `allow_credentials=True` against that exact origin; other origins are rejected
+**When** a request arrives from an origin listed in the `CORS_ORIGINS` environment variable (the local frontend origin by default; the Vercel origin in the optional hosted demo)
+**Then** it is accepted with `allow_credentials=True` against that exact origin; other origins are rejected, and a wildcard is never used (AD-7, AD-15)
 
 ### Story 1.3: Create a Home (Household or Landlord)
 
@@ -361,6 +372,10 @@ So that I can start organizing tasks for my living situation or property.
 **Given** a Landlord who already owns one or more Homes
 **When** they choose to create another Home (for example, from the Portfolio Dashboard, per UJ-2)
 **Then** the Create Home flow runs again and a new Landlord Home is added to their portfolio — Landlords are never blocked from creating additional Homes, since Epic 6's Portfolio Dashboard depends on this being possible
+
+**Given** the seed command from Story 1.6
+**When** this story is delivered
+**Then** the seed data is extended with an example Household Home that the example users belong to (FR-22)
 
 ### Story 1.4: Invite Members via Scoped Link & Accept Invite
 
@@ -442,15 +457,17 @@ As a developer or course reviewer,
 I want to run the whole app on my own machine without the team's accounts or keys,
 So that I can try it, test it and review it.
 
+This story builds on Stories 1.1 (scaffold, `docker-compose.yml`, test setup) and 1.2 (users). It does not depend on later stories: the seed mechanism is extended by Stories 1.3 and 2.1 (example Home and tasks), and the AI mock provider is delivered with Story 5.1.
+
 **Acceptance Criteria:**
 
 **Given** a machine with Docker installed and the repository cloned
 **When** the README's steps are followed (`docker compose up`, then one command for migrations and seed data)
-**Then** a local PostgreSQL database is running with the schema applied and seed data loaded: an example Household Home with a recommended task list and at least two example users (FR-22, AD-15)
+**Then** a local PostgreSQL database is running with the schema applied and seed data loaded, including at least two example users whose credentials are listed in the README (FR-22, AD-15)
 
-**Given** no `GEMINI_API_KEY` is set
-**When** the AI service is called
-**Then** the mock provider answers in the same `{status, answer, disclaimer}` structure, and the real Gemini provider is used only when the key is present (AD-4, AD-15)
+**Given** the seed mechanism
+**When** a later story adds an entity that needs example data (Stories 1.3 and 2.1)
+**Then** that story extends the same seed command, so one command always yields a ready-to-use example Home
 
 **Given** `.env.example`
 **When** inspected
@@ -501,6 +518,29 @@ So that my Home starts with a sensible, personalized task list instead of an emp
 **Given** a Landlord pre-provisioning a Home before any Tenant has joined
 **When** they complete Task Setup
 **Then** the Tasks are created and ready, independent of Tenant presence
+
+**Given** the recommended task list
+**When** its source is inspected
+**Then** it comes from a versioned, system-seeded task-type catalog in the repository (`TaskType`, AD-6) — one entry per task type with name, default Must/Should classification, recommended Frequency in days, and the `photo_evidence_eligible` flag — never hardcoded in a component or a route
+
+**Given** the initial catalog
+**When** it is reviewed in this story's pull request
+**Then** it contains at least eight task types covering both classifications and at least two flagged `photo_evidence_eligible` (for example a drain), and the team has agreed the values; the starter list in the table below is a proposal to adjust, not a requirement `[ASSUMPTION: starter values, to be confirmed by the team in the PR]`
+
+| Task type | Default | Frequency (days) | Photo-eligible |
+|---|---|---|---|
+| Deep-clean the bathroom (mold risk) | Must | 42 | No |
+| Clean the drain (sluk) | Must | 30 | Yes |
+| Descale the kettle | Should | 60 | No |
+| Clean behind and under the fridge | Should | 90 | No |
+| Clean the oven | Should | 90 | No |
+| Vacuum and mop the floors | Should | 14 | No |
+| Clean the extractor-fan filter | Must | 60 | Yes |
+| Wash the shower grout | Should | 90 | No |
+
+**Given** the seed command from Story 1.6
+**When** Task Setup is delivered
+**Then** the seed data is extended with an example Household Home that already has the recommended tasks, so a reviewer sees a populated Task Overview straight after seeding (FR-22)
 
 ### Story 2.2: Must-First Task Overview
 
@@ -935,6 +975,10 @@ So that I can get unstuck right when I need it.
 **Given** no AI API key is configured
 **When** a Member taps "?"
 **Then** the mock provider returns a canned, task-specific answer in the same structure with the disclaimer, and the UI marks it as demo mode — the feature can be run and tested without any external account (FR-22, AD-15)
+
+**Given** the backend AI service
+**When** it is built in this story
+**Then** it sits behind a provider interface with a Gemini provider and a mock provider, the real Gemini provider is used only when `GEMINI_API_KEY` is set, and the automated tests always use the mock provider (AD-4, AD-15)
 
 ### Story 5.2: Escalate to Full AI Chat
 

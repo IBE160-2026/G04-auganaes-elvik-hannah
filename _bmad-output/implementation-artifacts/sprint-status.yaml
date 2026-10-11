@@ -1,0 +1,81 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 10-11-2026 14:38
+last_updated: 10-11-2026 14:38
+project: Prosjektoppgave IBE160
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+# Leveranserekkefølge (se Stage i epics.md og sprint-change-proposal-2026-10-11.md):
+#   Trinn 1 (først, ferdig og stabil): 1-1 til 1-6, 2-1 til 2-5, 5-1
+#   Trinn 2 (etter at Trinn 1 er stabil): epic 3, epic 4, 5-2, 5-3, epic 6
+#   Anbefalt start: 1-1 (scaffold, docker-compose, testoppsett), deretter 1-2 og 1-6.
+development_status:
+  epic-1: backlog
+  1-1-project-scaffold-design-tokens-responsive-app-shell: backlog
+  1-2-account-registration-login: backlog
+  1-3-create-a-home-household-or-landlord: backlog
+  1-4-invite-members-via-scoped-link-accept-invite: backlog
+  1-5-view-home-members-list-enforce-role-based-permissions: backlog
+  1-6-run-locally-with-docker-seed-data-and-mock-modes: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-task-setup-at-home-creation: backlog
+  2-2-must-first-task-overview: backlog
+  2-3-adjust-task-classification-frequency: backlog
+  2-4-self-checkoff-completion-with-shared-status-attribution: backlog
+  2-5-auto-reschedule-on-completion: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-push-notification-permission-device-registration: backlog
+  3-2-due-overdue-push-notifications-via-due-check-job: backlog
+  3-3-fairness-based-targeted-notification: backlog
+  3-4-landlord-ad-hoc-broadcast-message: backlog
+  3-5-landlord-controlled-notification-cadence: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-landlord-requires-photo-evidence-on-eligible-must-tasks: backlog
+  4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval: backlog
+  4-3-landlord-reviews-evidence-auto-replacing-photo-storage: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-contextual-quick-answer: backlog
+  5-2-escalate-to-full-ai-chat: backlog
+  5-3-ai-generated-onboarding-guide-for-new-tenants: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-landlord-portfolio-dashboard: backlog
+  epic-6-retrospective: optional
