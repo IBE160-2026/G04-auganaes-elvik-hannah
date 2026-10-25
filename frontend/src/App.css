@@ -1,0 +1,15 @@
+.start-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.start-page__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-display);
+  line-height: var(--line-height-display);
+}
+
+.start-page__lead {
+  color: var(--color-ink-secondary);
+}

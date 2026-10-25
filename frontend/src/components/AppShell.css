@@ -1,0 +1,72 @@
+/* Mobile first: phone < 37.5em, tablet >= 37.5em, desktop >= 64em. One column at every width. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-shell__skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  min-height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-surface-raised);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  transform: translateY(-200%);
+}
+
+.app-shell__skip-link:focus {
+  transform: none;
+}
+
+.app-shell__header {
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+/* Header content lines up with the main column. */
+.app-shell__header-inner,
+.app-shell__main {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+}
+
+.app-shell__header-inner {
+  padding-block: var(--space-3);
+}
+
+.app-shell__brand {
+  color: var(--color-primary);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-title);
+  line-height: var(--line-height-title);
+}
+
+.app-shell__main {
+  flex: 1;
+  padding-block: var(--space-5);
+}
+
+@media (min-width: 37.5em) {
+  .app-shell__header-inner,
+  .app-shell__main {
+    padding-inline: var(--space-5);
+  }
+
+  .app-shell__main {
+    padding-block: var(--space-6);
+  }
+}
+
+@media (min-width: 64em) {
+  .app-shell__main {
+    padding-block: var(--space-7);
+  }
+}
