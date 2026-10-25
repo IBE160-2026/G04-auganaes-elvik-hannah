@@ -1,0 +1,87 @@
+/*
+ * Design tokens (AD-13). Copied once from the frontmatter of
+ * _bmad-output/planning-artifacts/ux-designs/ux-prosjektoppgave-ibe160-2026-09-29/DESIGN.md.
+ * Components reference only var(--...); tokens.test.ts checks both the copy and the usage.
+ * Breakpoints cannot be tokens (var() is not allowed in @media): phone < 37.5em (600px),
+ * tablet 37.5em–63.99em, desktop >= 64em (1024px).
+ */
+:root {
+  /* colors */
+  --color-primary: #6E62CC;
+  --color-secondary: #B67F98;
+  --color-accent: #5B96B1;
+  --color-surface-base: #FAF8FF;
+  --color-surface-raised: #FFFFFF;
+  --color-ink-primary: #2A2640;
+  --color-ink-secondary: #6B6480;
+  --color-success: #267F59;
+  --color-warning: #9E641F;
+  --color-danger: #C9404B;
+  --color-must-badge: #B94A6E;
+  --color-must-badge-ink: #FFFFFF;
+  --color-should-badge: #5D6BBE;
+  --color-should-badge-ink: #FFFFFF;
+  --color-focus-ring: #6E62CC;
+  /* components.button-primary.color */
+  --color-on-primary: #FFFFFF;
+
+  /* typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  --font-size-display: 1.5rem;
+  --font-weight-display: 700;
+  --line-height-display: 1.2;
+
+  --font-size-title: 1.125rem;
+  --font-weight-title: 700;
+  --line-height-title: 1.3;
+
+  --font-size-body: 0.9375rem;
+  --font-weight-body: 500;
+  --line-height-body: 1.45;
+
+  --font-size-meta: 0.78125rem;
+  --font-weight-meta: 500;
+  --line-height-meta: 1.4;
+
+  --font-size-badge: 0.625rem;
+  --font-weight-badge: 700;
+  --line-height-badge: 1.2;
+  --letter-spacing-badge: 0.03em;
+
+  /* rounded */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  /* Pill: only for primary buttons, badges and status tags (DESIGN.md Shapes). */
+  --radius-full: 9999px;
+  --radius-default: 14px;
+
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* elevation (DESIGN.md Elevation & Depth) */
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.05);
+  /* pressed state: 8% darker overlay (DESIGN.md Components, primary button) */
+  --overlay-pressed: rgba(0, 0, 0, 0.08);
+
+  /* accessibility floor (EXPERIENCE.md) */
+  --tap-min: 2.75rem; /* 44px at a 16px root */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --focus-color: var(--color-focus-ring);
+
+  /* motion; set to 0s under prefers-reduced-motion in global.css */
+  --duration-fast: 150ms;
+
+  /* layout */
+  --layout-max-width: 40rem;
+}
