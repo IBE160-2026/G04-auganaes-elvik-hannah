@@ -101,6 +101,14 @@ context:
 - **Start page demo:** `PrimaryButton` is shown disabled with the reason "Innlogging kommer i neste versjon av appen.", since there is nothing to start yet.
 - **`.env` loading:** the backend reads `os.environ` only. Defaults match `docker-compose.yml`, so no `.env` is needed; README shows `uv run --env-file ../.env` for overrides.
 - **FastAPI bumped to `0.162.0` (team decision, 2026-10-25):** the 0.149.0 pin above read "latest 0.14x" literally; the team confirmed the intent was "latest". Architecture Stack table and memlog updated with a dated revision note.
+- **Manual verification, macOS (Eirik, 2026-10-25, Chrome, `npm run preview` on :4173):** all OK. Manifest valid, service worker activated with scope `/`. No horizontal scroll at 320/768/1280px. 400% zoom gives vertical scroll only. Skip link and button show the focus ring. `transition-duration` is `0s` under reduced motion and `0.15s` without. The iOS install prompt (emulated iPhone) shows once, then stays hidden.
+- **Windows test (Steffen, 2026-10-25, fresh clone, README followed verbatim in Git Bash):** all steps OK.
+  - Machine: Windows 11 Home 10.0.26200, Git Bash 5.3.15 / Git 2.55.0, Docker 29.8.1, uv 0.12.23, Node 26.7.0.
+  - Results: `docker compose up -d --wait` healthy, `uv sync` + `alembic upgrade head` + `/api/health` OK, `npm ci` with 0 vulnerabilities, 13 pytest and 125 vitest tests pass (incl. `tokens.test.ts` with `\` paths), ruff and eslint clean, `dist/service-worker.js` at the root.
+  - Repo state: `git status` clean with `core.autocrlf=true`, no LF/CRLF warnings.
+  - Manual checks: manifest, SW scope `/`, 320/768/1280px, 400% zoom and the focus ring all OK.
+  - Not tested: the uv install command, because uv was already installed.
+  - Deviation outside the README's scope: in Windows PowerShell 5.1, `&&` is not supported and the execution policy blocks `npm.ps1`. Follow-up: state explicitly in the README that Windows users must use Git Bash, not PowerShell.
 
 ## Spec Change Log
 
