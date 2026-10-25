@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 10-11-2026 14:38
+last_updated: 10-25-2026 11:45
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -39,8 +39,8 @@ story_location: _bmad-output/implementation-artifacts
 #   Trinn 2 (etter at Trinn 1 er stabil): epic 3, epic 4, 5-2, 5-3, epic 6
 #   Anbefalt start: 1-1 (scaffold, docker-compose, testoppsett), deretter 1-2 og 1-6.
 development_status:
-  epic-1: backlog
-  1-1-project-scaffold-design-tokens-responsive-app-shell: backlog
+  epic-1: in-progress
+  1-1-project-scaffold-design-tokens-responsive-app-shell: review
   1-2-account-registration-login: backlog
   1-3-create-a-home-household-or-landlord: backlog
   1-4-invite-members-via-scoped-link-accept-invite: backlog
