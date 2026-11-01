@@ -1,9 +1,11 @@
 """Database engine (Story 1.7). One engine per URL, built from Settings.database_url."""
 
+from collections.abc import Iterator
 from functools import lru_cache
 
+from fastapi import Request
 from sqlalchemy import Engine
-from sqlmodel import create_engine
+from sqlmodel import Session, create_engine
 
 
 @lru_cache
@@ -21,3 +23,9 @@ def get_engine(url: str) -> Engine:
             "connect_timeout": 10,
         },
     )
+
+
+def get_session(request: Request) -> Iterator[Session]:
+    """One session per request on the app's engine. Tests override this dependency."""
+    with Session(get_engine(request.app.state.settings.database_url)) as session:
+        yield session

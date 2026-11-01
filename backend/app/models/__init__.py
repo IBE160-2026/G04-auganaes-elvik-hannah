@@ -1,1 +1,5 @@
-"""SQLModel entities. Filled from Story 1.2; Alembic reads SQLModel.metadata."""
+"""SQLModel entities. Alembic's env.py imports this package to register every table."""
+
+from app.models.user import User
+
+__all__ = ["User"]
