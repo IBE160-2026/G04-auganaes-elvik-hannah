@@ -1,9 +1,9 @@
 # KI-økt 2026-11-01 – Eirik
 
 - **Økt-ID:** `baa8ce2b-77cf-4185-9918-8d8b3d9e66cf`
-- **Tidsrom:** 2026-11-01 15:19 – 2026-11-01 16:59
+- **Tidsrom:** 2026-11-01 15:19 – 2026-11-01 17:03
 - **Verktøy:** Claude Code
-- **Antall prompts:** 15
+- **Antall prompts:** 17
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -19,6 +19,8 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `b492e35` 2026-11-01 16:18 (Eirik) Logg: JWT_SECRET satt i Vercel
 - `dff5729` 2026-11-01 16:46 (Eirik) Logg: Story 1.2 testet i Safari og på preview
 - `950bd58` 2026-11-01 17:00 (EirikAuganaes) Merge pull request #11 from IBE160-2026/story/1-2-registration-login
+- `2ebb042` 2026-11-01 17:02 (Eirik) Logg: Story 1.2 merget og avsluttet
+- `bcf3dbe` 2026-11-01 17:02 (Eirik) Etter merge av Story 1.2: status til done og neste steg 1.6
 
 ## Logg
 
@@ -81,4 +83,12 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 15. Prompt · 2026-11-01 16:59
 
 > merge PR-en
+
+### 16. Prompt · 2026-11-01 17:02
+
+> Jeg tenker vi er i mål for denne gang. Lukker du ned og gjør det som må gjøres?
+
+### 17. Prompt · 2026-11-01 17:03
+
+> Lager du et minne slik at vi kan ta opp igjen dette når jeg åpner terminalen neste gang?
 
