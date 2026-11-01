@@ -7,7 +7,7 @@ paradigm: 'Layered client-server: SPA client + REST API service'
 scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 9 PRD features / FR-1 through FR-22'
 status: final
 created: '2026-10-04'
-updated: '2026-10-11'
+updated: '2026-10-25'
 binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
@@ -20,6 +20,8 @@ companions: []
 # Architecture Spine — Husly
 
 > **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see `sprint-change-proposal-2026-10-11.md`): new AD-15 makes local Docker-based running the primary path (FR-22); AD-4 gets a provider interface with a mock implementation; the single shared Supabase development database is replaced by one local database per developer; hosting becomes an optional demo setup; decisions that only apply to Trinn 2 are tagged with a **Stage**; AD-13's primary colour is corrected to match DESIGN.md (`#6E62CC`).
+
+> **Revision 2026-10-25 (Story 1.1 scaffold):** Stack versions pinned at setup. FastAPI: "latest 0.14x" was a snapshot of the newest line at authoring, not an intended cap, so the team chose the newest release, 0.162.0. TypeScript: pinned to 6.0.3 rather than the newest 7.0, because `typescript-eslint` 8.72 (the linter) supports only TypeScript below 6.1.
 
 ## Design Paradigm
 
@@ -153,7 +155,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | Name | Version |
 | --- | --- |
 | Python | 3.12+ |
-| FastAPI | latest 0.14x (0.141.x current at authoring, Oct 2026 — pin exact patch at setup time) |
+| FastAPI | latest (pinned 0.162.0 at setup, 2026-10-25; was "latest 0.14x" at authoring) |
 | SQLModel | latest (0.0.47+; tracks SQLAlchemy 2.0.5x since v0.0.19 — no 1.x pin, web-verified Oct 2026) |
 | Alembic | latest (schema migrations for SQLModel/SQLAlchemy) |
 | PostgreSQL | local Docker image for development, tests and review (AD-15); Supabase managed Postgres only in the optional hosted demo. Pin the same major version in both. |
@@ -161,7 +163,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | pywebpush | latest (VAPID Web Push) |
 | google-genai | latest (official Gemini SDK; supersedes deprecated `google-generativeai`) |
 | React | latest 19.x (19.2 current at authoring — pin exact minor at setup time) |
-| TypeScript | latest stable |
+| TypeScript | latest version supported by `typescript-eslint` (pinned 6.0.3 at setup, 2026-10-25) |
 | Vite | latest (the community-standard build tool since `create-react-app`'s 2025 deprecation) |
 | TanStack Query | latest (v5) |
 | Node.js | current LTS (for Vite tooling) |
@@ -173,6 +175,8 @@ Layers may only depend downward (UI → routes → permission → domain → per
 **Primary path — local (AD-15):** `docker compose up` runs PostgreSQL; backend and frontend run on the host (or in Compose later); AI, push and storage use mock adapters when no keys are set. This is how the team develops and how a reviewer runs the app.
 
 **Optional — hosted demo:** the same code deployed as shown below. It is not required to run, test or review the app, and Trinn 1 needs none of cron, push or Storage there.
+
+> **Note 2026-11-01:** The course now offers Vercel as its only supported hosting, connected to every group repo. The frontend demo is the Vercel project `g04husly` (<https://g04husly.vercel.app>, Root Directory `frontend`), deployed from `main` with a preview per PR. The diagram below still shows the backend on Render and data on Supabase. Where the backend is hosted, and how the due-check is triggered (Vercel Cron on the free plan runs at most once a day), is open and will go through `bmad-correct-course` before the first story that needs a hosted backend.
 
 ```mermaid
 graph TB

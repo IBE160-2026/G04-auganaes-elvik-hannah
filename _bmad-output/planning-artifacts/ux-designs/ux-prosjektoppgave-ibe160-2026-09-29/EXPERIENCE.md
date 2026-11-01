@@ -4,14 +4,16 @@ status: final
 sources:
   - _bmad-output/planning-artifacts/prds/prd-prosjektoppgave-ibe160-2026-09-29/prd.md
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
-updated: 2026-10-04
+updated: 2026-10-25
 ---
 
 # Husly (placeholder name) — Experience Spine
 
+> **Revision 2026-10-25:** Foundation said "React (JavaScript)". Corrected to TypeScript to match the architecture spine's Stack table, which Story 1.1 scaffolds. No behavior in this spine changes.
+
 ## Foundation
 
-`DESIGN.md` is the visual identity reference; this spine is the behavior. Responsive single web app — phone, tablet, and desktop (PRD FR-21) — no native app in v1. No UI system named; the team's stack is a Python backend with a React (JavaScript) frontend. No dark mode in v1 (DESIGN.md).
+`DESIGN.md` is the visual identity reference; this spine is the behavior. Responsive single web app — phone, tablet, and desktop (PRD FR-21) — no native app in v1. No UI system named; the team's stack is a Python backend with a React (TypeScript) frontend. No dark mode in v1 (DESIGN.md).
 
 Three Roles read the same surfaces differently throughout, per PRD §2 Glossary: **Household Member** (single, samboer, kollektiv — full read/write on their Home), **Landlord** (elevated, multi-Home), and **Tenant** (locked-down, single Home). Every surface below states which roles reach it and how permissions change what they see.
 

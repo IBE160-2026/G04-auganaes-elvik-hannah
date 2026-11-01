@@ -1,0 +1,21 @@
+# Local PostgreSQL for development, tests and review (AD-15, FR-22).
+# Host port 5433 avoids clashing with a PostgreSQL already installed on 5432.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: husly
+      POSTGRES_PASSWORD: husly
+      POSTGRES_DB: husly
+    ports:
+      - "5433:5432"
+    volumes:
+      - husly-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U husly -d husly"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  husly-db:
