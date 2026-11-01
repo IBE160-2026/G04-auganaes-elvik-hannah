@@ -4,6 +4,8 @@ Gruppeprosjekt i **IBE160 Programmering med KI** ved Høgskolen i Molde, høsten
 
 Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og kvalitetssikring med KI.
 
+**Nettversjon:** <https://g04husly.vercel.app> (Vercel, oppdateres automatisk fra `main`, og hver PR får en egen forhåndsvisning). Foreløpig ligger bare frontenden der. Hovedveien for å kjøre og vurdere appen er lokal kjøring, se under.
+
 ## Medlemmer
 
 - Eirik Auganæs
