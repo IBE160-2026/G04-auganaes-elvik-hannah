@@ -1,8 +1,9 @@
 # Local PostgreSQL for development, tests and review (AD-15, FR-22).
+# Postgres 18, the same major as the hosted Neon database (Story 1.7).
 # Host port 5433 avoids clashing with a PostgreSQL already installed on 5432.
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_USER: husly
       POSTGRES_PASSWORD: husly
@@ -10,7 +11,9 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - husly-db:/var/lib/postgresql/data
+      # Postgres 18 keeps its data in /var/lib/postgresql/18/docker and rejects the old
+      # /var/lib/postgresql/data mount. New volume name, so a 17 volume is not reused.
+      - husly-db-18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U husly -d husly"]
       interval: 2s
@@ -18,4 +21,4 @@ services:
       retries: 15
 
 volumes:
-  husly-db:
+  husly-db-18:

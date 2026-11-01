@@ -4,7 +4,7 @@ Gruppeprosjekt i **IBE160 Programmering med KI** ved Høgskolen i Molde, høsten
 
 Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og kvalitetssikring med KI.
 
-**Nettversjon:** <https://g04husly.vercel.app> (Vercel, oppdateres automatisk fra `main`, og hver PR får en egen forhåndsvisning). Foreløpig ligger bare frontenden der. Hovedveien for å kjøre og vurdere appen er lokal kjøring, se under.
+**Nettversjon (valgfri):** <https://g04husly.vercel.app>. Hovedveien for å kjøre og vurdere appen er lokal kjøring, se under. Mer om nettversjonen står i [Nettversjon (valgfri)](#nettversjon-valgfri).
 
 ## Medlemmer
 
@@ -41,7 +41,9 @@ Fra rotmappen:
 docker compose up -d --wait
 ```
 
-Starter PostgreSQL 17 på port **5433** og venter til databasen er klar. Data ligger i Docker-volumet `husly-db`. Stopp med `docker compose down` (legg til `-v` for å slette dataene).
+Starter PostgreSQL 18 på port **5433** og venter til databasen er klar. Data ligger i Docker-volumet `husly-db-18`. Stopp med `docker compose down` (legg til `-v` for å slette dataene).
+
+> **Hadde du databasen fra før (PostgreSQL 17)?** Den lå i volumet `husly-db`, som 18 ikke kan bruke. Du får en ny, tom database automatisk. Det gamle volumet kan slettes: finn navnet med `docker volume ls --filter name=husly-db` (det heter f.eks. `prosjektoppgave_husly-db`) og slett det med `docker volume rm <navn>`.
 
 ### 2. Backend
 
@@ -52,7 +54,7 @@ uv run alembic upgrade head
 uv run fastapi dev
 ```
 
-API-et kjører på <http://localhost:8000>. Sjekk at det svarer: <http://localhost:8000/api/health> skal gi `{"status":"ok"}`. API-dokumentasjon ligger på <http://localhost:8000/docs>.
+API-et kjører på <http://localhost:8000>. Sjekk at det svarer: <http://localhost:8000/api/health> skal gi `{"status":"ok"}`, og <http://localhost:8000/api/health/db> skal gi `{"database":"ok"}` når databasen kjører. API-dokumentasjon ligger på <http://localhost:8000/docs>.
 
 Ingen `.env` trengs: standardverdiene matcher `docker-compose.yml`. Variablene står i [`.env.example`](.env.example). Vil du overstyre dem, kopierer du filen til `.env` og legger til `--env-file ../.env` etter `uv run`.
 
@@ -66,7 +68,7 @@ npm ci
 npm run dev
 ```
 
-Appen åpnes på <http://localhost:5173>.
+Appen åpnes på <http://localhost:5173>. Frontenden kaller API-et på samme adresse: Vite sender alt under `/api` videre til backenden på port 8000, både i `npm run dev` og `npm run preview`. <http://localhost:5173/api/health> skal derfor også gi `{"status":"ok"}` når backenden kjører.
 
 ### Sjekke PWA-en (manifest og service worker)
 
@@ -107,13 +109,16 @@ npm run lint
 ## Mappestruktur
 
 ```text
-docker-compose.yml   lokal PostgreSQL (AD-15)
+docker-compose.yml   lokal PostgreSQL 18 (AD-15)
 .env.example         alle miljøvariabler, uten hemmeligheter
+vercel.json          nettversjonen: frontend og backend som Vercel Services (Story 1.7)
+.github/workflows/   sletter Neon-grenen til en PR når den lukkes
 backend/             FastAPI + SQLModel + Alembic (Python 3.12, uv)
   app/
-    main.py          app-oppsett, CORS og ruter under /api
-    config.py        leser DATABASE_URL og CORS_ORIGINS
-    routes/          tynt HTTP-lag (foreløpig bare /api/health)
+    main.py          app-oppsett og ruter under /api (samme origin, ingen CORS)
+    config.py        leser og normaliserer DATABASE_URL (og DATABASE_URL_UNPOOLED)
+    db.py            databasemotor, én per URL
+    routes/          tynt HTTP-lag (foreløpig /api/health og /api/health/db)
     domain/          domenetjenester, eneste vei for endringer (AD-3)
     permissions/     rolle-sjekker (AD-2)
     models/          SQLModel-entiteter
@@ -128,3 +133,14 @@ frontend/            React 19 + TypeScript + Vite
     api/             API-klient og TanStack Query-hooks (fra Story 1.2)
     service-worker.ts
 ```
+
+## Nettversjon (valgfri)
+
+<https://g04husly.vercel.app> er en demo av den samme koden. Den trengs ikke for å kjøre, teste eller vurdere appen. Alt over fungerer uten den.
+
+- **Oppsett:** Ett Vercel-prosjekt (`g04husly`) med `frontend/` og `backend/` som Vercel Services på samme domene ([`vercel.json`](vercel.json)). Alt under `/api` går til FastAPI, resten til React-appen. Databasen er Neon Postgres 18 i EU (Frankfurt), koblet til gjennom Vercels Neon-integrasjon, som setter `DATABASE_URL` og `DATABASE_URL_UNPOOLED`.
+- **Oppdatering:** `main` publiseres automatisk. Hver PR får en egen forhåndsvisning med sin egen Neon-gren (`preview/<git-gren>`), som slettes når PR-en lukkes ([workflow](.github/workflows/neon-preview-cleanup.yml)).
+- **Migreringer:** `alembic upgrade head` kjører i backendens byggesteg (`[tool.vercel.scripts]` i `backend/pyproject.toml`). En feilende migrering stopper bygget, så forrige versjon blir stående. En migrering som allerede er committet, blir likevel liggende i databasen selv om et senere byggesteg feiler, så migreringer må være bakoverkompatible med forrige versjon av koden.
+- **Sjekk:** `/api/health` svarer at API-et lever, og `/api/health/db` at det når databasen.
+- **Tilgang:** Bare prosjekteieren (Eirik) ser Vercel- og Neon-dashboardene. Ingen nøkler ligger i repoet; de står bare i Vercel- og GitHub-innstillingene.
+- **Tilbakerulling:** Hvis Services-oppsettet må forlates, går vi tilbake til taggen `v0.1-for-vercel-hosting` (bare frontenden på Vercel): sett Root Directory til `frontend` og Framework Preset til **Vite** i prosjektinnstillingene.

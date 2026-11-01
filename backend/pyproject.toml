@@ -34,3 +34,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.fastapi]
 entrypoint = "app.main:app"
+
+# Story 1.7: Vercel runs this in the backend service's build. A failed migration fails the build.
+[tool.vercel.scripts]
+build = "python -m alembic upgrade head"
