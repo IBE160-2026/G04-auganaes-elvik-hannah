@@ -149,7 +149,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | --- | --- |
 | Naming (entities, files, interfaces, events) | Entity names match the PRD Glossary verbatim: `Home`, `Member`, `Role`, `Task`, `TaskInstance`, `Frequency`, `PhotoEvidence`, `NotificationCadence`. No synonyms (e.g. never `User` for the Home-scoped actor — that's `Member`; `User` is the account row). |
 | Data & formats (ids, dates, error shapes, envelopes) | IDs: UUIDv4 everywhere. Dates/times: ISO 8601 in UTC on the wire, converted client-side for display. Errors: FastAPI's default `{"detail": "..."}` shape; validation errors use FastAPI/Pydantic's standard 422 body, never a bespoke envelope. |
-| State & cross-cutting (mutation, errors, logging, config, auth) | Mutations only via domain services (AD-3). Auth via the `require_role` dependency (AD-2). Secrets (Gemini key, VAPID keys, DB URL, JWT signing key) via environment variables only, never committed. Frontend API types generated from the backend's OpenAPI schema (`openapi-typescript`), never hand-written. |
+| State & cross-cutting (mutation, errors, logging, config, auth) | Mutations only via domain services (AD-3). Auth via the `require_role` dependency (AD-2). Secrets (Gemini key, VAPID keys, DB URL, JWT signing key, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`) via environment variables only, never committed. `[REVISED 2026-11-01]` — `CRON_SECRET` and `BLOB_READ_WRITE_TOKEN` added to match the Deployment secrets list (found when compiling the Epic 1 context for Story 1.7). Frontend API types generated from the backend's OpenAPI schema (`openapi-typescript`), never hand-written. |
 | Schema changes (one local database per developer) | Every schema change is an Alembic migration committed to the repo — never a manual change to any database. Each developer has their own local Docker database (AD-15), so whoever pulls a migration runs it before starting work; no announcement is needed because nothing is shared. The optional hosted demo is migrated by the deploy's build step (`alembic upgrade head`), each preview against its own Neon branch and production against Neon's main branch, so an unmerged migration never touches production. |
 
 ## Stack
@@ -160,7 +160,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | FastAPI | latest (pinned 0.162.0 at setup, 2026-10-25; was "latest 0.14x" at authoring) |
 | SQLModel | latest (0.0.47+; tracks SQLAlchemy 2.0.5x since v0.0.19 — no 1.x pin, web-verified Oct 2026) |
 | Alembic | latest (schema migrations for SQLModel/SQLAlchemy) |
-| PostgreSQL | local Docker image for development, tests and review (AD-15); Neon (Postgres 17) only in the optional hosted demo. Pin the same major version in both. |
+| PostgreSQL | local Docker image for development, tests and review (AD-15); Neon (Postgres 18) only in the optional hosted demo. Pin the same major version in both. `[REVISED 2026-11-01]` — was 17; the Vercel Neon dialog offered no version choice and created Postgres 18.6, so the local image moved to `postgres:18` (Story 1.7). |
 | vercel (Python SDK) | latest, ≥ 0.5.0 (private Vercel Blob storage, AD-5; Trinn 2) |
 | Docker / Docker Compose | current stable; runs the local database (AD-15) |
 | pywebpush | latest (VAPID Web Push) |
