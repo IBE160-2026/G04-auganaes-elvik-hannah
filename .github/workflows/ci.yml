@@ -77,6 +77,10 @@ jobs:
           uv run python -c "from sqlalchemy import create_engine, inspect;
           from app.config import get_database_url;
           assert inspect(create_engine(get_database_url())).has_table('alembic_version')"
+      # Story 1.2: every migration must also downgrade cleanly, and upgrade again afterwards.
+      - run: uv run alembic downgrade base && uv run alembic upgrade head
+      # Story 1.2: the migrated schema must match the SQLModel models (e.g. uq_users_email).
+      - run: uv run alembic check
 
   frontend:
     name: Frontend (Vitest, eslint, build) – ${{ matrix.os }}
@@ -98,6 +102,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # Story 1.2: the committed client types must match frontend/openapi.json.
+      - name: Generert API-klient er oppdatert
+        run: npm run gen:api && git diff --exit-code src/api/schema.d.ts
       - run: npm test -- --run
       - run: npm run lint
       - run: npm run build
