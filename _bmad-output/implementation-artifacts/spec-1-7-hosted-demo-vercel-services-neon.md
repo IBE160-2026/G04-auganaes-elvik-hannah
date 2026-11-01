@@ -62,7 +62,8 @@ context:
 - `frontend/vite.config.ts` -- uses `vitest/config` `defineConfig`; keep the service-worker rolldown setup untouched.
 - `.env.example`, `README.md` (sections "Kjøre appen lokalt", "Mappestruktur", "Nettversjon" line at the top) -- update.
 - `ARCHITECTURE-SPINE.md` conventions row "State & cross-cutting" -- the secrets list lacks `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`; add them with a dated note (found by the epic-context compile).
-- Not to touch: `frontend/src/**`, `scripts/ki-logg/`, `docker-compose.yml`.
+- `docker-compose.yml` -- `image: postgres:17`, volume `husly-db:/var/lib/postgresql/data`. Neon was created with Postgres 18.6 (no version choice in the Vercel dialog), so local moves to 18 (spine: same major in both).
+- Not to touch: `frontend/src/**`, `scripts/ki-logg/`.
 
 ## Tasks & Acceptance
 
@@ -77,7 +78,8 @@ context:
 - [ ] `backend/tests/test_config.py`, `test_health.py`, `test_db_health.py` -- the matrix rows; DB health via dependency override, no real DB
 - [ ] `frontend/vite.config.ts` + `frontend/vite.config.test.ts` (`// @vitest-environment node`, added to `tsconfig.node.json`, outside `src/`) -- one `apiProxy` constant `/api` → `http://127.0.0.1:8000` (not `localhost`: Node may try `::1` first) used for `server.proxy` and `preview.proxy`; test asserts both
 - [ ] `.github/workflows/neon-preview-cleanup.yml` -- on `pull_request: closed`, `neondatabase/delete-branch-action@v3` with `project_id: vars.NEON_PROJECT_ID`, `branch: preview/${{ github.head_ref }}`, `api_key: secrets.NEON_API_KEY`, `continue-on-error: true` (a PR may never have had a branch); job skipped when the variable is unset
-- [ ] `.env.example`, `README.md`, `ARCHITECTURE-SPINE.md` -- as in Code Map; README gets "Nettversjon (valgfri)": URL, optional, owner-only dashboards, rollback (tag `v0.1-for-vercel-hosting`, Root Directory `frontend`, preset Vite)
+- [ ] `docker-compose.yml` -- `postgres:18`; mount the volume at `/var/lib/postgresql` (the 18 image keeps data in `/var/lib/postgresql/18/docker` and rejects the old `/data` mount); rename the volume to `husly-db-18` so an existing 17 volume gives a fresh database instead of an error -- added after approval, 2026-11-01
+- [ ] `.env.example`, `README.md`, `ARCHITECTURE-SPINE.md`, `epic-1-context.md` -- as in Code Map, plus Postgres 18 in README ("Starter PostgreSQL 18", volume name, how to delete the old `husly-db` volume), the spine's Stack row (Neon Postgres 18, dated note) and epic-1-context's Stack line; README gets "Nettversjon (valgfri)": URL, optional, owner-only dashboards, rollback (tag `v0.1-for-vercel-hosting`, Root Directory `frontend`, preset Vite)
 
 **Acceptance Criteria:**
 - Given Eirik's dashboard steps are done (Neon connected with preview branching, Root Directory = repo root, preset Services), when this PR's preview deploys, then `/` serves the app with `/service-worker.js`, `/api/health` and `/api/health/db` answer 200, and the Neon console shows `preview/story/1-7-hosted-demo-vercel` with an `alembic_version` table.
@@ -111,7 +113,7 @@ Spec review 2026-11-01 (one adversarial reviewer, verified against code and docs
 
 ## Design Notes
 
-Dashboard steps (Eirik, in order): (1) Storage → Neon → create the database in `aws-eu-central-1` with Postgres 17 (neither can be changed later), enable "Create database branch for deployment" for **Preview** only; (2) Settings → Build and Deployment: Root Directory empty (repo root), Framework Preset **Services** (confirm the exact dropdown name); (3) Settings → Functions: region `fra1`; (4) in GitHub, variable `NEON_PROJECT_ID` and secret `NEON_API_KEY`. Until the PR merges, other branches' previews fail, because `main` has no `vercel.json` yet. Production stays on its last good deployment, so nothing else is merged to `main` until 1.7 lands. Pushes without a PR also create Neon branches the workflow never deletes. Unverified: that the build hook runs in `backend/` with deps installed; check the first preview build log.
+Dashboard steps (Eirik, in order): (1) Storage → Neon → create the database in `aws-eu-central-1` (done 2026-11-01; the dialog offered no version choice and gave Postgres 18.6), enable "Create database branch for deployment" for **Preview** only; (2) Settings → Build and Deployment: Root Directory empty (repo root), Framework Preset **Services** (confirm the exact dropdown name); (3) Settings → Functions: region `fra1`; (4) in GitHub, variable `NEON_PROJECT_ID` and secret `NEON_API_KEY`. Until the PR merges, other branches' previews fail, because `main` has no `vercel.json` yet. Production stays on its last good deployment, so nothing else is merged to `main` until 1.7 lands. Pushes without a PR also create Neon branches the workflow never deletes. Unverified: that the build hook runs in `backend/` with deps installed; check the first preview build log.
 
 `/api/health/db` is the one public probe that shows the demo reaches Neon. It reveals nothing beyond up or down.
 
