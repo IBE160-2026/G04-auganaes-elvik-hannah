@@ -43,3 +43,7 @@ Prompts fra Claude Code-økter eksporteres automatisk til `docs/ki-logg/okter/` 
 ## Faglærers tilbakemelding
 
 Se `_bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/tilbakemelding-product-brief.md`. Hovedpunktene er å dele v1 i trinn 1 og trinn 2, lage testbare suksesskriterier og legge opp til lokal kjøring.
+
+## Sesjonslogg
+
+Når en oppgave eller økt avsluttes, før sluttoppsummeringen, bruk `sesjonslogg`-skillen: dokumenter Oppgave + Plan + Resultat + åpne punkter i `.logs/<bruker>/`, og før åpne punkter i `.logs/<bruker>/issues.md`. Skillen committer loggfila lokalt; push gjør du selv. Gruppens egne regler for commit og språk gjelder foran dette.
