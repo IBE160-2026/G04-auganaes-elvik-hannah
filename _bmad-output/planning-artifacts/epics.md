@@ -5,10 +5,12 @@ inputDocuments:
   - _bmad-output/planning-artifacts/architecture/architecture-prosjektoppgave-ibe160-2026-10-04/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/ux-designs/ux-prosjektoppgave-ibe160-2026-09-29/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-prosjektoppgave-ibe160-2026-09-29/EXPERIENCE.md
-updated: 2026-10-11
+updated: 2026-11-01
 ---
 
 # Husly - Epic Breakdown
+
+> **Revision 2026-11-01:** Vercel is now the course's only supported hosting (see `sprint-change-proposal-2026-11-01.md`). New Story 1.7 (hosted demo on Vercel, built before Story 1.2); Story 1.2 becomes same-origin (no CORS, `SameSite=Lax`); Story 3.2 uses a daily Vercel Cron and a split deep-link rule; Story 3.5 gets whole-day cadence options; Stories 4.2 and 4.3 move to a private Vercel Blob store served only through the backend.
 
 ## Overview
 
@@ -29,7 +31,7 @@ Trinn 1 is the minimal core flow that must be finished and stable first, so a co
 
 | Stage | Stories |
 |---|---|
-| **Trinn 1** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 5.1 |
+| **Trinn 1** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 5.1 |
 | **Trinn 2** | 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 5.2, 5.3, 6.1 |
 
 Epic 5 is split between the stages: the quick-answer (5.1) is Trinn 1, the chat (5.2) and onboarding guide (5.3) are Trinn 2. The Tenant locks in Stories 1.4, 2.3 and 1.5 are Trinn 1 on purpose: they are the product's differentiator and its most testable rules, even though the household is the primary user for Trinn 1.
@@ -107,9 +109,9 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 - **Layering & permissions:** Routes never mutate data or call external services directly — every mutating/permission-sensitive operation flows through a domain-service layer (AD-3). Role lives on the User↔Home Membership join entity, never on the User account (AD-1) — one User can hold different Roles in different Homes. Every Home-scoped route resolves the caller's Role per-request via a `require_role(home_id, allowed_roles)` dependency that loads the Membership row — never from a JWT claim (AD-2).
 - **Task completion:** One domain function (`complete_task_instance`) is the sole code path marking a Task instance complete, recording attribution, and triggering the FR-9 reschedule; it is idempotent on retried requests (AD-3).
 - **AI service:** One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation); every response is a structured object `{status: "ok" | "low_confidence" | "error", answer, disclaimer}` with the disclaimer always its own field (AD-4). The onboarding guide is generated once per Home at provisioning time and persisted, not regenerated per view (AD-4, FR-16).
-- **Photo Evidence storage:** `PhotoEvidence` is 1:1 with `Task` (not `TaskInstance`); each task's photo is stored under a fixed key (`tasks/{task_id}/evidence.jpg`) in Supabase Storage, overwritten on each new upload — no per-completion history row (AD-5). Task types carry a system-seeded, non-Landlord-editable `photo_evidence_eligible` flag; the endpoint setting FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible (AD-6).
-- **Auth:** Short-lived JWT access token returned in the login response body and kept only in React memory (never `localStorage`); long-lived refresh token as an `httpOnly`/`Secure`/`SameSite=None` cookie, exchanged only at a dedicated `/refresh` endpoint. CORS lists the exact origin(s) from the `CORS_ORIGINS` environment variable (the local frontend origin by default, the Vercel origin in the hosted demo) with `allow_credentials=True` (never a wildcard); the generated API client sends every request with `credentials: "include"` (AD-7).
-- **Due/notification job:** A dedicated `POST /internal/run-due-check` endpoint runs the due/overdue scan (FR-10, FR-11's fairness nudge); an external free cron service (cron-job.org) calls it every 10–14 minutes. The endpoint is safe to call concurrently/more often than scheduled — it tracks per-Task-Instance whether a notification was already sent for the current window (AD-8). Fairness-nudge rule: fire a targeted nudge to a Member with 0 completions in the last 3 instances of a recurring shared task, provided at least one other Member completed at least one of those 3 (AD-9, resolves PRD Open Question 4). Landlord broadcast (FR-12) is sent directly and synchronously on request, independent of the due-check cron (AD-14).
+- **Photo Evidence storage:** `PhotoEvidence` is 1:1 with `Task` (not `TaskInstance`); each task's photo is stored under a fixed key (`tasks/{task_id}/evidence.jpg`) in a private Vercel Blob store, overwritten on each new upload — no per-completion history row; the photo is only served through a backend route that runs `require_role` first, never as a permanent Blob URL (AD-5). Task types carry a system-seeded, non-Landlord-editable `photo_evidence_eligible` flag; the endpoint setting FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible (AD-6).
+- **Auth:** Short-lived JWT access token returned in the login response body and kept only in React memory (never `localStorage`); long-lived refresh token as an `httpOnly`/`Secure`/`SameSite=Lax` cookie scoped to `/api/auth/refresh`, the only endpoint that exchanges it. The frontend calls the API only through relative `/api/...` paths on the same origin (Vercel rewrite in the hosted demo, Vite proxy locally), so no CORS configuration exists (AD-7).
+- **Due/notification job:** A dedicated `GET /api/internal/run-due-check` endpoint runs the due/overdue scan (FR-10's daily batch, FR-11's fairness nudge); Vercel Cron calls it once a day (`0 6 * * *` UTC) with `Authorization: Bearer <CRON_SECRET>`, and requests without that secret are rejected. The endpoint is safe to call concurrently or twice — it tracks per Task Instance whether the notification for the current day was already sent (AD-8). Fairness-nudge rule: fire a targeted nudge to a Member with 0 completions in the last 3 instances of a recurring shared task, provided at least one other Member completed at least one of those 3 (AD-9, resolves PRD Open Question 4). Landlord broadcast (FR-12) is sent directly and synchronously on request, independent of the due-check cron (AD-14).
 - **No real-time layer:** Freshness comes from TanStack Query refetching on mount/window-focus — no WebSocket/SSE infrastructure (AD-10).
 - **Frontend data layer:** No component calls `fetch`/`axios` directly or holds server data in local `useState` — all server reads/writes go through TanStack Query hooks backed by one generated API client (from the backend's OpenAPI schema via `openapi-typescript`, never hand-written types). The self-checkoff mutation (FR-17) uses TanStack Query's optimistic-update pattern; the photo-evidence-upload mutation (FR-19) is deliberately pessimistic — the UI waits for the upload-and-auto-approve response before showing complete (AD-11).
 - **PWA shell:** `frontend/` includes a `manifest.json` and a registered service worker from day one, plus one shared "Add to Home Screen" install-prompt component shown once per Member per device (tracked client-side) — required for Web Push to reach iOS Safari (iOS 16.4+ only supports Web Push for a Home-Screen-installed PWA) (AD-12, binds FR-10, FR-21).
@@ -117,10 +119,10 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 - **Naming/data conventions:** Entity names match the PRD Glossary verbatim (`Home`, `Member`, `Role`, `Task`, `TaskInstance`, `Frequency`, `PhotoEvidence`, `NotificationCadence` — never `User` for the Home-scoped actor). IDs are UUIDv4 everywhere. Dates/times are ISO 8601 UTC on the wire. Errors use FastAPI's default `{"detail": "..."}` shape; validation errors use the standard Pydantic 422 body.
 - **Schema changes:** Every schema change is an Alembic migration committed to the repo — never a manual change to any database. Each developer has their own local Docker database (AD-15), so whoever pulls a migration runs it before starting work.
 - **Local running (AD-15):** `docker compose up` starts a local PostgreSQL database; one documented command applies the Alembic migrations and loads seed data; all configuration comes from environment variables with `.env.example` as the template. AI, push (Trinn 2) and Photo Evidence storage (Trinn 2) sit behind adapters with a mock/local implementation that is selected automatically when the key is missing. The automated test suite always runs offline against the mock adapters.
-- **Deployment/infrastructure (optional hosted demo):** React/Vite SPA static build on Vercel; FastAPI/uvicorn on Render (free tier); Postgres + Storage bucket via Supabase (free tier); external cron via cron-job.org; Google Gemini API for AI. This is an optional demo deployment of the same code, not a requirement for running the app, and Trinn 1 needs none of cron, push or Storage there.
-- **Secrets:** Gemini key, VAPID keys, DB URL, JWT signing key via environment variables only, never committed.
+- **Deployment/infrastructure (optional hosted demo):** one Vercel project (`g04husly`) with the Vite frontend and FastAPI backend as Vercel Services on one domain (`/api/*` → backend); Neon Postgres via the Vercel integration, with a Neon branch per PR preview migrated in the build step and deleted when the PR closes; a private Vercel Blob store for Photo Evidence; Vercel Cron for the daily due-check; Google Gemini API for AI. This is an optional demo deployment of the same code, not a requirement for running the app, and Trinn 1 needs none of cron, push or Blob there (Story 1.7).
+- **Secrets:** Gemini key, VAPID keys, DB URL, JWT signing key, `CRON_SECRET` and `BLOB_READ_WRITE_TOKEN` via environment variables only (Vercel project settings in the hosted demo), never committed.
 - **Core entities (names/relationships only):** User, Membership (scoped to one Role per Home), Home, InviteLink (own validity state: token, target Role, used/expired/revoked, distinct from Membership), Task, TaskType (system-seeded catalog carrying `photo_evidence_eligible`), TaskInstance, MemberCompletion (attribution), PhotoEvidence (per-Task), NotificationCadenceSetting (Landlord Homes), PushSubscription (per User, one per device). `[ASSUMPTION carried from Architecture, confirm with team before building]`: invite link default policy is single-use + 7-day expiry, regenerable by whoever can invite.
-- **Explicitly deferred by Architecture (flag for sprint planning, not pre-decided):** observability/logging strategy (left to Render/Supabase defaults + basic logging); automated testing strategy (pytest/Vitest suggested, not binding — the one binding rule is that the suite runs offline against the mock adapters, AD-15); rate-limiting/abuse protection on AI endpoints (none beyond the one-service chokepoint + Gemini's own free-tier cap); internationalization infrastructure (not needed — Norwegian-only v1 per UX).
+- **Explicitly deferred by Architecture (flag for sprint planning, not pre-decided):** observability/logging strategy (left to Vercel's runtime logs + basic logging); automated testing strategy (pytest/Vitest suggested, not binding — the one binding rule is that the suite runs offline against the mock adapters, AD-15); rate-limiting/abuse protection on AI endpoints (none beyond the one-service chokepoint + Gemini's own free-tier cap); internationalization infrastructure (not needed — Norwegian-only v1 per UX).
 
 ### UX Design Requirements
 
@@ -145,7 +147,7 @@ UX-DR13: Frequency/Must toggle — two visual/behavioral states: *editable* (Hou
 UX-DR14: Implement the 9-surface IA with its stated role access: Sign in/Register (all); Create Home + Task Setup step reviewing/adjusting recommended Must/Should tasks (Household Member, Landlord); Task Overview, Task Detail, AI Chat (Household Member, Tenant, Landlord per-Home); Members & Invite (any Household Member, Landlord only — not Tenants); Landlord Portfolio Dashboard (Landlord, shown only when they own ≥2 Homes); Landlord Home Admin (Landlord — bulk Must/Should, Frequency, Photo Evidence requirement, notification cadence, broadcast composer); Settings/Profile (all).
 UX-DR15: On Task Detail, Household Members get the Must/Should classification and Frequency fields directly editable inline (FR-5, FR-8) with no separate admin screen; Tenants see the same fields rendered via the locked Frequency/Must toggle (UX-DR13).
 UX-DR16: A first-time Tenant's Task Overview visit surfaces the AI-generated onboarding guide (FR-16) as a one-time dismissible card at the top of the list — not a separate surface — re-reachable later from Settings if dismissed.
-UX-DR17: No in-app notification inbox — a push notification deep-links straight to Task Detail (FR-10/FR-11/FR-12 stay push-only).
+UX-DR17: No in-app notification inbox (FR-10/FR-11/FR-12 stay push-only). A daily due/overdue notification about one task deep-links to its Task Detail and one about several tasks opens Task Overview; an FR-11 nudge opens its Task Detail; an FR-12 broadcast opens Task Overview. The notification text names the tasks.
 
 **State patterns (each with its specified copy/treatment, not left generic)**
 UX-DR18: Cold load (Task Overview, Landlord Portfolio Dashboard) — 3–4 skeleton placeholder cards/rows while data loads, distinct from the Empty state.
@@ -220,7 +222,7 @@ Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22. Trinn 
 ## Epic List
 
 ### Epic 1: Foundation — Accounts, Homes & Roles
-Users can register and log in, create a Home (Household or Landlord), invite others via a scoped link, and have their Role (Household Member, Landlord, Tenant) correctly enforced server-side everywhere. This epic also establishes the responsive, installable app shell (design tokens as CSS custom properties per AD-13, PWA manifest + service worker + install prompt per AD-12, phone/tablet/desktop breakpoints per FR-21/UX-DR44) that every later epic's screens build on, plus the domain-service/permission-dependency layering (AD-1, AD-2, AD-3 scaffold) and JWT auth split (AD-7).
+Users can register and log in, create a Home (Household or Landlord), invite others via a scoped link, and have their Role (Household Member, Landlord, Tenant) correctly enforced server-side everywhere. This epic also establishes the responsive, installable app shell (design tokens as CSS custom properties per AD-13, PWA manifest + service worker + install prompt per AD-12, phone/tablet/desktop breakpoints per FR-21/UX-DR44) that every later epic's screens build on, plus the domain-service/permission-dependency layering (AD-1, AD-2, AD-3 scaffold), the same-origin JWT auth split (AD-7) and the optional hosted demo on Vercel (Story 1.7).
 **FRs covered:** FR-1, FR-2, FR-3, FR-22 (+ FR-21 at the shell level)
 **Stage:** Trinn 1
 
@@ -230,7 +232,7 @@ Household Members, Tenants, and Landlords can see a Must-first task list for the
 **Stage:** Trinn 1
 
 ### Epic 3: Notifications
-Members receive a push notification when a task becomes due or overdue, with fairness-based targeting when one Member has fallen behind on a shared task; Landlords can send ad-hoc broadcast messages to their Tenants and configure how strictly Tenants are reminded. Implements the external cron-driven due-check endpoint (AD-8), the fairness-nudge rule (AD-9), and the direct/synchronous broadcast path (AD-14).
+Members receive a push notification when a task becomes due or overdue, with fairness-based targeting when one Member has fallen behind on a shared task; Landlords can send ad-hoc broadcast messages to their Tenants and configure how strictly Tenants are reminded. Implements the daily Vercel Cron-driven due-check endpoint (AD-8), the fairness-nudge rule (AD-9), and the direct/synchronous broadcast path (AD-14).
 **FRs covered:** FR-10, FR-11, FR-12, FR-13
 **Stage:** Trinn 2
 
@@ -325,7 +327,7 @@ So that I can access my Homes securely.
 
 **Given** a visitor with no account
 **When** they submit a valid email + password
-**Then** a User row is created and they receive a short-lived JWT access token in the response body (kept only in frontend memory) plus an httpOnly/Secure/SameSite=None refresh cookie (AD-7)
+**Then** a User row is created and they receive a short-lived JWT access token in the response body (kept only in frontend memory) plus an httpOnly/Secure/SameSite=Lax refresh cookie scoped to `/api/auth/refresh` (AD-7)
 
 **Given** a registered user
 **When** they submit correct credentials
@@ -337,11 +339,15 @@ So that I can access my Homes securely.
 
 **Given** an expired access token
 **When** a request is made
-**Then** the frontend calls `/refresh` using the httpOnly cookie to get a new access token transparently, without forcing re-login
+**Then** the frontend calls `/api/auth/refresh` using the httpOnly cookie to get a new access token transparently, without forcing re-login
 
-**Given** the backend CORS configuration
-**When** a request arrives from an origin listed in the `CORS_ORIGINS` environment variable (the local frontend origin by default; the Vercel origin in the optional hosted demo)
-**Then** it is accepted with `allow_credentials=True` against that exact origin; other origins are rejected, and a wildcard is never used (AD-7, AD-15)
+**Given** the frontend
+**When** it calls the API locally (Vite proxy) or on Vercel (rewrite)
+**Then** every call uses a relative `/api/...` path on the same origin, and no CORS configuration exists (AD-7, AD-15)
+
+**Given** Safari on macOS and iOS
+**When** a user logs in on local running and on the PR preview
+**Then** the refresh cookie is set and `/api/auth/refresh` works; if Safari rejects the `Secure` cookie on `http://localhost`, the `Secure` flag is relaxed by an environment variable for local running only, never in the hosted demo
 
 ### Story 1.3: Create a Home (Household or Landlord)
 
@@ -484,6 +490,50 @@ This story builds on Stories 1.1 (scaffold, `docker-compose.yml`, test setup) an
 **Given** the seed data
 **When** it is loaded twice
 **Then** it does not create duplicates (idempotent), so a reviewer can re-run it safely
+
+### Story 1.7: Hosted Demo on Vercel (Services + Neon)
+
+**Stage:** Trinn 1 (optional hosted demo, AD-15). Built before Story 1.2, so that login can be tried on PR previews.
+
+As a team member or course reviewer,
+I want the frontend and the API deployed together on the course's Vercel project,
+So that every PR can be tried online and the merged app is reachable at g04husly.vercel.app.
+
+This story builds on Story 1.1. Local running (AD-15) stays the primary path and is unchanged apart from the `/api` proxy. Added by `sprint-change-proposal-2026-11-01.md`.
+
+**Acceptance Criteria:**
+
+**Given** `vercel.json` at the repo root with `frontend/` and `backend/` as Vercel Services, and the project's Root Directory set to the repo root
+**When** `main` is deployed
+**Then** `/` serves the Vite app (manifest and `/service-worker.js` included) and `/api/health` answers 200 from FastAPI on the same domain (AD-7)
+
+**Given** Neon connected through the Vercel integration
+**When** a deployment is built
+**Then** `alembic upgrade head` runs in the build step against that deployment's `DATABASE_URL`, and a failed migration fails the build
+
+**Given** a PR
+**When** its preview is deployed
+**Then** it uses its own Neon branch `preview/<git-branch>`, so its migrations never touch production
+
+**Given** a PR is closed or merged
+**When** cleanup runs
+**Then** its Neon preview branch is deleted, so the free plan's 10-branch limit is never reached. If this is not possible on the free plan, the fallback is to migrate only on `main`, and the PR explains why
+
+**Given** the Vite dev and preview servers
+**When** the frontend calls `/api/...` locally
+**Then** the call is proxied to the backend on port 8000, so local running is same-origin like the demo (AD-7)
+
+**Given** the backend
+**When** inspected
+**Then** no CORS middleware is configured and `CORS_ORIGINS` is gone from the config and `.env.example` — this removes Story 1.1's CORS code (AD-7)
+
+**Given** the backend running as a Vercel Function
+**When** it connects to Neon
+**Then** it uses Neon's pooled connection string, and the DB URL scheme is normalised for SQLAlchemy/psycopg in one place in the config
+
+**Given** the repo
+**When** inspected
+**Then** no secret is committed, and the README describes the hosted demo: its URL, that it is optional, that only the project owner sees the Vercel and Neon dashboards, and how to roll back (tag `v0.1-for-vercel-hosting`, Root Directory `frontend`)
 
 ## Epic 2: Task Management Core Loop
 
@@ -738,21 +788,21 @@ So that I never silently miss a task.
 
 **Acceptance Criteria:**
 
-**Given** a dedicated `POST /internal/run-due-check` endpoint
+**Given** a dedicated `GET /api/internal/run-due-check` endpoint
 **When** it is called
-**Then** it scans for task instances that are due or overdue and sends a push notification to the relevant Member(s) (FR-10)
+**Then** it scans for task instances that are due or overdue and sends each relevant Member one push notification covering all of their due and overdue tasks (FR-10)
 
-**Given** an external cron service calling this endpoint every 10-14 minutes
-**When** it fires on schedule
-**Then** the due/overdue scan runs without needing an in-process scheduler (AD-8)
+**Given** Vercel Cron calling this endpoint once a day (`0 6 * * *` UTC) with `Authorization: Bearer <CRON_SECRET>`
+**When** it fires
+**Then** the due/overdue scan runs without an in-process scheduler, and a request without the correct secret is rejected (AD-8)
 
 **Given** the endpoint is called twice in quick succession (concurrent or overlapping triggers)
 **When** both calls scan the same due/overdue window
-**Then** no Member receives a duplicate notification for the same task instance and window
+**Then** no Member receives a duplicate notification for the same task instance and day (Vercel may deliver one cron event twice)
 
 **Given** a Member receives a due/overdue push notification
 **When** they tap it
-**Then** it deep-links directly to that task's Task Detail — no in-app notification inbox exists
+**Then** a notification about one task opens that task's Task Detail, and one about several tasks opens Task Overview — no in-app notification inbox exists (UX-DR17)
 
 **Given** no VAPID keys are configured (local running)
 **When** the due-check endpoint is called by hand or by a script
@@ -823,6 +873,10 @@ So that I can match reminder pressure to how seriously that property needs it.
 **Given** a cadence change
 **When** it takes effect
 **Then** it does not alter any task's underlying Frequency (FR-8/FR-9) — the two remain independent
+
+**Given** the cadence options
+**When** they are shown to the Landlord
+**Then** they are whole-day intervals (for example daily, every second day, weekly), since reminders come from the daily due-check (FR-13, AD-8)
 
 **Given** a Tenant
 **When** they attempt to change their Home's notification cadence
@@ -896,7 +950,7 @@ So that I'm never blocked waiting on my Landlord.
 **When** the underlying completion path is inspected
 **Then** it calls the same `complete_task_instance` domain function as the plain checkbox (Epic 2.5's AD-3), not a separate/duplicated completion path
 
-**Given** no Supabase Storage credentials are configured (local running)
+**Given** no `BLOB_READ_WRITE_TOKEN` is configured (local running)
 **When** a photo is uploaded
 **Then** it is stored through the local filesystem adapter under the same fixed per-task key, so Photo Evidence can be run and tested without external accounts (FR-22, AD-15)
 
@@ -925,6 +979,10 @@ So that I can review after the fact without the system becoming a privacy liabil
 **Given** a stored photo
 **When** access is attempted
 **Then** only that Home's Landlord and the product's own support staff can view it — no other Tenant, other Landlord, or third party can (NFR5)
+
+**Given** a stored photo
+**When** the Landlord views it
+**Then** it is served through a backend route that runs `require_role` first (streamed, or a short-lived signed URL if private Blob storage supports it); no permanent Blob URL ever reaches the browser (AD-5, NFR5)
 
 **Given** a Tenant's task history and Photo Evidence
 **When** visibility is checked
