@@ -1,7 +1,10 @@
-"""FastAPI entry point (Story 1.1). Routes are mounted under /api."""
+"""FastAPI entry point. Routes are mounted under /api.
+
+Frontend and API share one origin (AD-7): Vercel rewrites /api/* to this service with the
+full path, and the Vite dev/preview servers proxy /api locally. So there is no CORS setup.
+"""
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings, get_settings
 from app.routes import health
@@ -10,13 +13,7 @@ from app.routes import health
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="Husly API")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    app.state.settings = settings
     app.include_router(health.router, prefix="/api")
     return app
 
