@@ -1,0 +1,106 @@
+# Issue #9 (deferred R7 from Story 1.7): tests, lint and build on every PR and on main.
+# Needs no secrets or accounts, like local running (AD-15).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same PR cancels the run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest, ruff) – ${{ matrix.os }}
+    # Windows too, since the team and likely the examiner run the app there (README: Git Bash).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes only exact version tags, no moving v10 tag.
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked
+      - run: uv run pytest
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  migrations:
+    name: Migreringer (Postgres 18)
+    runs-on: ubuntu-latest
+    # Linux only: GitHub's Windows runners cannot run the Postgres service container.
+    # Same major version as Neon and docker-compose.yml.
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_USER: husly
+          POSTGRES_PASSWORD: husly
+          POSTGRES_DB: husly
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U husly -d husly"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked
+      # Uses the local default URL (localhost:5433), the same as README.
+      - run: uv run alembic upgrade head
+      # Proves the migration transaction committed (the advisory-lock pitfall from Story 1.7).
+      - name: alembic_version finnes
+        run: >-
+          uv run python -c "from sqlalchemy import create_engine, inspect;
+          from app.config import get_database_url;
+          assert inspect(create_engine(get_database_url())).has_table('alembic_version')"
+
+  frontend:
+    name: Frontend (Vitest, eslint, build) – ${{ matrix.os }}
+    # Windows too, since the team and likely the examiner run the app there (README: Git Bash).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test -- --run
+      - run: npm run lint
+      - run: npm run build
+      # The service worker must sit unhashed at the site root to control the app (AD-12, Story 1.1).
+      - name: service-worker.js i roten av dist
+        run: test -f dist/service-worker.js

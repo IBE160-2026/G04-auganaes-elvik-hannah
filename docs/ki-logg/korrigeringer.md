@@ -61,6 +61,7 @@ Vi har bedt KI om uavhengige gjennomganger av sitt eget arbeid før dokumentene 
 | KI sa at story-branchen skulle rebases på main før push, men branchen var allerede pushet, så det ville krevd force-push, som gruppa aldri gjør. | KI oppdaget det selv før kommandoen ble kjørt (V01). | Main ble tatt inn med merge (`6f873b4`). |
 | Spec-en for Story 1.7 sa at kommentaren `// @vitest-environment node` var nok for testen av `vite.config.ts`. Den felles oppsettfila `src/test-setup.ts` bruker `window`, så testen krasjet med «window is not defined». | Implementeringsagenten kjørte testen (V01). | Vitest delt i to prosjekter, `app` (jsdom) og `config` (node), i `frontend/vite.config.ts` (Story 1.7). |
 | Databasemotoren i Story 1.7 hadde ingen tidsgrense for tilkobling, så `/api/health/db` kunne henge til Vercel-funksjonen ble avbrutt i stedet for å svare 503. Innstillingene for Neon (`pool_pre_ping`, `prepare_threshold`) hadde heller ingen test. | Edge Case Hunter, Blind Hunter og Verification Gap i kodegjennomgangen (V01). | `connect_timeout` lagt til, og en test sjekker alle innstillingene (`backend/app/db.py`, Story 1.7). |
+| CI-workflowen brukte `astral-sh/setup-uv@v10`. KI-en sjekket at versjonen fantes, men ikke at det fantes en kort tag for den, og prosjektet publiserer bare eksakte versjonstagger. Backend- og migreringsjobbene feilet før de startet. | Første kjøring av CI på PR #10 (V01). | Låst til `v10.3.3` med en kommentar (`fdab244`, PR #10). |
 
 ## Ekstern tilbakemelding
 
