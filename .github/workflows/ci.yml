@@ -17,10 +17,16 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (pytest, ruff)
-    runs-on: ubuntu-latest
+    name: Backend (pytest, ruff) – ${{ matrix.os }}
+    # Windows too, since the team and likely the examiner run the app there (README: Git Bash).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
+        shell: bash
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
@@ -37,6 +43,7 @@ jobs:
   migrations:
     name: Migreringer (Postgres 18)
     runs-on: ubuntu-latest
+    # Linux only: GitHub's Windows runners cannot run the Postgres service container.
     # Same major version as Neon and docker-compose.yml.
     services:
       db:
@@ -72,10 +79,16 @@ jobs:
           assert inspect(create_engine(get_database_url())).has_table('alembic_version')"
 
   frontend:
-    name: Frontend (Vitest, eslint, build)
-    runs-on: ubuntu-latest
+    name: Frontend (Vitest, eslint, build) – ${{ matrix.os }}
+    # Windows too, since the team and likely the examiner run the app there (README: Git Bash).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
+        shell: bash
         working-directory: frontend
     steps:
       - uses: actions/checkout@v7
