@@ -14,6 +14,7 @@ Lay the foundation every later epic builds on. Users can register and log in, cr
 - Story 1.4: Invite Members via Scoped Link & Accept Invite
 - Story 1.5: View Home Members List & Enforce Role-Based Permissions
 - Story 1.6: Run Locally with Docker, Seed Data and Mock Modes
+- Story 1.7: Hosted Demo on Vercel (Services + Neon), built before Story 1.2 (added 2026-11-01)
 
 ## Requirements & Constraints
 
@@ -28,15 +29,15 @@ Lay the foundation every later epic builds on. Users can register and log in, cr
 
 ## Technical Decisions
 
-- **Stack:** Python 3.12+, FastAPI (pin the exact 0.14x patch at setup), SQLModel, Alembic and PostgreSQL in Docker. Frontend: React 19 (pin the exact minor), TypeScript (not plain JS), Vite, TanStack Query v5 and Node LTS. Tests: pytest (backend) and Vitest (frontend). Pin the PostgreSQL major version in `docker-compose.yml`, and keep the same major as the optional hosted Supabase demo. Do not use a project generator. Scaffold the committed tree directly.
+- **Stack:** Python 3.12+, FastAPI (pinned 0.162.0 in Story 1.1), SQLModel, Alembic and PostgreSQL in Docker. Frontend: React 19 (pin the exact minor), TypeScript (not plain JS), Vite, TanStack Query v5 and Node LTS. Tests: pytest (backend) and Vitest (frontend). Pin the PostgreSQL major version in `docker-compose.yml`, and keep the same major as the optional hosted Neon demo. Do not use a project generator. Scaffold the committed tree directly.
 - **Source tree:** At the repo root: `docker-compose.yml`, `.env.example`, `README.md`. Under `frontend/`: `public/manifest.json` and `src/{api,components,routes,styles}` plus `src/service-worker.ts`. Under `backend/app/`: `{routes,domain,permissions,models}`, with `ai/`, `seed/` and `notifications/` added by the stories that need them.
 - **Layering:** Dependencies point downward only (UI, then routes, then permissions, then domain, then persistence/adapters). Routes are thin. Every mutation and external call goes through a domain service.
 - **Role model:** Role lives on `Membership` (the User↔Home join), never on `User`. The JWT carries only `user_id`. Every Home-scoped route takes `home_id` as a path parameter and uses a `require_role(home_id, allowed_roles)` dependency. That dependency loads the caller's Membership row from the DB, never from a token claim, body or query. (Early architecture notes that read Role from the JWT are superseded.)
-- **Auth:** A short-lived access token is returned in the response body and held only in React memory, never in `localStorage`. A long-lived refresh token goes in an `httpOnly`/`Secure`/`SameSite=None` cookie and is exchanged only at `/refresh`. CORS uses the exact origins from `CORS_ORIGINS` (the local frontend by default) with `allow_credentials=True`, never a wildcard. The API client sends `credentials: "include"`.
+- **Auth (revised 2026-11-01):** Frontend and API share one origin everywhere: the frontend calls only relative `/api/...` paths, which the Vite dev/preview servers proxy to port 8000 locally and the Vercel rewrite sends to the FastAPI service in the hosted demo. A short-lived access token is returned in the response body and held only in React memory, never in `localStorage`. A long-lived refresh token goes in an `httpOnly`/`Secure`/`SameSite=Lax` cookie scoped to `/api/auth/refresh`, the only endpoint that exchanges it. There is no CORS middleware (Story 1.7 removes Story 1.1's). Login must be checked in Safari, locally and on the PR preview; if Safari rejects the `Secure` cookie on `http://localhost`, an environment variable relaxes it for local running only.
 - **Frontend data:** No direct `fetch`/`axios` in components and no server data in `useState`. All server reads and writes go through TanStack Query hooks on one API client generated with `openapi-typescript` from FastAPI's OpenAPI schema. There is no real-time layer: data refetches on mount and on window focus.
 - **Entities in this epic:** `User`, `Home` (type Household or Landlord), `Membership` (one Role per Home), `InviteLink` (token, target Role, used/expired/revoked state, kept separate from Membership).
 - **Conventions:** Entity names follow the glossary (`Member` is the Home-scoped actor, `User` is the account row). IDs are UUIDv4. Datetimes are ISO 8601 UTC on the wire. Errors use FastAPI's `{"detail": ...}` and the standard 422 body. Every schema change is a committed Alembic migration, against each developer's own local database. Secrets (DB URL, JWT signing key, later Gemini/VAPID) come only from environment variables.
-- **Mock adapters:** Each external service has an adapter with a mock that is picked automatically when its key is missing (AI when `GEMINI_API_KEY` is unset). Tests always use the mocks. The hosted Vercel/Render/Supabase setup is an optional demo, not a requirement.
+- **Mock adapters:** Each external service has an adapter with a mock that is picked automatically when its key is missing (AI when `GEMINI_API_KEY` is unset). Tests always use the mocks. The hosted demo (one Vercel project with Vercel Services, Neon Postgres, Vercel Blob and Vercel Cron) is optional, not a requirement.
 
 ## UX & Interaction Patterns
 

@@ -7,7 +7,7 @@ paradigm: 'Layered client-server: SPA client + REST API service'
 scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 9 PRD features / FR-1 through FR-22'
 status: final
 created: '2026-10-04'
-updated: '2026-10-25'
+updated: '2026-11-01'
 binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
@@ -23,22 +23,24 @@ companions: []
 
 > **Revision 2026-10-25 (Story 1.1 scaffold):** Stack versions pinned at setup. FastAPI: "latest 0.14x" was a snapshot of the newest line at authoring, not an intended cap, so the team chose the newest release, 0.162.0. TypeScript: pinned to 6.0.3 rather than the newest 7.0, because `typescript-eslint` 8.72 (the linter) supports only TypeScript below 6.1.
 
+> **Revision 2026-11-01 (Vercel as the only hosting):** The course now supports Vercel as its only hosting (see `sprint-change-proposal-2026-11-01.md`). The optional hosted demo moves to one Vercel project with the frontend and FastAPI as Vercel Services on one domain, Neon Postgres (a branch per preview) and a private Vercel Blob store; Render, Supabase and cron-job.org are dropped. AD-7 becomes same-origin (`SameSite=Lax`, no CORS), AD-8 becomes a daily Vercel Cron (resolves PRD OQ-2), AD-5 moves to Vercel Blob served only through the backend, and AD-15's adapter list follows. Rollback point: tag `v0.1-for-vercel-hosting`.
+
 ## Design Paradigm
 
 Layered client-server: a React SPA (presentation only) calls a single FastAPI REST API. Inside the API, every mutating or permission-sensitive operation flows through one domain-service layer before touching persistence — routes never mutate data or call external services directly.
 
 ```mermaid
 graph LR
-  UI["React SPA (Vercel)"] -->|HTTPS/JSON| API["FastAPI routes"]
+  UI["React SPA\n(Vercel service)"] -->|"HTTPS/JSON, same origin /api"| API["FastAPI routes\n(Vercel service)"]
   API --> PERM["require_role(home_id, ...)\n(resolves Role from Membership,\nnot a JWT claim — AD-2)"]
   PERM --> DOMAIN["Domain services\n(e.g. complete_task_instance)"]
-  DOMAIN --> DB[("Postgres\nvia SQLModel\n(Supabase)")]
-  DOMAIN --> STORAGE[("Supabase Storage\n(Photo Evidence)")]
+  DOMAIN --> DB[("Postgres\nvia SQLModel\n(Neon)")]
+  DOMAIN --> STORAGE[("Vercel Blob, private\n(Photo Evidence)")]
   DOMAIN --> AI["AI assistant service"]
   AI --> GEMINI["Google Gemini API"]
   DOMAIN --> PUSH["Push service\n(pywebpush)"]
   PUSH --> BROWSERS["Browser / PWA\npush endpoints"]
-  CRON["External cron ping\n(cron-job.org)"] -->|every 10-14 min| API
+  CRON["Vercel Cron"] -->|once a day| API
 ```
 
 Layers may only depend downward (UI → routes → permission → domain → persistence/external adapters). Nothing below the domain layer may import or call back up into routes or UI.
@@ -74,7 +76,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Binds:** FR-19
 - **Stage:** Trinn 2
 - **Prevents:** a per-TaskInstance PhotoEvidence record implying a photo history (contradicting FR-19's "no accumulating history"), and the ambiguity of which instance's evidence record points at the single stored photo after a recurring task's 2nd+ completion.
-- **Rule:** `PhotoEvidence` is 1:1 with `Task` (the recurring task definition), not with `TaskInstance` — it represents "the current evidence for this Task," with a field recording which `TaskInstance` most recently produced it (for the Landlord's "when/by whom" review). Each task's required photo is stored under a fixed, server-computed key (`tasks/{task_id}/evidence.jpg`) in Supabase Storage; a new upload overwrites that key and updates the pointer — no code path appends a new key or a new PhotoEvidence row per completion.
+- **Rule:** `PhotoEvidence` is 1:1 with `Task` (the recurring task definition), not with `TaskInstance` — it represents "the current evidence for this Task," with a field recording which `TaskInstance` most recently produced it (for the Landlord's "when/by whom" review). Each task's required photo is stored under a fixed, server-computed key (`tasks/{task_id}/evidence.jpg`) in a private Vercel Blob store (`access="private"`, overwrite explicitly enabled); a new upload overwrites that key and updates the pointer — no code path appends a new key or a new PhotoEvidence row per completion. The browser never gets a permanent Blob URL: every view goes through a backend route that runs `require_role` (AD-2) first, so a Member who loses the Landlord Role in that Home loses access at once (NFR5). After that check the backend either streams the photo or, if private Blob storage supports it, hands out a short-lived signed URL; Story 4.3 chooses. An overwrite can take up to 60 s to propagate through Blob's cache, so the review view relies on the pointer's timestamp, not on the cached object. `[REVISED 2026-11-01]` — was Supabase Storage.
 
 ### AD-6 — Photo Evidence eligibility is enforced in the data layer
 
@@ -83,18 +85,18 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Prevents:** a direct API call letting a Landlord require Photo Evidence on a privacy-sensitive task type, bypassing a UI-only restriction.
 - **Rule:** Task types carry a system-seeded `photo_evidence_eligible` flag, not Landlord-editable. The endpoint that sets FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible.
 
-### AD-7 — Auth: in-memory access token + httpOnly refresh cookie
+### AD-7 — Auth: in-memory access token + httpOnly refresh cookie, same origin
 
 - **Binds:** all authenticated routes; Cross-Cutting NFR "Permission enforcement"
-- **Prevents:** storing a JWT in `localStorage` (XSS-exposed) or relying on a same-origin assumption that breaks once frontend (Vercel) and backend (Render) are on different domains.
-- **Rule:** A short-lived JWT access token is returned in the login response body and kept only in React memory. A long-lived refresh token is set as an `httpOnly`, `Secure`, `SameSite=None` cookie, exchanged only at a dedicated `/refresh` endpoint. Both halves of cross-origin credentialed cookies are named explicitly so neither is forgotten: the backend's CORS config lists the exact origin(s) from the `CORS_ORIGINS` environment variable (the local frontend origin by default, the Vercel origin in the optional hosted demo) with `allow_credentials=True` (never a wildcard origin, which browsers reject when credentials are involved), and the one generated API client (AD-11) sends every request with `credentials: "include"`.
+- **Prevents:** storing a JWT in `localStorage` (XSS-exposed), and the cross-site cookie and CORS wiring a split frontend/backend domain would need.
+- **Rule:** The frontend calls the API only through relative `/api/...` paths, so frontend and API share one origin in every environment: on Vercel, the top-level rewrite sends `/api/*` to the FastAPI service and everything else to the Vite service; locally, the Vite dev and preview servers proxy `/api` to the backend on port 8000. A short-lived JWT access token is returned in the login response body and kept only in React memory. A long-lived refresh token is set as an `httpOnly`, `Secure`, `SameSite=Lax` cookie scoped to the refresh endpoint's path, and is exchanged only at `/api/auth/refresh`. No CORS middleware is configured: a same-origin app has no cross-origin caller to allow, and `CORS_ORIGINS` is removed from `.env.example` (Story 1.7). `[REVISED 2026-11-01]` — was a `SameSite=None` cookie plus credentialed CORS, because the frontend (Vercel) and backend (Render) were on different domains.
 
-### AD-8 — Due-check runs on an external cron trigger, not an in-process scheduler
+### AD-8 — Due-check runs on a daily Vercel Cron trigger, not an in-process scheduler
 
 - **Binds:** FR-10, FR-11, FR-12, FR-13, Cross-Cutting NFR "Notification reliability"
-- **Stage:** Trinn 2. Locally (AD-15) the due-check endpoint is called by hand or by a small script instead of cron-job.org; the cron service is only used in the optional hosted demo.
-- **Prevents:** an in-process scheduler (e.g. APScheduler) never firing because Render's free tier spins the service down after 15 minutes idle.
-- **Rule:** A dedicated `POST /internal/run-due-check` endpoint runs the due/overdue scan (push notifications, FR-11's fairness nudge) and is the only thing that triggers it. An external free cron service (cron-job.org) calls it every 10–14 minutes, which also keeps the Render instance awake and incidentally keeps Supabase's free-tier project from auto-pausing after 7 days of DB inactivity (web-verified; the due-check job touches the DB every cycle). The endpoint is safe to call concurrently or more often than scheduled: it tracks, per Task Instance, whether a notification has already been sent for the current due/overdue window, so a duplicate or overlapping trigger never double-sends. `[ADOPTED]` — resolves PRD Open Question 2 (delivery window = "checked every ~10–14 min," not immediate, unless upgraded to the paid tier). `[ASSUMPTION: Render's own docs call this pattern unsupported/not guaranteed — acceptable risk for a course project; reversible to Render's paid tier without any code change if it proves unreliable. Note: keeping the service always-on this way consumes nearly all of Render's 750 free instance-hours/month (~720-744h/month) — fine if this is the only free Render service in use, but leaves no headroom for a second one on the same account.]`
+- **Stage:** Trinn 2. Locally (AD-15) the due-check endpoint is called by hand or by a small script; Vercel Cron is only used in the optional hosted demo.
+- **Prevents:** an in-process scheduler (e.g. APScheduler), which never fires on serverless functions that only run while handling a request.
+- **Rule:** A dedicated `GET /api/internal/run-due-check` endpoint runs the due/overdue scan (FR-10's daily batch, FR-11's fairness nudge) and is the only thing that triggers it. Vercel Cron calls it once a day (`0 6 * * *` UTC, about 07:00–08:00 Norwegian time; the free plan may start it up to 59 minutes late and allows no more than one run a day). The endpoint rejects any request whose `Authorization` header is not `Bearer <CRON_SECRET>`, and in the hosted demo it rejects every request when `CRON_SECRET` is unset. It is safe to call concurrently or more than once (Vercel may deliver one cron event twice): per Task Instance it records whether the notification for the current day has been sent, so a duplicate trigger never double-sends. FR-13's cadence options are whole-day intervals evaluated by this daily run. `[ADOPTED]` — resolves PRD Open Question 2 as a daily morning batch. `[REVISED 2026-11-01]` — was cron-job.org every 10–14 minutes, which also kept a free Render instance awake. `[ASSUMPTION: a missed daily run means no reminders that day — accepted risk for a course project.]`
 
 ### AD-9 — FR-11 fairness-nudge rule
 
@@ -132,14 +134,14 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 - **Binds:** FR-12
 - **Stage:** Trinn 2
-- **Prevents:** a Landlord's ad-hoc message silently inheriting AD-8's 10–14 minute cron cadence, when the PRD expects it sent as soon as the Landlord submits it.
+- **Prevents:** a Landlord's ad-hoc message silently inheriting AD-8's once-a-day cron cadence, when the PRD expects it sent as soon as the Landlord submits it.
 - **Rule:** The broadcast endpoint calls the push-sending domain function directly and synchronously on request, independent of the `/internal/run-due-check` job. AD-8 governs only the due/overdue scan and FR-11's fairness nudge, never FR-12.
 
 ### AD-15 — Local Docker-based running is the primary path
 
 - **Binds:** FR-22, Cross-Cutting NFR "Runnable without external accounts"; depends on AD-4
 - **Prevents:** an app that only runs against the team's shared Supabase project and external accounts, so a reviewer (or a new team member on Mac or Windows) cannot run or test it.
-- **Rule:** `docker compose up` starts a local PostgreSQL database; one documented command applies the Alembic migrations and loads seed data. All configuration comes from environment variables, with `.env.example` as the template and no secrets in the repo. Every external service sits behind an adapter with a mock implementation that is selected automatically when its key is missing: the AI service (AD-4, mock when `GEMINI_API_KEY` is unset), the push sender (Trinn 2, mock when the VAPID keys are unset) and Photo Evidence storage (Trinn 2, local filesystem instead of Supabase Storage). The automated test suite always runs against the mock adapters, with no network and no keys. The hosted setup (Vercel, Render, Supabase, cron-job.org) is an optional demo deployment of the same code, never a requirement for running it. `[ADOPTED]` — resolves the teacher's feedback on local runnability.
+- **Rule:** `docker compose up` starts a local PostgreSQL database; one documented command applies the Alembic migrations and loads seed data. All configuration comes from environment variables, with `.env.example` as the template and no secrets in the repo. Every external service sits behind an adapter with a mock implementation that is selected automatically when its key is missing: the AI service (AD-4, mock when `GEMINI_API_KEY` is unset), the push sender (Trinn 2, mock when the VAPID keys are unset) and Photo Evidence storage (Trinn 2, local filesystem instead of Vercel Blob, selected when `BLOB_READ_WRITE_TOKEN` is unset). The automated test suite always runs against the mock adapters, with no network and no keys. The hosted setup (one Vercel project with Vercel Services, Neon Postgres, Vercel Blob and Vercel Cron) is an optional demo deployment of the same code, never a requirement for running it. `[ADOPTED]` — resolves the teacher's feedback on local runnability.
 
 ## Consistency Conventions
 
@@ -148,7 +150,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | Naming (entities, files, interfaces, events) | Entity names match the PRD Glossary verbatim: `Home`, `Member`, `Role`, `Task`, `TaskInstance`, `Frequency`, `PhotoEvidence`, `NotificationCadence`. No synonyms (e.g. never `User` for the Home-scoped actor — that's `Member`; `User` is the account row). |
 | Data & formats (ids, dates, error shapes, envelopes) | IDs: UUIDv4 everywhere. Dates/times: ISO 8601 in UTC on the wire, converted client-side for display. Errors: FastAPI's default `{"detail": "..."}` shape; validation errors use FastAPI/Pydantic's standard 422 body, never a bespoke envelope. |
 | State & cross-cutting (mutation, errors, logging, config, auth) | Mutations only via domain services (AD-3). Auth via the `require_role` dependency (AD-2). Secrets (Gemini key, VAPID keys, DB URL, JWT signing key) via environment variables only, never committed. Frontend API types generated from the backend's OpenAPI schema (`openapi-typescript`), never hand-written. |
-| Schema changes (one local database per developer) | Every schema change is an Alembic migration committed to the repo — never a manual change to any database. Each developer has their own local Docker database (AD-15), so whoever pulls a migration runs it before starting work; no announcement is needed because nothing is shared. The optional hosted demo database is only migrated by the person who deploys. |
+| Schema changes (one local database per developer) | Every schema change is an Alembic migration committed to the repo — never a manual change to any database. Each developer has their own local Docker database (AD-15), so whoever pulls a migration runs it before starting work; no announcement is needed because nothing is shared. The optional hosted demo is migrated by the deploy's build step (`alembic upgrade head`), each preview against its own Neon branch and production against Neon's main branch, so an unmerged migration never touches production. |
 
 ## Stack
 
@@ -158,7 +160,8 @@ Layers may only depend downward (UI → routes → permission → domain → per
 | FastAPI | latest (pinned 0.162.0 at setup, 2026-10-25; was "latest 0.14x" at authoring) |
 | SQLModel | latest (0.0.47+; tracks SQLAlchemy 2.0.5x since v0.0.19 — no 1.x pin, web-verified Oct 2026) |
 | Alembic | latest (schema migrations for SQLModel/SQLAlchemy) |
-| PostgreSQL | local Docker image for development, tests and review (AD-15); Supabase managed Postgres only in the optional hosted demo. Pin the same major version in both. |
+| PostgreSQL | local Docker image for development, tests and review (AD-15); Neon (Postgres 17) only in the optional hosted demo. Pin the same major version in both. |
+| vercel (Python SDK) | latest, ≥ 0.5.0 (private Vercel Blob storage, AD-5; Trinn 2) |
 | Docker / Docker Compose | current stable; runs the local database (AD-15) |
 | pywebpush | latest (VAPID Web Push) |
 | google-genai | latest (official Gemini SDK; supersedes deprecated `google-generativeai`) |
@@ -174,32 +177,31 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 **Primary path — local (AD-15):** `docker compose up` runs PostgreSQL; backend and frontend run on the host (or in Compose later); AI, push and storage use mock adapters when no keys are set. This is how the team develops and how a reviewer runs the app.
 
-**Optional — hosted demo:** the same code deployed as shown below. It is not required to run, test or review the app, and Trinn 1 needs none of cron, push or Storage there.
+**Optional — hosted demo:** the same code deployed to one Vercel project, `g04husly` (<https://g04husly.vercel.app>). It is not required to run, test or review the app, and Trinn 1 needs none of cron, push or Blob there. The course supports Vercel as its only hosting (2026-11-01).
 
-> **Note 2026-11-01:** The course now offers Vercel as its only supported hosting, connected to every group repo. The frontend demo is the Vercel project `g04husly` (<https://g04husly.vercel.app>, Root Directory `frontend`), deployed from `main` with a preview per PR. The diagram below still shows the backend on Render and data on Supabase. Where the backend is hosted, and how the due-check is triggered (Vercel Cron on the free plan runs at most once a day), is open and will go through `bmad-correct-course` before the first story that needs a hosted backend.
+- **One project, one domain:** the project's Root Directory is the repo root, and `vercel.json` declares two Vercel Services, `frontend/` (Vite) and `backend/` (FastAPI). A top-level rewrite sends `/api/*` to the backend, which sees the full path, and everything else to the frontend (AD-7).
+- **Database:** Neon, connected through the Vercel integration, which sets `DATABASE_URL`. Production uses Neon's main branch; every PR preview gets its own branch `preview/<git-branch>`, migrated in the build step. The free plan allows 10 branches per project, so a preview's branch is deleted when its PR is closed or merged.
+- **Secrets:** `DATABASE_URL`, the JWT signing key, `GEMINI_API_KEY`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN` and the VAPID keys live only in the Vercel project's environment variables, never in the repo.
+- **Rollback:** before this change the project's Root Directory was `frontend` and only the static frontend was deployed; the tag `v0.1-for-vercel-hosting` marks that state.
 
 ```mermaid
 graph TB
-  subgraph Vercel
-    FE["React/Vite SPA\n(static build)"]
+  subgraph Vercel["Vercel project g04husly (Hobby)"]
+    FE["Vite service\n(static SPA)"]
+    BE["FastAPI service\n(Vercel Function)"]
+    CRON["Vercel Cron\n(daily)"]
+    OBJ[("Vercel Blob\n(private)")]
   end
-  subgraph Render["Render (free tier)"]
-    BE["FastAPI service\nuvicorn"]
-  end
-  subgraph Supabase["Supabase (free tier)"]
-    PG[("Postgres")]
-    OBJ[("Storage bucket")]
-  end
-  CRON["cron-job.org\n(free, external)"]
+  PG[("Neon Postgres\nmain + preview branches")]
   GEMINI["Google Gemini API"]
-  FE -->|HTTPS| BE
+  FE -->|"/api/* same origin"| BE
+  CRON -->|"GET /api/internal/run-due-check"| BE
   BE --> PG
   BE --> OBJ
   BE --> GEMINI
-  CRON -->|ping every 10-14 min| BE
 ```
 
-The hosted demo is a single environment — no separate staging, given the 3-person/13-week scope. Development does not use it: each developer runs their own local database.
+The hosted demo has one production environment plus a short-lived preview per PR. Development does not use it: each developer runs their own local database.
 
 ### Core entities (names + relationships only)
 
@@ -227,6 +229,7 @@ erDiagram
 ```text
 /
   docker-compose.yml # local PostgreSQL (AD-15)
+  vercel.json        # Vercel Services, /api rewrite and daily cron (hosted demo only)
   .env.example       # every environment variable, no secrets (AD-15)
   README.md          # local setup, seed, tests, mock modes (AD-15)
   frontend/          # React + Vite + TypeScript SPA
@@ -267,7 +270,7 @@ erDiagram
 
 ## Deferred
 
-- **Observability/logging strategy** — not fixed at this altitude; left to whatever Render/Supabase provide by default plus `print`/basic logging for this course project's scale. Revisit if the team hits a debugging wall.
+- **Observability/logging strategy** — not fixed at this altitude; left to Vercel's runtime logs plus `print`/basic logging for this course project's scale. Revisit if the team hits a debugging wall.
 - **Automated testing strategy** — not fixed here (pytest for backend, Vitest for frontend are the obvious defaults but not binding); left to sprint planning/story level. The one binding rule is AD-15: the suite runs offline against the mock adapters.
 - **PRD Open Question 1 (scope cut order)** — explicitly a PM/scope call, not an architecture one; the PRD's own provisional cut order stands.
 - **Rate-limiting/abuse protection on the AI endpoints** — beyond "one backend service" (AD-4) and the Gemini free-tier's own cap, no additional throttling is designed; acceptable at this user scale.

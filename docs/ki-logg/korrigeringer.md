@@ -2,7 +2,7 @@
 
 Utvalgte situasjoner der vi ikke bare godtok det KI foreslo. Hvert eksempel lenker til prompten i KI-loggen og til stedet i repoet der endringen havnet. Listen oppdateres fortløpende. Fra implementeringen av starter, kommer eksempler fra PR-er og kodegjennomgang i tillegg.
 
-Forkortelser: **B44** = [økt 12.09–04.10](okter/2026-09-12_eirik_44c18c13.md), **A29** = [arkitekturøkt 04.10](okter/2026-10-04_eirik_29c07691.md), **E19** = [epics-økt 04.10](okter/2026-10-04_eirik_192ee825.md), **S11** = [Steffens correct course-økt 11.10](okter/2026-10-11_steffen-elvik_f2e2dde9.md), **K25** = [Story 1.1-økt 25.10](okter/2026-10-25_eirik_4408f289.md). Tallet etter `#` er nummeret på innlegget i loggfila.
+Forkortelser: **B44** = [økt 12.09–04.10](okter/2026-09-12_eirik_44c18c13.md), **A29** = [arkitekturøkt 04.10](okter/2026-10-04_eirik_29c07691.md), **E19** = [epics-økt 04.10](okter/2026-10-04_eirik_192ee825.md), **S11** = [Steffens correct course-økt 11.10](okter/2026-10-11_steffen-elvik_f2e2dde9.md), **K25** = [Story 1.1-økt 25.10](okter/2026-10-25_eirik_4408f289.md), **V01** = [Vercel-økt 01.11](okter/2026-11-01_eirik_a9ebc4c9.md). Tallet etter `#` er nummeret på innlegget i loggfila.
 
 ## Presiserte krav (KI måtte endre forslaget sitt)
 
@@ -21,6 +21,7 @@ Forkortelser: **B44** = [økt 12.09–04.10](okter/2026-09-12_eirik_44c18c13.md)
 | 11 | KI foreslo å skrive den anbefalte oppgavelista rett inn i Story 2.1. | Vi gjorde den til en versjonert `TaskType`-katalog i repoet, slik at bildebevis-flagget (AD-6) bare finnes ett sted. Eirik vurderte startlista og beholdt også gulvvask, fordi den er lett å glemme. (S11, PR #2) | `epics.md` Story 2.1 |
 | 12 | KI låste FastAPI til 0.149.0 fordi arkitekturen sa «latest 0.14x», selv om 0.162.0 fantes. | Vi spurte om fordeler og ulemper og bestemte at «0.14x» bare var et øyeblikksbilde fra da arkitekturen ble skrevet. Vi bruker nyeste versjon og rettet arkitekturen med en datert merknad. (K25) | `ARCHITECTURE-SPINE.md` Stack, `backend/pyproject.toml` (Story 1.1) |
 | 13 | KI foreslo tre åpne valg i spec-en for Story 1.1 (pip eller uv, appnavn, fanelinje). | Vi ba om fordeler og ulemper før vi valgte uv, beholdt «Husly» foreløpig og valgte et minimalt skall uten fanelinje. Ansvaret for fanelinjen ble notert som utsatt arbeid, så det ikke blir glemt. (K25) | Spec Story 1.1, `deferred-work.md` |
+| 14 | KI foreslo i correct-course at fotobevis alltid skal vises via backend (AD-5). | Vi spurte hvorfor bildet må gå via backend, før vi godtok. Svaret (en fast Blob-lenke kan deles og ville vist nye leietakeres bilder til en tidligere leietaker) ble skrevet inn som begrunnelse, og valget mellom strømming og kortlivet signert lenke ble lagt til Story 4.3. (V01) | `ARCHITECTURE-SPINE.md` AD-5, epics Story 4.3 |
 
 ## Kvalitetssikring av KI-generert innhold (reviews)
 
@@ -53,6 +54,8 @@ Vi har bedt KI om uavhengige gjennomganger av sitt eget arbeid før dokumentene 
 | Token-testen så ut til å håndheve AD-13, men slapp gjennom `margin: -12px`, `style={{ padding: 12 }}` og `letter-spacing`. | Edge Case Hunter og Blind Hunter i kodegjennomgangen (K25). | Reglene er utvidet, med testtilfeller for hver (`02925b9`) |
 | Installasjonsmeldingen viste Safari-instrukser til Chrome, Firefox og Instagram på iPhone. Et dobbelttrykk på «Installer» ga en uhåndtert feil. | Blind Hunter og Edge Case Hunter (K25). | Bare iOS Safari får instruks, og `prompt()` brukes én gang og feil fanges (`a780e33`) |
 | Node-kravet «22 eller nyere» var for løst. Vitest 5 krever `^22.12`, og jsdom krever `^22.22.2 \|\| ^24.15.0`. Rettingen KI-en først foreslo for Node-versjonen var også for løs. | Blind Hunter fant første feil. Subagenten som rettet koden fant den andre ved å sjekke låsefila (K25). | `engines` og README bruker det strengeste kravet fra avhengighetene (`02925b9`, `2bd90bf`) |
+| I sammenligningen av Neon og Supabase for Vercel-hosting påsto KI at Supabase krever egen konto og at nøklene må limes inn manuelt i Vercel. Supabase finnes også i Vercel Marketplace og setter miljøvariablene selv, akkurat som Neon. | Vi spurte «Er det vanskelig å knytte Supabase mot Vercel?» (V01). KI sjekket dokumentasjonen og rettet tabellen. | Valget (Neon) ble tatt på riktig grunnlag: Supabase-prosjekter settes på pause etter 7 dager (`sprint-change-proposal-2026-11-01.md`). |
+| KI sa at story-branchen skulle rebases på main før push, men branchen var allerede pushet, så det ville krevd force-push, som gruppa aldri gjør. | KI oppdaget det selv før kommandoen ble kjørt (V01). | Main ble tatt inn med merge (`6f873b4`). |
 
 ## Ekstern tilbakemelding
 
