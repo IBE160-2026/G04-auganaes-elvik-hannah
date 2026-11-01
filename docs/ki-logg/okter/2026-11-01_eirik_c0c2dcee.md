@@ -1,9 +1,9 @@
 # KI-økt 2026-11-01 – Eirik
 
 - **Økt-ID:** `c0c2dcee-7a2c-43e4-80c5-67ae39f032f2`
-- **Tidsrom:** 2026-11-01 13:50 – 2026-11-01 14:59
+- **Tidsrom:** 2026-11-01 13:50 – 2026-11-01 15:00
 - **Verktøy:** Claude Code
-- **Antall prompts:** 32
+- **Antall prompts:** 33
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -32,6 +32,7 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `7f81f78` 2026-11-01 14:59 (Eirik) KI-logg: CI-workflow og opprydding i Neon
 - `b9f5f09` 2026-11-01 14:59 (Eirik) Merge remote-tracking branch 'origin/main' into story/1-2-registration-login
 - `8d22ce0` 2026-11-01 14:59 (EirikAuganaes) Merge pull request #10 from IBE160-2026/chore/ci-workflow
+- `8ac3af0` 2026-11-01 15:00 (Eirik) Oppdater KI-logg for økten 01.11
 
 ## Logg
 
@@ -167,4 +168,8 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 33. Prompt · 2026-11-01 14:59
 
 > godkjent, flett PR-en
+
+### 34. Prompt · 2026-11-01 15:00
+
+> ja, push 1.2-branchen
 
