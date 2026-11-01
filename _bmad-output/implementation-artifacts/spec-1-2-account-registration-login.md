@@ -2,7 +2,8 @@
 title: 'Story 1.2: Account Registration & Login'
 type: 'feature'
 created: '2026-11-01'
-status: 'ready-for-dev'
+status: 'done'
+baseline_commit: 'cbf88d5417ac2b83a7a4a9123bc56f2b75a49259'
 route: 'dispatch'
 review_loop_iteration: 0
 context:
@@ -84,25 +85,25 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `backend/pyproject.toml`, `backend/uv.lock` -- add `pyjwt`, `pwdlib[argon2]` (exact pins) -- JWT, Argon2; check that argon2 wheels exist for Windows and the Vercel Python runtime
-- [ ] `backend/app/config.py` + `tests/test_config.py` -- `jwt_secret`, `cookie_secure`, Vercel guard -- Boundaries
-- [ ] `backend/app/models/user.py`, `models/__init__.py` -- `User` (`__tablename__ = "users"`: `user` is reserved in Postgres; UUIDv4 `id`, unique `email`, `name`, `password_hash`, `created_at` as `DateTime(timezone=True)`, serialised with an offset)
-- [ ] `backend/alembic/versions/<rev>_create_users.py` -- autogenerate, then review by hand: `timestamptz`, UUID, a named unique constraint, a working `downgrade`
-- [ ] `backend/app/db.py` -- `get_session`
-- [ ] `backend/app/domain/accounts.py` -- `register` (catches `IntegrityError` → `EmailTaken`), `authenticate` (with a dummy hash for unknown emails), `EmailTaken`
-- [ ] `backend/app/domain/tokens.py` -- issue and decode access/refresh tokens, checking `type`
-- [ ] `backend/app/permissions/current_user.py` -- `current_user` dependency from `Authorization: Bearer`
-- [ ] `backend/app/routes/auth.py`, `main.py` -- `register`, `login`, `refresh`, `logout`, `me`; cookie set/clear helpers in one place
-- [ ] `backend/tests/conftest.py`, `test_accounts.py`, `test_tokens.py`, `test_auth_routes.py` -- every matrix row. Setup: `app.dependency_overrides[get_session]` with `create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})` + `create_all`, and `TestClient(app, base_url="https://testserver")` so that Secure cookies are sent. Assert the raw `Set-Cookie` header: `HttpOnly`, `SameSite=lax`, `Path=/api/auth/refresh`, `Max-Age`, `Secure` only with `VERCEL`/`AUTH_COOKIE_SECURE=true`; logout gives `Max-Age=0` with the same path; a rotated cookie has a new value. Test emails use `example.com`
-- [ ] `backend/app/export_openapi.py` + `frontend/openapi.json` + `backend/tests/test_openapi_sync.py` -- write with `indent=2`, `ensure_ascii=False`, `newline="\n"`; the test compares parsed JSON with `create_app().openapi()` (not bytes, so CRLF on Windows is fine)
-- [ ] `frontend/package.json`, `package-lock.json` -- add `react-router`, `@tanstack/react-query`, `openapi-fetch`; dev: `openapi-typescript` with `"overrides": {"openapi-typescript": {"typescript": "$typescript"}}` (no `legacy-peer-deps`); verify that `gen:api` runs under TS 6. A `gen:api` script writes `src/api/schema.d.ts` from `openapi.json`
-- [ ] `frontend/src/api/{client,auth,queries}.ts` -- in-memory token store; `openapi-fetch` middleware that adds `Bearer`. A 401 on a request that carried a Bearer token, outside `/api/auth/*`, triggers one shared refresh and one retry; if refresh fails → signed out. 422s are mapped by `loc` to Norwegian field messages
-- [ ] `frontend/src/routes/{SignIn,Register,Start,RequireAuth}.tsx` + `.css` -- forms with labels, inline field errors, "Sender…"; on app load, one silent refresh restores the session before routes render
-- [ ] `frontend/src/App.tsx`, `main.tsx` -- `QueryClientProvider`, router: `/logg-inn`, `/registrer`, `/` (protected)
-- [ ] `frontend/src/**/*.test.tsx` -- refresh-and-retry once, shared refresh for concurrent 401s, a wrong-password 401 makes no refresh call, inline errors, redirect when signed out, no token in Web Storage
-- [ ] `.github/workflows/ci.yml` -- migrations job: add `alembic downgrade base && alembic upgrade head`; frontend job: add `npm run gen:api && git diff --exit-code src/api/schema.d.ts`
-- [ ] `.env.example`, `README.md` -- `JWT_SECRET` (≥32 bytes, how to generate one), `AUTH_COOKIE_SECURE`; "first login" steps; `gen:api` workflow; Vercel needs `JWT_SECRET` (Production + Preview)
-- [ ] `deferred-work.md` -- record the R10 outcome; move the tab bar entry to Story 1.3 (team decision)
+- [x] `backend/pyproject.toml`, `backend/uv.lock` -- add `pyjwt`, `pwdlib[argon2]` (exact pins) -- JWT, Argon2; check that argon2 wheels exist for Windows and the Vercel Python runtime
+- [x] `backend/app/config.py` + `tests/test_config.py` -- `jwt_secret`, `cookie_secure`, Vercel guard -- Boundaries
+- [x] `backend/app/models/user.py`, `models/__init__.py` -- `User` (`__tablename__ = "users"`: `user` is reserved in Postgres; UUIDv4 `id`, unique `email`, `name`, `password_hash`, `created_at` as `DateTime(timezone=True)`, serialised with an offset)
+- [x] `backend/alembic/versions/<rev>_create_users.py` -- autogenerate, then review by hand: `timestamptz`, UUID, a named unique constraint, a working `downgrade`
+- [x] `backend/app/db.py` -- `get_session`
+- [x] `backend/app/domain/accounts.py` -- `register` (catches `IntegrityError` → `EmailTaken`), `authenticate` (with a dummy hash for unknown emails), `EmailTaken`
+- [x] `backend/app/domain/tokens.py` -- issue and decode access/refresh tokens, checking `type`
+- [x] `backend/app/permissions/current_user.py` -- `current_user` dependency from `Authorization: Bearer`
+- [x] `backend/app/routes/auth.py`, `main.py` -- `register`, `login`, `refresh`, `logout`, `me`; cookie set/clear helpers in one place
+- [x] `backend/tests/conftest.py`, `test_accounts.py`, `test_tokens.py`, `test_auth_routes.py` -- every matrix row. Setup: `app.dependency_overrides[get_session]` with `create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})` + `create_all`, and `TestClient(app, base_url="https://testserver")` so that Secure cookies are sent. Assert the raw `Set-Cookie` header: `HttpOnly`, `SameSite=lax`, `Path=/api/auth/refresh`, `Max-Age`, `Secure` only with `VERCEL`/`AUTH_COOKIE_SECURE=true`; logout gives `Max-Age=0` with the same path; a rotated cookie has a new value. Test emails use `example.com`
+- [x] `backend/app/export_openapi.py` + `frontend/openapi.json` + `backend/tests/test_openapi_sync.py` -- write with `indent=2`, `ensure_ascii=False`, `newline="\n"`; the test compares parsed JSON with `create_app().openapi()` (not bytes, so CRLF on Windows is fine)
+- [x] `frontend/package.json`, `package-lock.json` -- add `react-router`, `@tanstack/react-query`, `openapi-fetch`; dev: `openapi-typescript` with `"overrides": {"openapi-typescript": {"typescript": "$typescript"}}` (no `legacy-peer-deps`); verify that `gen:api` runs under TS 6. A `gen:api` script writes `src/api/schema.d.ts` from `openapi.json`
+- [x] `frontend/src/api/{client,auth,queries}.ts` -- in-memory token store; `openapi-fetch` middleware that adds `Bearer`. A 401 on a request that carried a Bearer token, outside `/api/auth/*`, triggers one shared refresh and one retry; if refresh fails → signed out. 422s are mapped by `loc` to Norwegian field messages
+- [x] `frontend/src/routes/{SignIn,Register,Start,RequireAuth}.tsx` + `.css` -- forms with labels, inline field errors, "Sender…"; on app load, one silent refresh restores the session before routes render
+- [x] `frontend/src/App.tsx`, `main.tsx` -- `QueryClientProvider`, router: `/logg-inn`, `/registrer`, `/` (protected)
+- [x] `frontend/src/**/*.test.tsx` -- refresh-and-retry once, shared refresh for concurrent 401s, a wrong-password 401 makes no refresh call, inline errors, redirect when signed out, no token in Web Storage
+- [x] `.github/workflows/ci.yml` -- migrations job: add `alembic downgrade base && alembic upgrade head`; frontend job: add `npm run gen:api && git diff --exit-code src/api/schema.d.ts`
+- [x] `.env.example`, `README.md` -- `JWT_SECRET` (≥32 bytes, how to generate one), `AUTH_COOKIE_SECURE`; "first login" steps; `gen:api` workflow; Vercel needs `JWT_SECRET` (Production + Preview)
+- [x] `deferred-work.md` -- record the R10 outcome; move the tab bar entry to Story 1.3 (team decision)
 
 **Acceptance Criteria:**
 - Given Eirik has set `JWT_SECRET` for Production and Preview in Vercel, when this PR's preview deploys, then registering, logging in and reloading the page (silent refresh) work, and `/logg-inn` opened directly loads the app (not a 404). If it gives a 404, an SPA fallback is added to `vercel.json` in this PR.
@@ -111,6 +112,17 @@ context:
 - Given a clean clone, when the README is followed, then a user can register and log in locally without a `.env`.
 
 ## Implementation Notes
+
+Implemented 2026-11-01 (bmad-build, implemented inline rather than by a subagent).
+
+- **Pins:** `pyjwt==2.15.1`, `pwdlib[argon2]==0.3.1` (`argon2-cffi-bindings` 26.1.0 ships abi3 wheels for `win_amd64` and `manylinux_2_28_x86_64`, so Windows and the Vercel runtime need no compiler). `email-validator` is not pinned separately (Code Map). Frontend: `react-router` 8.5.1, `@tanstack/react-query` 5.105.1, `openapi-fetch` 0.17.0, dev `openapi-typescript` 7.13.0 with the npm override; `npm ci` from clean and `gen:api` run under TS 6.0.3.
+- **Refresh rule, as built:** the middleware adds `Bearer` to every request except the four credential endpoints (`register`, `login`, `refresh`, `logout`), and only a request that carried a Bearer may refresh-and-retry. That keeps the matrix row "Me: expired → refresh once and retry" (`/api/auth/me` is under `/api/auth/*`) while the credential 401s (wrong password, bad cookie) never refresh. The retry goes straight to `fetch`, not through the middleware, so a second 401 cannot loop.
+- **Start page** reads the name through `useMe()` (`GET /api/auth/me`), so the Bearer + refresh path is exercised in the real app, not only in tests.
+- **`test-setup.ts`** got one shim: Node's `Request` (used under jsdom) rejects relative URLs, which browsers resolve against the page. The shim resolves them like a browser, so the client keeps relative `/api` paths.
+- **R10 deep links:** production answered 404 for `/logg-inn` before this change, so the frontend service in `vercel.json` got a rewrite `/(.*)` → `/index.html` (Vercel applies rewrites after static files). To be confirmed on this PR's preview (AC 1).
+- **Concurrent duplicate registration:** a two-thread test against a shared SQLite connection would be flaky, especially on Windows CI. Instead a test proves `register` does no pre-check query, so the unique constraint (`IntegrityError` → 409) is the only gate, which is exactly the path a race takes.
+- **Verified locally** against Docker Postgres 18 through the Vite proxy with curl: register 201 with the cookie attributes from the spec (no `Secure` locally), duplicate in other casing 409, me 200, refresh 200, wrong and unknown login same 401, logout 204 with `Max-Age=0`, refresh after logout 401, `GET` refresh 405, `/logg-inn` 200 from Vite. Migration upgrade → downgrade → upgrade exits 0, and `alembic check` finds no drift.
+- **Not verified here (needs a person):** Safari macOS/iOS and the preview ACs (1–3).
 
 ## Spec Change Log
 
@@ -135,6 +147,29 @@ Spec review 2026-11-01 (one adversarial reviewer, verified against code and the 
 | 13 | Methods for refresh/logout unspecified (GET + Lax = cross-site navigation) | low | POST only; 405 test |
 | 14 | Register 409 reveals existence; concurrent duplicate → 500 | low | accepted and noted (team); `IntegrityError` → 409 |
 | 15 | PyJWT key length/`sub` string/`require`; email-validator already locked; `.test` domains rejected; 422s in English | low | Boundaries + tasks updated |
+
+Code review 2026-11-01 (Blind Hunter, Edge Case Hunter, Verification Gap; 33 findings, verified against the code):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| Tampered-token test edits the last base64 char, which partly holds padding bits, so it can still verify (rare flake) | medium | patch: tamper a middle char |
+| Focus moved in a microtask before React renders `aria-invalid`/message after an async 401/409/422 | medium | patch: `flushSync` then focus |
+| No CI check that the migration matches the models (a dropped `uq_users_email` would pass everything) | medium | patch: `alembic check` in CI |
+| SPA rewrite serves HTML 200 for a missing `/assets/*` chunk | low | patch: rewrite excludes `assets/` |
+| Client counts length in UTF-16 units, server in code points (emoji at 50/128) | low | patch: `[...s].length` |
+| Client validates trimmed email but sends it untrimmed | low | patch: trim before sending |
+| Login `email` has no max length | low | patch: `max_length=320` |
+| Local `JWT_SECRET` shorter than 32 bytes accepted silently | low | patch: warning + test |
+| "No pre-check" test only patched `Session.exec` | low | patch: assert the first SQL statement is the INSERT |
+| `from` redirect in RequireAuth/SignIn untested, only `/` is protected | low | patch: removed until a second protected page exists |
+| deferred-work called R10 "settled" before the preview check | low | patch: "fixed, not yet confirmed" |
+| DB does not enforce lowercase email, only the domain does | low | defer (deferred-work, Story 1.6 seed) |
+| Stateless refresh stays valid after logout/rotation | false | recorded in Design Notes |
+| Register 409 reveals an existing email | false | team decision in Intent |
+| Spec/sprint status mismatch | false | synced when the story is presented |
+| Logout during an in-flight refresh; refresh 5xx signs out; offline logout keeps cookie; refresh for another user; IDN login spelling; `AUTH_COOKIE_SECURE=1`; email regex looser than email-validator; no `server_default` on `created_at`; dev key on a non-Vercel host; failed retry/`useMe` error state; 401 console noise on first visit | low | rejected: unlikely in everyday use, or the fix adds guards for states not shown reachable |
+| `get_session` only verified by the manual curl run | low | noted, thin pass-through |
+| KI-logg/korrigeringer not updated | — | done with the commit/PR |
 
 ## Design Notes
 
