@@ -1,9 +1,9 @@
 # KI-økt 2026-11-01 – Eirik
 
 - **Økt-ID:** `c0c2dcee-7a2c-43e4-80c5-67ae39f032f2`
-- **Tidsrom:** 2026-11-01 13:50 – 2026-11-01 14:56
+- **Tidsrom:** 2026-11-01 13:50 – 2026-11-01 14:59
 - **Verktøy:** Claude Code
-- **Antall prompts:** 31
+- **Antall prompts:** 32
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -28,6 +28,10 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `fdab244` 2026-11-01 14:52 (Eirik) CI: lås setup-uv til v10.3.3
 - `dd10dd6` 2026-11-01 14:53 (Eirik) KI-logg: feil versjonstag for setup-uv i CI
 - `1bbc182` 2026-11-01 14:56 (Eirik) CI: kjør backend og frontend også på Windows
+- `854ff39` 2026-11-01 14:59 (Eirik) Logg: CI-workflow
+- `7f81f78` 2026-11-01 14:59 (Eirik) KI-logg: CI-workflow og opprydding i Neon
+- `b9f5f09` 2026-11-01 14:59 (Eirik) Merge remote-tracking branch 'origin/main' into story/1-2-registration-login
+- `8d22ce0` 2026-11-01 14:59 (EirikAuganaes) Merge pull request #10 from IBE160-2026/chore/ci-workflow
 
 ## Logg
 
@@ -159,4 +163,8 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 32. Prompt · 2026-11-01 14:56
 
 > ok, si fra når CI er ferdig
+
+### 33. Prompt · 2026-11-01 14:59
+
+> godkjent, flett PR-en
 
