@@ -176,6 +176,8 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 **Optional — hosted demo:** the same code deployed as shown below. It is not required to run, test or review the app, and Trinn 1 needs none of cron, push or Storage there.
 
+> **Note 2026-11-01:** The course now offers Vercel as its only supported hosting, connected to every group repo. The frontend demo is the Vercel project `g04husly` (<https://g04husly.vercel.app>, Root Directory `frontend`), deployed from `main` with a preview per PR. The diagram below still shows the backend on Render and data on Supabase. Where the backend is hosted, and how the due-check is triggered (Vercel Cron on the free plan runs at most once a day), is open and will go through `bmad-correct-course` before the first story that needs a hosted backend.
+
 ```mermaid
 graph TB
   subgraph Vercel
