@@ -15,7 +15,7 @@
 - [ ] 2026-11-01 [story-1-7-hostet-demo-vercel](997-2026-11-01-13-10-35-story-1-7-hostet-demo-vercel.md) — Story 1.2: sjekke at dype lenker ikke gir 404 på Vercel (utsatt R10)
 - [ ] 2026-11-01 [story-1-7-hostet-demo-vercel](997-2026-11-01-13-10-35-story-1-7-hostet-demo-vercel.md) — Steffen: teste lokal kjøring på Windows med Postgres 18 og Vite-proxy
 - [x] 2026-11-01 [story-1-2-spec](995-2026-11-01-15-17-02-story-1-2-spec.md) — Implementere Story 1.2 i en ny bmad-build-økt fra spec-en (ready-for-dev) (løst 2026-11-01, se [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md))
-- [ ] 2026-11-01 [story-1-2-spec](995-2026-11-01-15-17-02-story-1-2-spec.md) — Eirik: sette `JWT_SECRET` (minst 32 byte) i Vercel for Production og Preview før preview-testen av 1.2
+- [x] 2026-11-01 [story-1-2-spec](995-2026-11-01-15-17-02-story-1-2-spec.md) — Eirik: sette `JWT_SECRET` (minst 32 byte) i Vercel for Production og Preview før preview-testen av 1.2 (løst 2026-11-01: satt med `vercel env add`, egen nøkkel per miljø)
 - [ ] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.2 preview: `/logg-inn` laster direkte og `/api/health` når FastAPI etter SPA-rewriten (AC 1)
 - [ ] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.2: DevTools på preview, ingen token i Storage og riktig cookie-attributter (AC 3)
 - [ ] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.2: bmad-walkthrough før merge
