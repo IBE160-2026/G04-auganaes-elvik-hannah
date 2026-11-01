@@ -34,7 +34,7 @@ Gruppa jobber på både Mac (Eirik, Hannah) og Windows (Steffen, med Git Bash).
 
 ## Status
 
-Planleggingen (brief → PRD → UX → arkitektur → 6 epics / 23 stories) er ferdig, og faglærers tilbakemelding er fulgt opp med `bmad-correct-course` (se `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-11.md`). v1 er delt i Trinn 1 og Trinn 2, og appen skal kunne kjøres lokalt med Docker (FR-22, AD-15). Endringene er gjennomgått og slått sammen i PR #1. Sprint planning er gjort i PR #2, og rekkefølgen står i `_bmad-output/implementation-artifacts/sprint-status.yaml`. **Neste steg** er Story 1.1, deretter 1.2 og 1.6, med én GitHub-issue, branch og PR per story.
+Planleggingen (brief → PRD → UX → arkitektur → 6 epics / 24 stories) er ferdig. Faglærers tilbakemelding er fulgt opp med `bmad-correct-course` (`_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-11.md`, PR #1), og sprint planning er gjort i PR #2. Story 1.1 er ferdig (PR #4). 01.11 gjorde faglærer Vercel til eneste hosting, og planen ble justert med en ny correct-course (`sprint-change-proposal-2026-11-01.md`): hostet demo på ett Vercel-prosjekt (`g04husly`, eid av Eirik) med Vercel Services, Neon og Vercel Blob, og auth på samme domene. Lokal kjøring med Docker (FR-22, AD-15) er fortsatt hovedveien. **Neste steg** er Story 1.7 (hostet demo), deretter 1.2 og 1.6, med én GitHub-issue, branch og PR per story. Rekkefølgen står i `_bmad-output/implementation-artifacts/sprint-status.yaml`.
 
 ## KI-logg
 
