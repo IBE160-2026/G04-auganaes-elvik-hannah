@@ -491,6 +491,8 @@ This story builds on Stories 1.1 (scaffold, `docker-compose.yml`, test setup) an
 **When** it is loaded twice
 **Then** it does not create duplicates (idempotent), so a reviewer can re-run it safely
 
+> **Note 2026-11-01 (team decision, Story 1.6):** No mock-mode indicator is built in the UI yet. Trinn 1 calls no external service so far (AI arrives with Story 5.1, push and Blob in Trinn 2), so an indicator would show an empty list. The README says that nothing is mocked yet and that Story 5.1 marks AI answers as «demo-modus»; the UI indicator comes with Story 5.1, whose existing acceptance criterion ("the UI marks it as demo mode") already covers it. The acceptance criteria above are unchanged. The seed also refuses to run on Vercel or against a non-local database, so the example users never reach the hosted demo.
+
 ### Story 1.7: Hosted Demo on Vercel (Services + Neon)
 
 **Stage:** Trinn 1 (optional hosted demo, AD-15). Built before Story 1.2, so that login can be tried on PR previews.
