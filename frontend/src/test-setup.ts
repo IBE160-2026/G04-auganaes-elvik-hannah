@@ -16,6 +16,15 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Browsers resolve a relative URL in `new Request('/api/...')` against the page; Node's Request
+// (used under jsdom) does not. Resolve it the browser way, so the API client keeps relative paths.
+const NodeRequest = globalThis.Request;
+globalThis.Request = class extends NodeRequest {
+  constructor(input: RequestInfo | URL, init?: RequestInit) {
+    super(typeof input === 'string' ? new URL(input, window.location.href) : input, init);
+  }
+};
+
 afterEach(() => {
   cleanup();
 });
