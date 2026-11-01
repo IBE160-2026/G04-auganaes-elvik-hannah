@@ -69,14 +69,39 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --locked
+      # Story 1.6: the seed command applies the migrations, then the example data.
       # Uses the local default URL (localhost:5433), the same as README.
-      - run: uv run alembic upgrade head
+      - run: uv run python -m app.seed
       # Proves the migration transaction committed (the advisory-lock pitfall from Story 1.7).
       - name: alembic_version finnes
         run: >-
           uv run python -c "from sqlalchemy import create_engine, inspect;
           from app.config import get_database_url;
           assert inspect(create_engine(get_database_url())).has_table('alembic_version')"
+      # Story 1.6: a second run must exit 0 and create nothing new.
+      - run: uv run python -m app.seed
+      - name: Seed er idempotent (én rad per eksempelbruker)
+        run: |
+          uv run python - <<'EOF'
+          from sqlalchemy import create_engine, text
+          from app.config import get_database_url
+          from app.seed.users import EXAMPLE_USERS
+          with create_engine(get_database_url()).connect() as c:
+              n = c.execute(text("SELECT count(*) FROM users")).scalar_one()
+          assert n == len(EXAMPLE_USERS), n
+          EOF
+      # Story 1.6: the real DB-down path (Alembic -> psycopg -> OperationalError) gives exit 1.
+      - name: Seed uten database gir exit 1 og hint
+        shell: bash
+        run: |
+          set +e
+          DATABASE_URL=postgresql+psycopg://husly:husly@localhost:5999/husly \
+            uv run python -m app.seed 2> seed-err.txt
+          code=$?
+          set -e
+          cat seed-err.txt
+          test "$code" -eq 1
+          grep -qF "docker compose up -d --wait" seed-err.txt
       # Story 1.2: every migration must also downgrade cleanly, and upgrade again afterwards.
       - run: uv run alembic downgrade base && uv run alembic upgrade head
       # Story 1.2: the migrated schema must match the SQLModel models (e.g. uq_users_email).
