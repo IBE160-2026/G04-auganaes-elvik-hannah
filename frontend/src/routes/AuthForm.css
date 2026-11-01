@@ -1,0 +1,27 @@
+/* Shared by the sign-in and register screens. One column at every width. */
+.auth-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.auth-page__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-display);
+  line-height: var(--line-height-display);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-form__error {
+  color: var(--color-danger);
+}
+
+.auth-page__switch a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}

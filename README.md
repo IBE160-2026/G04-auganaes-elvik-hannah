@@ -56,7 +56,7 @@ uv run fastapi dev
 
 API-et kjører på <http://localhost:8000>. Sjekk at det svarer: <http://localhost:8000/api/health> skal gi `{"status":"ok"}`, og <http://localhost:8000/api/health/db> skal gi `{"database":"ok"}` når databasen kjører. API-dokumentasjon ligger på <http://localhost:8000/docs>.
 
-Ingen `.env` trengs: standardverdiene matcher `docker-compose.yml`. Variablene står i [`.env.example`](.env.example). Vil du overstyre dem, kopierer du filen til `.env` og legger til `--env-file ../.env` etter `uv run`.
+Ingen `.env` trengs: standardverdiene matcher `docker-compose.yml`, og uten `JWT_SECRET` bruker backenden en fast nøkkel for lokal utvikling (den logger en advarsel om det). Variablene står i [`.env.example`](.env.example). Vil du overstyre dem, kopierer du filen til `.env` og legger til `--env-file ../.env` etter `uv run`.
 
 ### 3. Frontend
 
@@ -69,6 +69,26 @@ npm run dev
 ```
 
 Appen åpnes på <http://localhost:5173>. Frontenden kaller API-et på samme adresse: Vite sender alt under `/api` videre til backenden på port 8000, både i `npm run dev` og `npm run preview`. <http://localhost:5173/api/health> skal derfor også gi `{"status":"ok"}` når backenden kjører.
+
+### 4. Første innlogging
+
+1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
+2. Velg **Opprett konto**, og fyll inn e-post, navn og et passord på minst 8 tegn.
+3. Du havner på startsiden: «Du er logget inn som {navn}». Last siden på nytt; du er fortsatt logget inn.
+4. **Logg ut** sender deg tilbake til innloggingen.
+
+Eksempelbrukere med ferdige passord kommer med seed-kommandoen i Story 1.6. Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
+
+### Når API-et endres
+
+Frontenden har en typet API-klient generert fra FastAPIs OpenAPI-skjema. Etter en endring i backendens ruter eller modeller:
+
+```bash
+cd backend && uv run python -m app.export_openapi   # skriver frontend/openapi.json
+cd ../frontend && npm run gen:api                   # skriver src/api/schema.d.ts
+```
+
+Commit begge filene. En test i backenden og et steg i CI feiler hvis de ikke er oppdatert.
 
 ### Sjekke PWA-en (manifest og service worker)
 
@@ -83,7 +103,7 @@ npm run build && npm run preview
 
 ### Tester og lint
 
-Testene trenger verken Docker, nettverk eller nøkler. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med `alembic upgrade head` mot Postgres 18 og `npm run build`.
+Testene trenger verken Docker, nettverk eller nøkler. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
 
 ```bash
 cd backend
@@ -116,11 +136,11 @@ vercel.json          nettversjonen: frontend og backend som Vercel Services (Sto
 backend/             FastAPI + SQLModel + Alembic (Python 3.12, uv)
   app/
     main.py          app-oppsett og ruter under /api (samme origin, ingen CORS)
-    config.py        leser og normaliserer DATABASE_URL (og DATABASE_URL_UNPOOLED)
+    config.py        leser miljøvariablene (DATABASE_URL, JWT_SECRET, AUTH_COOKIE_SECURE)
     db.py            databasemotor, én per URL
-    routes/          tynt HTTP-lag (foreløpig /api/health og /api/health/db)
+    routes/          tynt HTTP-lag (/api/health, /api/auth/*)
     domain/          domenetjenester, eneste vei for endringer (AD-3)
-    permissions/     rolle-sjekker (AD-2)
+    permissions/     innlogget bruker og rolle-sjekker (AD-2)
     models/          SQLModel-entiteter
   alembic/           databasemigreringer
   tests/             pytest
@@ -128,9 +148,10 @@ frontend/            React 19 + TypeScript + Vite
   public/            manifest.json og app-ikoner (AD-12)
   src/
     styles/          designtokens fra DESIGN.md og globale stiler (AD-13)
-    components/      AppShell, PrimaryButton, InstallPrompt
-    routes/          sider (fra Story 1.2)
-    api/             API-klient og TanStack Query-hooks (fra Story 1.2)
+    components/      AppShell, PrimaryButton, TextField, InstallPrompt
+    routes/          sider: logg inn, registrer, startside
+    api/             generert API-klient, økt i minnet og TanStack Query-hooks
+  openapi.json       API-skjemaet klienten genereres fra (npm run gen:api)
     service-worker.ts
 ```
 
@@ -138,7 +159,7 @@ frontend/            React 19 + TypeScript + Vite
 
 <https://g04husly.vercel.app> er en demo av den samme koden. Den trengs ikke for å kjøre, teste eller vurdere appen. Alt over fungerer uten den.
 
-- **Oppsett:** Ett Vercel-prosjekt (`g04husly`) med `frontend/` og `backend/` som Vercel Services på samme domene ([`vercel.json`](vercel.json)). Alt under `/api` går til FastAPI, resten til React-appen. Databasen er Neon Postgres 18 i EU (Frankfurt), koblet til gjennom Vercels Neon-integrasjon, som setter `DATABASE_URL` og `DATABASE_URL_UNPOOLED`.
+- **Oppsett:** Ett Vercel-prosjekt (`g04husly`) med `frontend/` og `backend/` som Vercel Services på samme domene ([`vercel.json`](vercel.json)). Alt under `/api` går til FastAPI, resten til React-appen. Databasen er Neon Postgres 18 i EU (Frankfurt), koblet til gjennom Vercels Neon-integrasjon, som setter `DATABASE_URL` og `DATABASE_URL_UNPOOLED`. `JWT_SECRET` (minst 32 byte) er satt for Production og Preview i prosjektinnstillingene; uten den starter ikke API-et på Vercel. React-appen får `index.html` for alle stier som ikke er filer, så lenker som `/logg-inn` fungerer direkte.
 - **Oppdatering:** `main` publiseres automatisk. Hver PR får en egen forhåndsvisning med sin egen Neon-gren (`preview/<git-gren>`), som slettes når PR-en lukkes ([workflow](.github/workflows/neon-preview-cleanup.yml)).
 - **Migreringer:** `alembic upgrade head` kjører i backendens byggesteg (`[tool.vercel.scripts]` i `backend/pyproject.toml`). En feilende migrering stopper bygget, så forrige versjon blir stående. En migrering som allerede er committet, blir likevel liggende i databasen selv om et senere byggesteg feiler, så migreringer må være bakoverkompatible med forrige versjon av koden.
 - **Sjekk:** `/api/health` svarer at API-et lever, og `/api/health/db` at det når databasen.

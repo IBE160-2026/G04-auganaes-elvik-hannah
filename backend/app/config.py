@@ -1,17 +1,27 @@
 """Settings read from environment variables (AD-15). See .env.example."""
 
+import logging
 import os
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_DATABASE_URL = "postgresql+psycopg://husly:husly@localhost:5433/husly"
 SQLALCHEMY_SCHEME = "postgresql+psycopg://"
 # Neon and the Vercel integration hand out plain libpq URLs; SQLAlchemy needs the driver named.
 LIBPQ_SCHEMES = ("postgresql://", "postgres://")
 
+# Story 1.2: only for local running and tests. On Vercel JWT_SECRET must be set.
+DEV_JWT_SECRET = "husly-lokal-utvikling-ikke-hemmelig-0123456789"
+MIN_JWT_SECRET_BYTES = 32
+
 
 @dataclass(frozen=True)
 class Settings:
     database_url: str
+    jwt_secret: str = DEV_JWT_SECRET
+    # Secure on the refresh cookie. Off locally so Safari keeps it on http://localhost.
+    cookie_secure: bool = False
 
 
 def normalize_database_url(url: str) -> str:
@@ -52,5 +62,37 @@ def get_migration_url() -> str:
     return get_database_url()
 
 
+def get_jwt_secret() -> str:
+    """The JWT signing key (Story 1.2, AD-7). On Vercel a missing or short key is an error."""
+    secret = _env("JWT_SECRET")
+    if _env("VERCEL"):
+        if secret is None or len(secret.encode()) < MIN_JWT_SECRET_BYTES:
+            raise RuntimeError(
+                f"JWT_SECRET mangler eller er kortere enn {MIN_JWT_SECRET_BYTES} byte på Vercel. "
+                "Sett den under Settings → Environment Variables (Production og Preview)."
+            )
+        return secret
+    if secret is None:
+        logger.warning("JWT_SECRET er ikke satt; bruker en fast nøkkel for lokal utvikling.")
+        return DEV_JWT_SECRET
+    if len(secret.encode()) < MIN_JWT_SECRET_BYTES:
+        logger.warning(
+            "JWT_SECRET er kortere enn %d byte; på Vercel stopper det oppstarten.",
+            MIN_JWT_SECRET_BYTES,
+        )
+    return secret
+
+
+def get_cookie_secure() -> bool:
+    """Secure refresh cookie: always on Vercel, locally only with AUTH_COOKIE_SECURE=true."""
+    if _env("VERCEL"):
+        return True
+    return (_env("AUTH_COOKIE_SECURE") or "").lower() == "true"
+
+
 def get_settings() -> Settings:
-    return Settings(database_url=get_database_url())
+    return Settings(
+        database_url=get_database_url(),
+        jwt_secret=get_jwt_secret(),
+        cookie_secure=get_cookie_secure(),
+    )

@@ -1,23 +1,64 @@
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { useEffect, useState, type ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { refreshSession } from './api/client';
+import { createQueryClient } from './api/queries';
 import { AppShell } from './components/AppShell';
 import { InstallPrompt } from './components/InstallPrompt';
-import { PrimaryButton } from './components/PrimaryButton';
-import './App.css';
+import { Register } from './routes/Register';
+import { RequireAuth } from './routes/RequireAuth';
+import { SignIn } from './routes/SignIn';
+import { Start } from './routes/Start';
 
-/** Placeholder start page until routes arrive with Story 1.2. */
-export function App() {
+/**
+ * Restores the session from the refresh cookie once, before any route renders, so a reload
+ * keeps the user signed in (Story 1.2). StrictMode's second effect shares the same refresh.
+ */
+function SessionGate({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void refreshSession().then(() => {
+      if (active) setReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (!ready) return <p role="status">Laster …</p>;
+  return children;
+}
+
+export function AppRoutes() {
   return (
-    <AppShell>
-      <div className="start-page">
-        <h1 className="start-page__title">Velkommen til Husly</h1>
-        <p className="start-page__lead">
-          Her skal dere snart kunne fordele og huske oppgavene i hjemmet, enten dere bor sammen
-          eller leier ut.
-        </p>
-        <PrimaryButton disabled disabledReason="Innlogging kommer i neste versjon av appen.">
-          Kom i gang
-        </PrimaryButton>
-      </div>
-      <InstallPrompt />
-    </AppShell>
+    <Routes>
+      <Route path="/logg-inn" element={<SignIn />} />
+      <Route path="/registrer" element={<Register />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <Start />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export function App({ queryClient }: { queryClient?: QueryClient }) {
+  const [client] = useState(() => queryClient ?? createQueryClient());
+  return (
+    <QueryClientProvider client={client}>
+      <BrowserRouter>
+        <AppShell>
+          <SessionGate>
+            <AppRoutes />
+          </SessionGate>
+          <InstallPrompt />
+        </AppShell>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
