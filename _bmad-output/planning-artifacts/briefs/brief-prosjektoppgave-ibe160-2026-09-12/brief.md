@@ -126,7 +126,7 @@ Photo Evidence and the portfolio dashboard were not in the original brief. They 
 - No confirmed partnership or integration agreement exists with Hybel.no or similar platforms — deeper integration is a stated future direction, not a validated one.
 - The review/rating mechanism proposed as a product-success signal is a hypothesis for measurement, not yet a validated or built feature.
 - This is a full scope for a 3-person, 13-week build. The AI bot and multi-role permission model are likely the highest-effort pieces. The Trinn 1 / Trinn 2 split is the mitigation: Trinn 1 is a complete app on its own.
-- The app must be runnable by a reviewer without the team's accounts or keys. Trinn 1 therefore runs locally with Docker, seed data and mock modes for AI and push. Hosting (Vercel, Render, Supabase, cron-job.org) is an optional demo setup, not a requirement for running the app.
+- The app must be runnable by a reviewer without the team's accounts or keys. Trinn 1 therefore runs locally with Docker, seed data and mock modes for AI and push. Hosting (one Vercel project with Neon Postgres and Vercel Blob; Vercel is the course's only supported hosting since 2026-11-01) is an optional demo setup, not a requirement for running the app.
 
 ## Vision
 
