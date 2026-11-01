@@ -83,7 +83,7 @@ npm run build && npm run preview
 
 ### Tester og lint
 
-Testene trenger verken Docker, nettverk eller nøkler.
+Testene trenger verken Docker, nettverk eller nøkler. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med `alembic upgrade head` mot Postgres 18 og `npm run build`.
 
 ```bash
 cd backend
@@ -112,7 +112,7 @@ npm run lint
 docker-compose.yml   lokal PostgreSQL 18 (AD-15)
 .env.example         alle miljøvariabler, uten hemmeligheter
 vercel.json          nettversjonen: frontend og backend som Vercel Services (Story 1.7)
-.github/workflows/   sletter Neon-grenen til en PR når den lukkes
+.github/workflows/   CI (tester, lint, migreringer, bygg) og sletting av Neon-grenen til en PR
 backend/             FastAPI + SQLModel + Alembic (Python 3.12, uv)
   app/
     main.py          app-oppsett og ruter under /api (samme origin, ingen CORS)
