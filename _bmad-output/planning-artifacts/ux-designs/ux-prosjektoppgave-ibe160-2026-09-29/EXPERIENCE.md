@@ -4,7 +4,7 @@ status: final
 sources:
   - _bmad-output/planning-artifacts/prds/prd-prosjektoppgave-ibe160-2026-09-29/prd.md
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
-updated: 2026-10-25
+updated: 2026-11-01
 ---
 
 # Husly (placeholder name) — Experience Spine
@@ -33,7 +33,13 @@ Three Roles read the same surfaces differently throughout, per PRD §2 Glossary:
 | Landlord Home Admin | Portfolio row tap, or single-Home settings | Landlord | Bulk Must/Should, Frequency, and Photo Evidence requirement management across a Home's tasks, notification cadence, compose broadcast message (PRD FR-5, FR-8, FR-13, FR-18) — the Landlord's heavier equivalent of the inline editing Household Members get on Task Detail |
 | Settings / Profile | Tab bar | All | Account, notification permission status, sign out |
 
-No in-app notification inbox in v1 — a push notification deep-links straight to Task Detail (confirmed with the team; PRD FR-10/FR-11/FR-12 stay push-only).
+No in-app notification inbox in v1 — PRD FR-10/FR-11/FR-12 stay push-only (confirmed with the team). Where a notification lands depends on what it is about:
+
+- The daily due/overdue notification (FR-10) covers all of a Member's due and overdue tasks. If it covers one task it deep-links to that task's Task Detail; if it covers several it opens Task Overview, where those tasks are already sorted first (Must before Should).
+- A fairness-targeted reminder (FR-11) is about one task and deep-links to its Task Detail.
+- A Landlord broadcast (FR-12) is free text and opens Task Overview.
+
+The notification text names the tasks, e.g. "Vask bad og støvsuging forfaller i dag". (Revised 2026-11-01: daily batch, see `sprint-change-proposal-2026-11-01.md`.)
 
 `[NOTE FOR UX]` PRD FR-18's Photo Evidence eligibility restriction (which task types may require a photo) is itself an open `[ASSUMPTION]` in the PRD — whether it's enforced via a curated system allowlist or left to Landlord judgment is undecided (PRD §Privacy Constraints). This spine's Landlord Home Admin currently exposes an unconstrained per-task toggle; if the PRD resolves toward a system allowlist, Landlord Home Admin needs a corresponding "eligible task types only" constraint added to the toggle's available options.
 
