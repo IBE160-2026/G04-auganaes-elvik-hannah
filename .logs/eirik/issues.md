@@ -20,4 +20,6 @@
 - [x] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.2: DevTools på preview, ingen token i Storage og riktig cookie-attributter (AC 3) (løst 2026-11-01: ingen token; cookie godtatt via curl og omlastingstest)
 - [x] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.2: bmad-walkthrough før merge (løst 2026-11-01: walkthrough gjort, PR #11 merget)
 - [ ] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Sjekke i Neon at preview-branchen for 1.2 er slettet etter at PR #11 ble lukket
-- [ ] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.6: seed må lage brukere via `accounts.register` (lowercase e-post)
+- [x] 2026-11-01 [story-1-2-implementering](994-2026-11-01-16-14-46-story-1-2-implementering.md) — Story 1.6: seed må lage brukere via `accounts.register` (lowercase e-post) (løst 2026-11-01, se [story-1-6-lokal-kjoring-seed](993-2026-11-01-21-09-06-story-1-6-lokal-kjoring-seed.md))
+- [ ] 2026-11-01 [story-1-6-lokal-kjoring-seed](993-2026-11-01-21-09-06-story-1-6-lokal-kjoring-seed.md) — Steffen: følge README i Git Bash på Windows på branchen for PR #13 (seed, pytest, innlogging som Mari), resultat som PR-kommentar
+- [ ] 2026-11-01 [story-1-6-lokal-kjoring-seed](993-2026-11-01-21-09-06-story-1-6-lokal-kjoring-seed.md) — Etter Steffens test: merge PR #13, 1-6 til `done` i sprint-status og oppdatere status i CLAUDE.md (neste: Story 1.3)
