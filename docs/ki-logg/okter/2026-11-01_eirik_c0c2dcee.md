@@ -1,9 +1,9 @@
 # KI-økt 2026-11-01 – Eirik
 
 - **Økt-ID:** `c0c2dcee-7a2c-43e4-80c5-67ae39f032f2`
-- **Tidsrom:** 2026-11-01 13:50 – 2026-11-01 14:49
+- **Tidsrom:** 2026-11-01 13:50 – 2026-11-01 14:56
 - **Verktøy:** Claude Code
-- **Antall prompts:** 24
+- **Antall prompts:** 31
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -23,6 +23,11 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `c0e4840` 2026-11-01 14:24 (Eirik) Logg: Story 1.7: hostet demo på Vercel
 - `da639c5` 2026-11-01 14:46 (Eirik) Logg: alembic_version bekreftet i Neons main-gren
 - `3bf6262` 2026-11-01 14:49 (Eirik) Logg: Neons eksempeltabell slettet fra main-grenen
+- `02892a9` 2026-11-01 14:50 (Eirik) Oppdater KI-logg for økten 01.11
+- `1e21a3c` 2026-11-01 14:51 (Eirik) CI: kjør tester, lint, migreringer og bygg på hver PR
+- `fdab244` 2026-11-01 14:52 (Eirik) CI: lås setup-uv til v10.3.3
+- `dd10dd6` 2026-11-01 14:53 (Eirik) KI-logg: feil versjonstag for setup-uv i CI
+- `1bbc182` 2026-11-01 14:56 (Eirik) CI: kjør backend og frontend også på Windows
 
 ## Logg
 
@@ -126,4 +131,32 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 25. Prompt · 2026-11-01 14:49
 
 > bare alembic_version står igjen
+
+### 26. Prompt · 2026-11-01 14:49
+
+> Steffen har ikke mulighet da han er på ferie. Jeg tenker vi kan kjøre videre med CI-workflowen
+
+### 27. Prompt · 2026-11-01 14:52
+
+> ok, si fra når CI er ferdig
+
+### 28. Prompt · 2026-11-01 14:54
+
+> ja, vis meg fila
+
+### 29. Prompt · 2026-11-01 14:55
+
+> Betyr dette at man ikke kan kjøre appen lokalt på en windows maskin slik sensor trolig gjør?
+
+### 30. Prompt · 2026-11-01 14:55
+
+> Er det enkelt å korigere senere når Steffen er tilbake?
+
+### 31. Prompt · 2026-11-01 14:56
+
+> ja, legg det til i denne PR-en
+
+### 32. Prompt · 2026-11-01 14:56
+
+> ok, si fra når CI er ferdig
 
