@@ -29,3 +29,12 @@
   summary: Let the database enforce lowercase emails (`CHECK (email = lower(email))` or a unique index on `lower(email)`), not only `accounts.normalize_email`.
   evidence: Review of Story 1.2. `uq_users_email` is on the raw column, so a write that bypasses `accounts.register` (e.g. the Story 1.6 seed) could create `Ola@…` beside `ola@…`. Low today, since register is the only write path; the 1.6 seed should call `accounts.register`.
   outcome: Partly settled in Story 1.6: the seed creates users only through `accounts.register`, so it cannot create mixed-case emails. Kept open for any later raw-SQL write until the database itself enforces lowercase.
+- source_spec: none
+  summary: Build the tab bar from EXPERIENCE.md (Task Overview, Settings/Profile, Portfolio for Landlords with ≥2 Homes) in Story 2.2, and add it to 2.2's acceptance criteria in epics.md.
+  evidence: Split from Story 1.3 by the team (2026-11-07). After 1.3 only a placeholder Home page and sign-out exist, so the tab bar would point at near-empty pages; Story 2.2 delivers Task Overview, its first real content. 1.3 gives Landlords a plain "create another Home" link instead.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-create-a-home.md`
+  summary: Add a concurrent Postgres test that two parallel `POST /api/homes` for a user without a Home create exactly one Home (the `with_for_update` lock in `domain/homes.create_home`).
+  evidence: Code review of Story 1.3; SQLite ignores `FOR UPDATE` and CI runs pytest only on SQLite, so deleting the lock passes every check. Needs a Postgres-backed test harness (same gap as the 1.7 `env.py` lock entry).
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-create-a-home.md`
+  summary: Decide in Story 1.4 whether accepting an invite may give a Household Member or Tenant a second Home, and enforce it in `domain/homes.add_member` rather than only in the seed.
+  evidence: Code review of Story 1.3 (unverified, would be medium). `add_member` adds a Membership to any Home; only `seed/homes.py` skips Jonas when he is already in another Home. The 1.3 intent covers only the create flow ("not re-prompted"), so the rule for joining belongs to 1.4's invite acceptance.

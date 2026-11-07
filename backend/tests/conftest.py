@@ -10,7 +10,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -63,6 +63,14 @@ def engine() -> Iterator[Engine]:
     engine = create_engine(
         "sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
     )
+
+    # SQLite leaves foreign keys off unless asked (Story 1.3), unlike Postgres.
+    @event.listens_for(engine, "connect")
+    def enable_foreign_keys(dbapi_connection: object, _record: object) -> None:
+        cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     SQLModel.metadata.create_all(engine)
     yield engine
     engine.dispose()

@@ -5,10 +5,11 @@ import { refreshSession } from './api/client';
 import { createQueryClient } from './api/queries';
 import { AppShell } from './components/AppShell';
 import { InstallPrompt } from './components/InstallPrompt';
+import { CreateHome } from './routes/CreateHome';
+import { HomePage } from './routes/HomePage';
 import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
 import { SignIn } from './routes/SignIn';
-import { Start } from './routes/Start';
 
 /**
  * Restores the session from the refresh cookie once, before any route renders, so a reload
@@ -38,7 +39,15 @@ export function AppRoutes() {
         path="/"
         element={
           <RequireAuth>
-            <Start />
+            <HomePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/nytt-hjem"
+        element={
+          <RequireAuth>
+            <CreateHome />
           </RequireAuth>
         }
       />

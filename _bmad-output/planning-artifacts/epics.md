@@ -644,6 +644,12 @@ So that I always know what's non-negotiable before what's optional.
 **When** a keyboard/screen-reader user tabs through the list
 **Then** it matches the visual reading order — Must tasks before Should tasks, top to bottom (UX-DR41)
 
+**Given** a signed-in Member with a Home
+**When** any signed-in page renders
+**Then** a tab bar shows Task Overview and Settings/Profile, plus Portfolio for a Landlord who owns two or more Homes (EXPERIENCE.md)
+
+> **Note 2026-11-07 (team decision, Story 1.3):** The tab bar was deferred from Stories 1.1 and 1.2 to 1.3, and has now been split out of 1.3 too, since after 1.3 only a placeholder Home page and sign-out exist. It belongs here because Task Overview is its first real content. Until then, Story 1.3 gives Landlords a plain link to create another Home.
+
 ### Story 2.3: Adjust Task Classification & Frequency
 
 **Stage:** Trinn 1

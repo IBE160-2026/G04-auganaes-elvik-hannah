@@ -224,6 +224,86 @@
           }
         ]
       }
+    },
+    "/api/homes": {
+      "get": {
+        "tags": [
+          "homes"
+        ],
+        "summary": "List Homes",
+        "operationId": "list_homes_api_homes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomesOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "homes"
+        ],
+        "summary": "Create Home",
+        "operationId": "create_home_api_homes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHomeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The caller may not create a Home of this type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -251,6 +331,43 @@
         ],
         "title": "AuthResponse"
       },
+      "CreateHomeRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "household",
+              "landlord"
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "CreateHomeRequest"
+      },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -263,6 +380,78 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HomeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "household",
+              "landlord"
+            ],
+            "title": "Type"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "household_member",
+              "landlord",
+              "tenant"
+            ],
+            "title": "Role"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "role",
+          "created_at"
+        ],
+        "title": "HomeOut"
+      },
+      "HomesOut": {
+        "properties": {
+          "homes": {
+            "items": {
+              "$ref": "#/components/schemas/HomeOut"
+            },
+            "type": "array",
+            "title": "Homes"
+          },
+          "allowed_types": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "household",
+                "landlord"
+              ]
+            },
+            "type": "array",
+            "title": "Allowed Types"
+          }
+        },
+        "type": "object",
+        "required": [
+          "homes",
+          "allowed_types"
+        ],
+        "title": "HomesOut"
       },
       "LoginRequest": {
         "properties": {

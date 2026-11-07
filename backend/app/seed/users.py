@@ -1,6 +1,6 @@
 """Example users for local running (Story 1.6, FR-22). Credentials are listed in the README.
 
-Stories 1.3–1.5 add a Landlord and a Tenant here. Later steps look users up by email.
+Stories 1.4–1.5 add a Landlord and a Tenant here. Later steps look users up by email.
 """
 
 from typing import NamedTuple
