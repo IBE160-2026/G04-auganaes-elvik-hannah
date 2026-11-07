@@ -31,3 +31,21 @@ En kort økt der vi fortsatte fra forrige gang. Story 1.6 skulle bygges, slik at
 ### Åpne punkter
 - Steffen: følge README-en fra start i Git Bash på Windows på branchen for PR #13 (seed, `pytest` og innlogging som Mari), og legge resultatet som kommentar på PR-en. Dekker også det åpne punktet fra 1.7.
 - Etter Steffens test: eventuelt resten av `bmad-walkthrough` (detaljer og testing), merge PR #13, sette 1-6 til `done` i sprint-status og oppdatere status i CLAUDE.md. Neste story er 1.3, som utvider `STEPS` med et eksempel-Home.
+
+## 2026-11-07 kl. 23:19 — Eirik
+
+### Oppgave
+Steffen er fortsatt på ferie. Vi ville komme videre uten å vente på hans Windows-test før PR #13 ble merget.
+
+### Plan
+- Merge PR #13 før den manuelle testen på Windows, med begrunnelsen i PR-en, og flytte testen til en egen issue for Steffen.
+- Fortsette med Story 1.3 fra `main` (se [story-1-3-opprette-hjem](992-2026-11-07-23-19-16-story-1-3-opprette-hjem.md)).
+
+### Resultat
+- KI-logg for økten om 1.6 committet (`9884d2b`).
+- Issue #14 opprettet og tildelt Steffen (`Steelvik`): følg README i Git Bash på `main`.
+- PR #13 har en kommentar om risikoen. CI på `windows-latest` dekker pytest, ruff, Vitest og bygg, men ikke Docker og Git Bash fra en helt ny klone. Avkrysningen er flyttet til #14.
+- PR #13 merget (`c2bcfc7`). 1-6 satt til `done`, og CLAUDE.md pekte på 1.3 (`38f5e49`, første commit på `story/1-3-create-home`).
+
+### Åpne punkter
+- Steffen: issue #14, README i Git Bash på Windows på `main`.
