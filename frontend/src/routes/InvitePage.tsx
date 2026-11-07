@@ -2,7 +2,7 @@
 // signed-out visitor sees the Home and can register or sign in; a signed-in one can join with
 // one tap, or is told why not. Whether they can join comes from the server (viewer), so the
 // one-Home rule is never copied here. An invalid link shows a message, never a 404.
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ROLE_LABELS } from '../api/homes';
 import { INVITE_MESSAGES, InviteError, invalidInviteMessage, validInviteToken, type InvitePreview } from '../api/invites';
 import { useAcceptInvite, useInvite } from '../api/queries';
@@ -38,6 +38,8 @@ function ValidTokenInvite({ token }: { token: string }) {
   const invite = useInvite(token);
   const accept = useAcceptInvite(token);
   const navigate = useNavigate();
+  // Set by Register after an account was made through this link.
+  const justRegistered = (useLocation().state as { justRegistered?: boolean } | null)?.justRegistered === true;
 
   if (invite.isPending) return <p role="status">Laster …</p>;
   if (!invite.data) {
@@ -70,6 +72,18 @@ function ValidTokenInvite({ token }: { token: string }) {
         <PrimaryButton onClick={() => navigate(`/registrer?invitasjon=${token}`)}>Opprett konto og bli med</PrimaryButton>
         <Link to={`/logg-inn?invitasjon=${token}`} className="invite-page__link">
           Logg inn
+        </Link>
+      </div>
+    );
+  }
+
+  if (preview.viewer === 'already_member' && justRegistered) {
+    return (
+      <div className="auth-page">
+        <h1 className="auth-page__title">{homeName}</h1>
+        <p className="invite-page__message">Velkommen! Du er nå med i «{homeName}».</p>
+        <Link to="/" className="invite-page__link">
+          Gå til hjemmet
         </Link>
       </div>
     );

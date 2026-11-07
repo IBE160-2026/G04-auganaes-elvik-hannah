@@ -24,7 +24,11 @@ export function Register() {
   const inviteToken = validInviteToken(searchParams.get('invitasjon'));
   const signInPath = inviteToken ? `/logg-inn?invitasjon=${inviteToken}` : '/logg-inn';
 
-  if (session) return <Navigate to={inviteToken ? `/invitasjon/${inviteToken}` : '/'} replace />;
+  if (session) {
+    if (!inviteToken) return <Navigate to="/" replace />;
+    // The invite page greets a just-registered user instead of saying "already a Member".
+    return <Navigate to={`/invitasjon/${inviteToken}`} replace state={{ justRegistered: true }} />;
+  }
 
   function showErrors(next: FieldErrors) {
     flushSync(() => setErrors(next));

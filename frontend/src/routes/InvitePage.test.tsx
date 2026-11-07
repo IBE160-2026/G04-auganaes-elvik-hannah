@@ -72,12 +72,14 @@ describe('Invite page, signed out', () => {
     expect(window.location.search).toBe(`?invitasjon=${TOKEN}`);
     await fillRegister();
 
-    expect(await screen.findByText('Du er allerede med i «Kollektivet».')).toBeInTheDocument();
+    // Greeted as new, not told "already a Member" (team review of PR #18).
+    expect(await screen.findByText('Velkommen! Du er nå med i «Kollektivet».')).toBeInTheDocument();
+    expect(screen.queryByText(/allerede med/)).not.toBeInTheDocument();
     expect(window.location.pathname).toBe(`/invitasjon/${TOKEN}`);
     const [request] = server.calls('POST', '/api/auth/register');
     expect(await request.json()).toMatchObject({ email: 'jonas@example.com', invite_token: TOKEN });
 
-    await userEvent.click(screen.getByRole('link', { name: 'Gå til forsiden' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Gå til hjemmet' }));
     expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
   });
 
