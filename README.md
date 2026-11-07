@@ -54,7 +54,7 @@ uv run python -m app.seed
 uv run fastapi dev
 ```
 
-`uv run python -m app.seed` er én kommando for både migreringer og eksempeldata (Story 1.6): den kjører `alembic upgrade head` og lager eksempelbrukerne under. Den kan kjøres så mange ganger du vil, og sletter eller overskriver aldri noe; finnes en bruker fra før, skriver den «finnes allerede». Kjøres den før databasen er startet, avslutter den med en melding om å kjøre `docker compose up -d --wait`. Kjør den fra `backend/`.
+`uv run python -m app.seed` er én kommando for både migreringer og eksempeldata (Story 1.6): den kjører `alembic upgrade head` og lager eksempelbrukerne under og et eksempelhjem de bor i (Story 1.3). Den kan kjøres så mange ganger du vil, og sletter eller overskriver aldri noe; finnes en bruker fra før, skriver den «finnes allerede». Kjøres den før databasen er startet, avslutter den med en melding om å kjøre `docker compose up -d --wait`. Kjør den fra `backend/`.
 
 API-et kjører på <http://localhost:8000>. Sjekk at det svarer: <http://localhost:8000/api/health> skal gi `{"status":"ok"}`, og <http://localhost:8000/api/health/db> skal gi `{"database":"ok"}` når databasen kjører. API-dokumentasjon ligger på <http://localhost:8000/docs>.
 
@@ -76,15 +76,18 @@ Appen åpnes på <http://localhost:5173>. Frontenden kaller API-et på samme adr
 
 Seed-kommandoen lager disse eksempelbrukerne:
 
-| Navn | E-post | Passord |
-|---|---|---|
-| Mari Nordmann | `mari@example.com` | `husly-demo` |
-| Jonas Berg | `jonas@example.com` | `husly-demo` |
+| Navn | E-post | Passord | Hjem (rolle) |
+|---|---|---|---|
+| Mari Nordmann | `mari@example.com` | `husly-demo` | «Mari og Jonas sitt hjem», husstand (husstandsmedlem) |
+| Jonas Berg | `jonas@example.com` | `husly-demo` | «Mari og Jonas sitt hjem», husstand (husstandsmedlem) |
+
+Eksempler på utleier og leietaker kommer med Story 1.4–1.5.
 
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
-2. Logg inn som en av eksempelbrukerne. Du kan også velge **Opprett konto** og lage din egen (e-post, navn og et passord på minst 8 tegn).
-3. Du havner på startsiden: «Du er logget inn som {navn}». Last siden på nytt; du er fortsatt logget inn.
-4. **Logg ut** sender deg tilbake til innloggingen.
+2. Logg inn som Mari. Du havner på hjemsiden for «Mari og Jonas sitt hjem», med type og rolle. Last siden på nytt; du er fortsatt logget inn.
+3. **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
+4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Med en husstand blir du husstandsmedlem og får ikke tilbud om å lage flere hjem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier, ser listen over hjemmene dine og kan lage flere med **Opprett nytt hjem**.
+5. **Logg ut** sender deg tilbake til innloggingen.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 
@@ -118,7 +121,7 @@ npm run build && npm run preview
 
 ### Tester og lint
 
-Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig to brukere) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
+Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig to brukere, ett hjem og to medlemskap) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
 
 ```bash
 cd backend
@@ -153,7 +156,7 @@ backend/             FastAPI + SQLModel + Alembic (Python 3.12, uv)
     main.py          app-oppsett og ruter under /api (samme origin, ingen CORS)
     config.py        leser miljøvariablene (DATABASE_URL, JWT_SECRET, AUTH_COOKIE_SECURE)
     db.py            databasemotor, én per URL
-    routes/          tynt HTTP-lag (/api/health, /api/auth/*)
+    routes/          tynt HTTP-lag (/api/health, /api/auth/*, /api/homes)
     domain/          domenetjenester, eneste vei for endringer (AD-3)
     permissions/     innlogget bruker og rolle-sjekker (AD-2)
     models/          SQLModel-entiteter
@@ -165,7 +168,7 @@ frontend/            React 19 + TypeScript + Vite
   src/
     styles/          designtokens fra DESIGN.md og globale stiler (AD-13)
     components/      AppShell, PrimaryButton, TextField, InstallPrompt
-    routes/          sider: logg inn, registrer, startside
+    routes/          sider: logg inn, registrer, opprett hjem, hjemside
     api/             generert API-klient, økt i minnet og TanStack Query-hooks
   openapi.json       API-skjemaet klienten genereres fra (npm run gen:api)
     service-worker.ts

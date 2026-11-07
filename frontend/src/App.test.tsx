@@ -1,11 +1,13 @@
-// Story 1.2 (FR-1): routes, forms and the session restored on load.
+// Story 1.2 (FR-1): routes, forms and the session restored on load. Story 1.3: the landing page
+// is the Home page, or Create Home for a user without a Home.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { MESSAGES } from './api/auth';
-import { OLA, authResponse, fakeApi, json, resetApi } from './test-utils/fakeApi';
+import { OLA, OLAS_HOME, authResponse, fakeApi, homesResponse, json, resetApi } from './test-utils/fakeApi';
 
 const signedOut = { 'POST /api/auth/refresh': () => json(401, { detail: 'Økten er utløpt.' }) };
+const withHome = { 'GET /api/homes': () => json(200, homesResponse()) };
 
 function renderAt(path: string) {
   window.history.pushState({}, '', path);
@@ -27,18 +29,20 @@ describe('App routes', () => {
     const server = fakeApi({
       'POST /api/auth/refresh': () => json(200, authResponse('a1')),
       'GET /api/auth/me': () => json(200, OLA),
+      ...withHome,
     });
     renderAt('/');
 
-    expect(await screen.findByText('Du er logget inn som Ola')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: OLAS_HOME.name })).toBeInTheDocument();
     expect(server.calls('POST', '/api/auth/refresh')).toHaveLength(1);
   });
 
-  it('signs in and shows the start page with the name', async () => {
+  it('signs in and shows the Home page with the name', async () => {
     fakeApi({
       ...signedOut,
       'POST /api/auth/login': () => json(200, authResponse('a1')),
       'GET /api/auth/me': () => json(200, OLA),
+      ...withHome,
     });
     renderAt('/logg-inn');
 
@@ -46,7 +50,7 @@ describe('App routes', () => {
     await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
     await userEvent.click(screen.getByRole('button', { name: 'Logg inn' }));
 
-    expect(await screen.findByText('Du er logget inn som Ola')).toBeInTheDocument();
+    expect(await screen.findByText(/Velkommen hjem, Ola!/)).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
     expect(localStorage.length + sessionStorage.length).toBe(0);
   });
@@ -125,11 +129,12 @@ describe('App routes', () => {
     );
   });
 
-  it('registers and lands on the start page', async () => {
+  it('registers and, without a Home yet, lands on Create Home', async () => {
     fakeApi({
       ...signedOut,
       'POST /api/auth/register': () => json(201, authResponse('a1', { ...OLA, name: 'Mari' })),
       'GET /api/auth/me': () => json(200, { ...OLA, name: 'Mari' }),
+      'GET /api/homes': () => json(200, homesResponse([], ['household', 'landlord'])),
     });
     renderAt('/registrer');
 
@@ -138,13 +143,15 @@ describe('App routes', () => {
     await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
     await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
 
-    expect(await screen.findByText('Du er logget inn som Mari')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Opprett hjemmet ditt' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/nytt-hjem');
   });
 
   it('signs out and returns to /logg-inn', async () => {
     const server = fakeApi({
       'POST /api/auth/refresh': () => json(200, authResponse('a1')),
       'GET /api/auth/me': () => json(200, OLA),
+      ...withHome,
       'POST /api/auth/logout': () => new Response(null, { status: 204 }),
     });
     renderAt('/');
@@ -159,6 +166,7 @@ describe('App routes', () => {
     fakeApi({
       'POST /api/auth/refresh': () => json(200, authResponse('a1')),
       'GET /api/auth/me': () => json(200, OLA),
+      ...withHome,
       'POST /api/auth/logout': () => json(500, { detail: 'x' }),
     });
     renderAt('/');

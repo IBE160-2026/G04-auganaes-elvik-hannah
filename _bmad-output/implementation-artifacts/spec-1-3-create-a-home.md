@@ -2,9 +2,10 @@
 title: 'Story 1.3: Create a Home (Household or Landlord)'
 type: 'feature'
 created: '2026-11-07'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: '38f5e4941e55214b993395bdbd4c6cb950129c25'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -82,19 +83,19 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `backend/app/models/home.py`, `models/membership.py`, `models/__init__.py` -- `Home` (`homes`) and `Membership` (`memberships`); type and Role as strings with named CHECK constraints listing every value now (`ck_homes_type`: household, landlord; `ck_memberships_role`: household_member, landlord, tenant); explicitly named PK/FK/unique (`fk_memberships_user_id_users`, `fk_memberships_home_id_homes`, `uq_memberships_user_id_home_id`), no `ondelete` (no deletion exists); index on `memberships.home_id` -- AD-1; `alembic check` ignores CHECKs, so a test covers them
-- [ ] `backend/alembic/versions/<rev>_create_homes_memberships.py` -- autogenerate, review by hand, working `downgrade` -- CI runs `alembic check`
-- [ ] `backend/app/domain/homes.py` -- `create_home`, `allowed_types`, `add_member` (joiner Role from Home type; 1.4 will reuse it), `homes_for`, `HomeCreationNotAllowed`. `create_home` locks the user's row (`with_for_update`) before the check so two parallel requests cannot both pass -- creation rule in one place
-- [ ] `backend/app/routes/homes.py`, `main.py` -- `GET /api/homes`, `POST /api/homes` (201; 409 with Norwegian detail) -- thin routes
-- [ ] `backend/tests/conftest.py`, `test_homes.py`, `test_homes_routes.py` -- turn on `PRAGMA foreign_keys=ON` in the SQLite `engine` fixture (connect event); every matrix row, plus: Role is not a column on `users`; a Landlord who joins a Household Home holds two Roles; `add_member` to a Landlord Home gives `tenant`, never a second `landlord`; a raw insert with an unknown type/role fails
-- [ ] `backend/app/seed/homes.py`, `seed/__init__.py`, `tests/test_seed.py` -- example Household Home "Mari og Jonas sitt hjem" with Mari (creator) and Jonas (`add_member`), each checked separately (matrix); update `STEPS` and the "finnes allerede" count assertions; tests for fresh, rerun and partial
-- [ ] `.github/workflows/ci.yml` -- idempotence check also asserts one Home and two Memberships
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts`, `src/api/homes.ts`, `src/api/queries.ts` -- `useHomes` keyed `['homes', userId]`, enabled only with a session (like `useMe`); `useCreateHome` writes the new Home into that cache before navigating
-- [ ] `frontend/src/routes/CreateHome.tsx` + `.css`, `routes/HomePage.tsx` (replaces `Start.tsx`: name, type, Role, "Logg ut"; Landlords also get their Homes list and an "Opprett nytt hjem" link), `App.tsx` -- `/nytt-hjem` (a Landlord with Homes sees no type choice, only the name field); `/` shows the newest Home and sends a user to `/nytt-hjem` only when the list has loaded empty; `/nytt-hjem` offers `allowed_types` and sends a user with none back to `/`
-- [ ] `frontend/src/App.test.tsx`, `routes/*.test.tsx` -- existing tests get a `GET /api/homes` handler and the new landing text; redirect only after an empty list (not while loading, not on error), no bounce after create, choosing a type and creating, inline 409/422, Landlord sees the Homes list and create link, a Member sees neither
-- [ ] `README.md` -- example Home in the user table, what to try first, the CI paragraph ("nøyaktig to brukere" → also the Home)
-- [ ] `sprint-status.yaml` -- 1-3 to `in-progress` at start, `review` when the PR opens
-- [ ] `docs/ki-logg/korrigeringer.md` -- corrections found in review
+- [x] `backend/app/models/home.py`, `models/membership.py`, `models/__init__.py` -- `Home` (`homes`) and `Membership` (`memberships`); type and Role as strings with named CHECK constraints listing every value now (`ck_homes_type`: household, landlord; `ck_memberships_role`: household_member, landlord, tenant); explicitly named PK/FK/unique (`fk_memberships_user_id_users`, `fk_memberships_home_id_homes`, `uq_memberships_user_id_home_id`), no `ondelete` (no deletion exists); index on `memberships.home_id` -- AD-1; `alembic check` ignores CHECKs, so a test covers them
+- [x] `backend/alembic/versions/<rev>_create_homes_memberships.py` -- autogenerate, review by hand, working `downgrade` -- CI runs `alembic check`
+- [x] `backend/app/domain/homes.py` -- `create_home`, `allowed_types`, `add_member` (joiner Role from Home type; 1.4 will reuse it), `homes_for`, `HomeCreationNotAllowed`. `create_home` locks the user's row (`with_for_update`) before the check so two parallel requests cannot both pass -- creation rule in one place
+- [x] `backend/app/routes/homes.py`, `main.py` -- `GET /api/homes`, `POST /api/homes` (201; 409 with Norwegian detail) -- thin routes
+- [x] `backend/tests/conftest.py`, `test_homes.py`, `test_homes_routes.py` -- turn on `PRAGMA foreign_keys=ON` in the SQLite `engine` fixture (connect event); every matrix row, plus: Role is not a column on `users`; a Landlord who joins a Household Home holds two Roles; `add_member` to a Landlord Home gives `tenant`, never a second `landlord`; a raw insert with an unknown type/role fails
+- [x] `backend/app/seed/homes.py`, `seed/__init__.py`, `tests/test_seed.py` -- example Household Home "Mari og Jonas sitt hjem" with Mari (creator) and Jonas (`add_member`), each checked separately (matrix); update `STEPS` and the "finnes allerede" count assertions; tests for fresh, rerun and partial
+- [x] `.github/workflows/ci.yml` -- idempotence check also asserts one Home and two Memberships
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts`, `src/api/homes.ts`, `src/api/queries.ts` -- `useHomes` keyed `['homes', userId]`, enabled only with a session (like `useMe`); `useCreateHome` writes the new Home into that cache before navigating
+- [x] `frontend/src/routes/CreateHome.tsx` + `.css`, `routes/HomePage.tsx` (replaces `Start.tsx`: name, type, Role, "Logg ut"; Landlords also get their Homes list and an "Opprett nytt hjem" link), `App.tsx` -- `/nytt-hjem` (a Landlord with Homes sees no type choice, only the name field); `/` shows the newest Home and sends a user to `/nytt-hjem` only when the list has loaded empty; `/nytt-hjem` offers `allowed_types` and sends a user with none back to `/`
+- [x] `frontend/src/App.test.tsx`, `routes/*.test.tsx` -- existing tests get a `GET /api/homes` handler and the new landing text; redirect only after an empty list (not while loading, not on error), no bounce after create, choosing a type and creating, inline 409/422, Landlord sees the Homes list and create link, a Member sees neither
+- [x] `README.md` -- example Home in the user table, what to try first, the CI paragraph ("nøyaktig to brukere" → also the Home)
+- [x] `sprint-status.yaml` -- 1-3 to `in-progress` at start, `review` when the PR opens
+- [x] `docs/ki-logg/korrigeringer.md` -- corrections found in review
 
 **Acceptance Criteria:**
 - Given a clean clone, when the README is followed and the seed is run, then signing in as Mari shows the example Home and no Create Home prompt.
@@ -102,6 +103,15 @@ context:
 - Given this PR's Vercel preview, when a new user registers and creates a Landlord Home and then a second one, then both appear for them, and the migration ran on the preview's Neon branch.
 
 ## Implementation Notes
+
+- Migration `cf10f98fe92a_create_homes_memberships.py`: autogenerated, then `sqlmodel` AutoString replaced by `sa.String` to match the users revision. Verified on Docker Postgres 18: downgrade base → upgrade head → `alembic check` clean, seed twice gives users/homes/memberships = 2/1/2.
+- `create_home` also validates name and type in the domain (ValueError), even though the route's Pydantic model already does, so seed or later callers cannot bypass it.
+- 409 detail depends on what the caller may still create: a Landlord gets `LANDLORD_ONLY`, a Household Member or Tenant gets `ALREADY_IN_HOME` (`routes/homes.py`).
+- `useCreateHome` writes the new Home first in the cache with `allowed_types: []` as a placeholder, then invalidates so the refetch brings the server's `allowed_types`. `CreateHome` does not redirect on the empty placeholder while the create is pending or just succeeded. The no-bounce test was checked by removing the cache write: it then fails.
+- `routes/formFocus.ts` now accepts any field-error record, so the Create Home form reuses it (radio `type` and `name`).
+- `sprint-status.yaml` → `review` and `korrigeringer.md` are left for when the PR opens and the code review has run.
+- Review fixes (2026-11-07): `homes_for` tiebreaker on `id`, error screen only without cached data, refetch on 409, 409 declared in OpenAPI, CI checks the migrated CHECK constraints, typed test fixtures.
+- The Verification command `alembic downgrade base` wiped the developer's local database on the first run. The final verification ran the migration round trip and seed against a throwaway database `husly_verify` in the same container instead (`DATABASE_URL`/`DATABASE_URL_UNPOOLED` pointed at it), then dropped it.
 
 ## Spec Change Log
 
@@ -126,6 +136,32 @@ Spec review 2026-11-07 (one adversarial reviewer; all 15 findings verified again
 | 13 | One-Landlord rule only a racy domain check | low | impossible by construction (finding 1) |
 | 14 | README CI paragraph, sprint-status, epic context still say tab bar → 1.3 | low | tasks added; epic context fixed now |
 | 15 | Homes cache not scoped to the user | low | key on user id |
+
+Code review 2026-11-07 (Blind Hunter, Edge Case Hunter, Verification Gap; 28 findings, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| "Newest first" has no tiebreaker; Windows/Py 3.12 clock ties make three order tests flaky (B, E, V) | medium | patch: secondary key `Home.id`, tests use explicit `created_at` |
+| Migration CHECKs never tested against the migrated schema; `alembic check` ignores them (V) | medium | patch: CI step inserts bad type/role on Postgres |
+| A failed background refetch replaces an existing Home with the load error (`isError` checked before data) (B, E) | medium | patch: error screen only without data; test |
+| 409 on create keeps stale `allowed_types`, retries loop (E) | low | patch: refetch on 409 |
+| `POST /api/homes` 409 missing from OpenAPI/`/docs` (B) | low | patch: declared response, client regenerated |
+| Test fixtures typed `object[]`/`string[]`, can drift from the schema (B) | low | patch: typed as `Home[]`/`HomeType[]` |
+| Row lock against double submit has no test; SQLite ignores `FOR UPDATE` (B, V) | medium | defer: needs a concurrent Postgres test harness; reasoned only, noted in PR |
+| `add_member` lets a Household Member/Tenant join a second Home; only the seed checks (B, E) | maybe-false | defer to 1.4: whether invites may add a second Home is 1.4's decision, not in this story's intent |
+| `add_member` maps every `IntegrityError` to `AlreadyMember` (B, E) | low | rejected: callers pass loaded rows and the Role comes from a map, so FK/CHECK failures need a concurrent delete; fix adds a branch |
+| Order by `Home.created_at`, not `Membership.created_at`, for a joined older Home (E) | low | rejected: no join path exists until 1.4 |
+| Seed matches the example Home by name only, not type (E) | low | rejected: needs Mari to own a Landlord Home with that exact name |
+| Placeholder `allowed_types: []` hides the Landlord's create link until the refetch (B) | low | rejected: lasts one request; a correct placeholder would copy the domain rule |
+| Frontend infers Landlord from `role` for the list and title (E) | low | rejected: the list is for Landlords by team decision 3a |
+| `focusFirstInvalid` signature loosened (B) | low | rejected: unlikely, fix adds generics |
+| Model `type`/`role` typed `str`, `type` shadows the builtin (B) | low | rejected: values constrained by CHECK and Pydantic `Literal` at the API |
+| CI seed check counts rows, not who/which Role (B) | low | rejected: pytest seed tests check names and Roles |
+| Frontend test gaps: client name limit, Tenant on `/nytt-hjem`, dual Role page, no `maxLength` (B) | low | rejected: server 422 path tested; Tenant takes the same `allowed_types: []` path as the tested Member |
+| Landlord greeting shows "som ." while `useMe` loads (B) | false | `useMe` has `initialData: session.user`, so the name is there whenever the page renders |
+| Only the newest Home can be viewed (B) | false | team decision 3a; switching comes with the tab bar/Portfolio |
+| sprint-status and spec status out of sync (B) | false | synced when the story is presented (step 5) |
+| `korrigeringer.md` and KI-logg README not updated (B) | false | done with the commit and PR |
 
 ## Design Notes
 

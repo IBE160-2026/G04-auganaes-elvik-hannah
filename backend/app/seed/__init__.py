@@ -2,7 +2,7 @@
 
 Run from backend/: `uv run python -m app.seed`. It writes only to a local database, so users
 with publicly known passwords never reach the hosted demo or a Neon branch. Idempotent: it
-never deletes or overwrites rows. Stories 1.3 and 2.1 add their steps to STEPS.
+never deletes or overwrites rows. Story 1.3 added the example Home; 2.1 adds its step too.
 
 Output uses print(), because Alembic's fileConfig replaces the logging setup.
 """
@@ -19,12 +19,13 @@ from sqlmodel import Session
 from alembic import command
 from app.config import _env, get_database_url, get_migration_url
 from app.db import get_engine
+from app.seed.homes import seed_homes
 from app.seed.users import seed_users
 
 Step = Callable[[Session], None]
 
 # In order: a later step may look up rows from an earlier one by natural key (e.g. email).
-STEPS: tuple[Step, ...] = (seed_users,)
+STEPS: tuple[Step, ...] = (seed_users, seed_homes)
 
 LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"

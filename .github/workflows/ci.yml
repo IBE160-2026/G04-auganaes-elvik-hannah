@@ -80,7 +80,8 @@ jobs:
           assert inspect(create_engine(get_database_url())).has_table('alembic_version')"
       # Story 1.6: a second run must exit 0 and create nothing new.
       - run: uv run python -m app.seed
-      - name: Seed er idempotent (én rad per eksempelbruker)
+      # Story 1.3: plus the example Home with Mari and Jonas as its two Members.
+      - name: Seed er idempotent (eksempelbrukere, ett hjem, to medlemskap)
         run: |
           uv run python - <<'EOF'
           from sqlalchemy import create_engine, text
@@ -88,7 +89,36 @@ jobs:
           from app.seed.users import EXAMPLE_USERS
           with create_engine(get_database_url()).connect() as c:
               n = c.execute(text("SELECT count(*) FROM users")).scalar_one()
+              homes = c.execute(text("SELECT count(*) FROM homes")).scalar_one()
+              members = c.execute(text("SELECT count(*) FROM memberships")).scalar_one()
           assert n == len(EXAMPLE_USERS), n
+          assert (homes, members) == (1, 2), (homes, members)
+          EOF
+      # Story 1.3: alembic check ignores CHECK constraints, so prove the migrated schema has them.
+      - name: CHECK-constraints finnes i migrert skjema
+        run: |
+          uv run python - <<'EOF'
+          import uuid
+          from sqlalchemy import create_engine, text
+          from sqlalchemy.exc import IntegrityError
+          from app.config import get_database_url
+          cases = [
+              ("ck_homes_type",
+               "INSERT INTO homes (id, name, type, created_at) VALUES (:h, 'x', 'other', now())"),
+              ("ck_memberships_role",
+               "INSERT INTO memberships (id, user_id, home_id, role, created_at) "
+               "SELECT :h, m.user_id, m.home_id, 'owner', now() FROM memberships m LIMIT 1"),
+          ]
+          with create_engine(get_database_url()).connect() as c:
+              for name, sql in cases:
+                  try:
+                      c.execute(text(sql), {"h": uuid.uuid4()})
+                  except IntegrityError as exc:
+                      assert name in str(exc.orig), exc.orig
+                  else:
+                      raise AssertionError(f"{name} slapp gjennom")
+                  finally:
+                      c.rollback()
           EOF
       # Story 1.6: the real DB-down path (Alembic -> psycopg -> OperationalError) gives exit 1.
       - name: Seed uten database gir exit 1 og hint

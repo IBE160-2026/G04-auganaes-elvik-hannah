@@ -5,8 +5,12 @@ from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, func, select
 
 from app import seed
+from app.domain import homes
 from app.domain.accounts import authenticate, register
+from app.models.home import Home
+from app.models.membership import Membership
 from app.models.user import User
+from app.seed.homes import EXAMPLE_HOME_NAME, seed_homes
 from app.seed.users import EXAMPLE_PASSWORD, EXAMPLE_USERS, seed_users
 
 
@@ -18,6 +22,17 @@ def local_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def user_count(session: Session) -> int:
     return session.exec(select(func.count()).select_from(User)).one()
+
+
+def count(session: Session, model: type) -> int:
+    return session.exec(select(func.count()).select_from(model)).one()
+
+
+def by_email(session: Session, email: str) -> User:
+    return session.exec(select(User).where(User.email == email)).one()
+
+
+MARI, JONAS = (user.email for user in EXAMPLE_USERS[:2])
 
 
 class Calls:
@@ -35,8 +50,8 @@ class Calls:
         return self.session
 
 
-def test_steps_start_with_users() -> None:
-    assert seed.STEPS == (seed_users,)
+def test_steps_are_users_then_homes() -> None:
+    assert seed.STEPS == (seed_users, seed_homes)
 
 
 def test_example_emails_are_normalised() -> None:
@@ -53,7 +68,21 @@ def test_fresh_db_migrates_and_creates_users(
     assert user_count(session) == 2
     for user in EXAMPLE_USERS:
         assert authenticate(session, email=user.email, password=EXAMPLE_PASSWORD) is not None
-    assert "Opprettet bruker mari@example.com" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Opprettet bruker mari@example.com" in out
+    assert f"Opprettet hjemmet «{EXAMPLE_HOME_NAME}»" in out
+
+
+def test_fresh_db_gives_mari_and_jonas_one_household_home(session: Session) -> None:
+    seed_users(session)
+    seed_homes(session)
+
+    for email in (MARI, JONAS):
+        member_homes = homes.homes_for(session, by_email(session, email))
+        assert [(h.home.name, h.home.type, h.role) for h in member_homes] == [
+            (EXAMPLE_HOME_NAME, "household", "household_member")
+        ]
+    assert count(session, Home) == 1 and count(session, Membership) == 2
 
 
 def test_rerun_is_idempotent(session: Session, capsys: pytest.CaptureFixture[str]) -> None:
@@ -65,8 +94,11 @@ def test_rerun_is_idempotent(session: Session, capsys: pytest.CaptureFixture[str
     assert seed.run(upgrade=calls.upgrade, session_factory=calls.session_factory) == 0
     assert user_count(session) == 2
     assert set(session.exec(select(User.id)).all()) == ids
+    assert count(session, Home) == 1 and count(session, Membership) == 2
     out = capsys.readouterr().out
-    assert out.count("finnes allerede") == 2
+    # Two users and the Home; Jonas's Membership says "er allerede med".
+    assert out.count("finnes allerede") == 3
+    assert f"{JONAS} er allerede med" in out
 
 
 def test_partial_skips_existing_user_with_other_casing(
@@ -83,6 +115,51 @@ def test_partial_skips_existing_user_with_other_casing(
     out = capsys.readouterr().out
     assert "Bruker mari@example.com finnes allerede" in out
     assert "Opprettet bruker jonas@example.com" in out
+
+
+def test_partial_run_adds_jonas_to_the_existing_home(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    home = homes.create_home(
+        session, by_email(session, MARI), name=EXAMPLE_HOME_NAME, type="household"
+    ).home
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    assert count(session, Home) == 1
+    assert [h.home.id for h in homes.homes_for(session, by_email(session, JONAS))] == [home.id]
+    out = capsys.readouterr().out
+    assert "finnes allerede" in out and f"La til {JONAS}" in out
+
+
+def test_jonas_in_another_home_is_skipped_with_a_reason(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    jonas = by_email(session, JONAS)
+    other = homes.create_home(session, jonas, name="Jonas sitt", type="household").home
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    assert [h.home.id for h in homes.homes_for(session, jonas)] == [other.id]
+    assert count(session, Home) == 2 and count(session, Membership) == 2
+    assert f"Hoppet over {JONAS}" in capsys.readouterr().out
+
+
+def test_mari_in_another_home_is_skipped_and_nothing_is_written(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    homes.create_home(session, by_email(session, MARI), name="Maris", type="household")
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    assert count(session, Home) == 1 and count(session, Membership) == 1
+    assert f"Hoppet over «{EXAMPLE_HOME_NAME}»" in capsys.readouterr().out
 
 
 def _db_down() -> None:

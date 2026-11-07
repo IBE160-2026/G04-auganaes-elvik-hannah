@@ -1,4 +1,5 @@
 // Story 1.2 test helper: stubs globalThis.fetch with handlers per "METHOD /path".
+import type { Home, HomeType } from '../api/homes';
 import { setSession } from '../api/session';
 
 export type Handler = (request: Request) => Response | Promise<Response>;
@@ -36,4 +37,26 @@ export function fakeApi(handlers: Record<string, Handler>) {
 export function resetApi() {
   vi.unstubAllGlobals();
   setSession(null);
+}
+
+// Story 1.3: Homes as GET /api/homes returns them.
+export const OLAS_HOME: Home = {
+  id: '00000000-0000-4000-8000-0000000000a1',
+  name: 'Kollektivet',
+  type: 'household',
+  role: 'household_member',
+  created_at: '2026-11-07T12:00:00Z',
+};
+
+export function homesResponse(homes: readonly Home[] = [OLAS_HOME], allowed_types: HomeType[] = []) {
+  return { homes, allowed_types };
+}
+
+/** Signed in as Ola on load, with these Homes. */
+export function signedInWith(homes: readonly Home[] = [OLAS_HOME], allowed_types: HomeType[] = []) {
+  return {
+    'POST /api/auth/refresh': () => json(200, authResponse('a1')),
+    'GET /api/auth/me': () => json(200, OLA),
+    'GET /api/homes': () => json(200, homesResponse(homes, allowed_types)),
+  };
 }
