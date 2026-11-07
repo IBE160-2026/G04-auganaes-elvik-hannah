@@ -74,9 +74,12 @@ def test_landlord_creates_another_landlord_home(client: TestClient, engine: Engi
     t0 = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
     with Session(engine) as session:
         for response, when in ((first, t0), (second, t0 + timedelta(seconds=1))):
-            home = session.get(Home, uuid.UUID(response.json()["id"]))
-            home.created_at = when
-            session.add(home)
+            # homes_for orders by the Membership (Story 1.4).
+            membership = session.exec(
+                select(Membership).where(Membership.home_id == uuid.UUID(response.json()["id"]))
+            ).one()
+            membership.created_at = when
+            session.add(membership)
         session.commit()
 
     body = client.get("/api/homes", headers=auth).json()

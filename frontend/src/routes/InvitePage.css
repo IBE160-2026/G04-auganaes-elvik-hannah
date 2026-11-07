@@ -1,0 +1,14 @@
+/* Story 1.4: the invite page. One column at every width, like the sign-in screens. */
+.invite-page__message {
+  color: var(--color-ink-secondary);
+}
+
+/* A plain link, but still a 44×44 tap target. */
+.invite-page__link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}

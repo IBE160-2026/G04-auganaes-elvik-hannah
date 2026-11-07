@@ -1,8 +1,10 @@
 // Story 1.2 (FR-1): sign in. A wrong email or password shows one inline error, no reload.
+// Story 1.4 (FR-2): with ?invitasjon=<token>, the user goes back to the invite page after.
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, Navigate } from 'react-router';
+import { Link, Navigate, useSearchParams } from 'react-router';
 import { AuthError, MESSAGES, validateSignIn, type FieldErrors } from '../api/auth';
+import { validInviteToken } from '../api/invites';
 import { useSignIn } from '../api/queries';
 import { useSession } from '../api/session';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -16,8 +18,10 @@ export function SignIn() {
   const formRef = useRef<HTMLFormElement>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const inviteToken = validInviteToken(searchParams.get('invitasjon'));
 
-  if (session) return <Navigate to="/" replace />;
+  if (session) return <Navigate to={inviteToken ? `/invitasjon/${inviteToken}` : '/'} replace />;
 
   function showErrors(next: FieldErrors) {
     // Render aria-invalid and the message first, so screen readers announce the error on focus.
@@ -68,7 +72,8 @@ export function SignIn() {
         </PrimaryButton>
       </form>
       <p className="auth-page__switch">
-        Ny i Husly? <Link to="/registrer">Opprett konto</Link>
+        Ny i Husly?{' '}
+        <Link to={inviteToken ? `/registrer?invitasjon=${inviteToken}` : '/registrer'}>Opprett konto</Link>
       </p>
     </div>
   );

@@ -147,6 +147,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Invite */
+        post: operations["create_invite_api_homes__home_id__invites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/invites/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview Invite */
+        get: operations["preview_invite_api_invites__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/invites/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Invite */
+        post: operations["accept_invite_api_invites__token__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -207,6 +258,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Can Invite */
+            can_invite: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -214,6 +267,39 @@ export interface components {
             homes: components["schemas"]["HomeOut"][];
             /** Allowed Types */
             allowed_types: ("household" | "landlord")[];
+        };
+        /** InviteOut */
+        InviteOut: {
+            /** Token */
+            token: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "household_member" | "landlord" | "tenant";
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** InvitePreviewOut */
+        InvitePreviewOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "valid" | "invalid";
+            /** Home Type */
+            home_type: ("household" | "landlord") | null;
+            /** Home Name */
+            home_name?: string | null;
+            /** Role */
+            role?: ("household_member" | "landlord" | "tenant") | null;
+            /** Viewer */
+            viewer?: ("can_join" | "already_member" | "in_other_home") | null;
+            /** Other Home Name */
+            other_home_name?: string | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -233,6 +319,22 @@ export interface components {
             name: string;
             /** Password */
             password: string;
+            /** Invite Token */
+            invite_token?: string | null;
+        };
+        /** RegisterResponse */
+        RegisterResponse: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             * @constant
+             */
+            token_type: "bearer";
+            user: components["schemas"]["UserOut"];
+            /** Joined Home Id */
+            joined_home_id?: string | null;
         };
         /** UserOut */
         UserOut: {
@@ -331,7 +433,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthResponse"];
+                    "application/json": components["schemas"]["RegisterResponse"];
                 };
             };
             /** @description Validation Error */
@@ -498,6 +600,133 @@ export interface operations {
             };
             /** @description The caller may not create a Home of this type */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invite_api_homes__home_id__invites_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteOut"];
+                };
+            };
+            /** @description Not a Household Member or the Landlord of this Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_invite_api_invites__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitePreviewOut"];
+                };
+            };
+            /** @description A Bearer token was sent but is invalid */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_invite_api_invites__token__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeOut"];
+                };
+            };
+            /** @description Already a Member here, or Member or Tenant in another Home */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unknown, expired, or used by someone else */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };

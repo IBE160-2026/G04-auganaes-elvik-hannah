@@ -1,6 +1,7 @@
 """Example users for local running (Story 1.6, FR-22). Credentials are listed in the README.
 
-Stories 1.4–1.5 add a Landlord and a Tenant here. Later steps look users up by email.
+Story 1.4 added the Landlord Kari and the Tenant Anders. Later steps look users up by email,
+and seed/homes.py by index, so new users are appended.
 """
 
 from typing import NamedTuple
@@ -21,6 +22,8 @@ class ExampleUser(NamedTuple):
 EXAMPLE_USERS = (
     ExampleUser("mari@example.com", "Mari Nordmann"),
     ExampleUser("jonas@example.com", "Jonas Berg"),
+    ExampleUser("kari@example.com", "Kari Hansen"),
+    ExampleUser("anders@example.com", "Anders Johnsen"),
 )
 
 

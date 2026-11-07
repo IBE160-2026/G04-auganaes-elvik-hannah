@@ -23,7 +23,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 These do not block Trinn 1 but must be resolved before the stories they touch are built.
 
 - **Screens without an owning story (Trinn 2).** "Landlord Home Admin" is used by Stories 3.4, 3.5, 4.1 and 6.1, and "Settings" by Stories 3.1 and 5.3, but no story builds the screen itself. Decide before Epic 3: either the first story that needs the screen builds its shell, or a small shell story is added.
-- **Invite link policy is unconfirmed.** "Single-use plus 7-day expiry" in Story 1.4 and the architecture is an assumption the team has not confirmed. Confirm it in the pull request for Story 1.4.
+- **Invite link policy (settled 2026-11-07).** "Single-use plus 7-day expiry" in Story 1.4 and the architecture was an assumption until the team confirmed it.
+  - *Settled 2026-11-07 (team decision, Story 1.4 spec):* single-use, 7-day expiry; "Lag ny lenke" makes another link and earlier unused links stay valid; no revoking in v1.
 
 ### Delivery stages
 
@@ -257,6 +258,8 @@ Users can register and log in, create a Home (Household or Landlord), invite oth
 
 `[ASSUMPTION carried from PRD Open Question 3 / EXPERIENCE.md's Foundation note, unresolved at the PRD level]`: v1 does not design a Home-switcher UI. A Landlord may own and switch between multiple Homes via the Portfolio Dashboard (Epic 6) — that mechanism is Landlord-specific and already scoped. A Household Member or Tenant is assumed to belong to at most one Home for the main self-service flow (Story 1.3); nothing technically prevents them from also accepting a second invite link (Story 1.4) into another Home, but no UI exists for switching between multiple simultaneous non-Landlord Memberships. If this turns out to matter for the team's actual usage, revisit before Epic 1 is built — it is a scope decision, not an oversight.
 
+*Update 2026-11-07 (team decision 3, Story 1.4):* the assumption is now a rule enforced on the server in `domain/homes.add_member`. A user may be Household Member or Tenant in at most one Home; Landlord Memberships do not count, so a Landlord may also join one such Home. A second invite is refused with "Du er allerede med i «X». Du kan bare være med i ett hjem om gangen."
+
 ### Story 1.1: Project Scaffold, Design Tokens & Responsive App Shell
 
 **Stage:** Trinn 1
@@ -425,6 +428,8 @@ So that I can bring others in with the right Role.
 **When** the Member sees the result
 **Then** an inline error with a retry affordance shows at the action — not a silent failure (UX-DR30)
 
+*Implementation note 2026-11-07 (Story 1.4 spec):* invite generation is the first Home-scoped route, so `permissions/require_role.py` is built in this story instead of 1.5 (signature `require_role(*roles)`, reading `home_id` from the path); Story 1.5 reuses it. The invite control lives on a new page `/hjem/<id>/medlemmer` ("Medlemmer og invitasjon"), linked from the Home page, since the Task Overview header (Story 2.2) does not exist yet. The seed gains a Landlord (Kari) and a Tenant (Anders) who joins through an invite link.
+
 ### Story 1.5: View Home Members List & Enforce Role-Based Permissions
 
 **Stage:** Trinn 1
@@ -445,7 +450,9 @@ So that Tenant-locked actions can never be bypassed.
 
 **Given** any Home-scoped route
 **When** a request includes `home_id`
-**Then** `require_role(home_id, allowed_roles)` loads the caller's Membership row for `(user_id, home_id)` and checks that row's Role — never a JWT claim, body, or query param (AD-2)
+**Then** `require_role(*allowed_roles)`, reading `home_id` from the path, loads the caller's Membership row for `(user_id, home_id)` and checks that row's Role — never a JWT claim, body, or query param (AD-2)
+
+*Note 2026-11-07:* `require_role` itself was delivered early in Story 1.4 (first Home-scoped route); this story adds the members list to the existing Members & Invite page and applies `require_role` to its routes.
 
 **Given** a user with a Membership in Home A but not Home B
 **When** they call a Home B route

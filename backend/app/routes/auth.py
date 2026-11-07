@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from app.config import Settings
 from app.db import get_session
-from app.domain import accounts, tokens
+from app.domain import accounts, homes, invites, tokens
 from app.models.user import EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, User
 from app.permissions.current_user import CurrentUser
 
@@ -40,6 +40,10 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     name: DisplayName
     password: Password
+    # Story 1.4: register through an invite link and join its Home in the same request.
+    invite_token: (
+        Annotated[str, Field(min_length=1, max_length=invites.TOKEN_MAX_LENGTH)] | None
+    ) = None
 
 
 class LoginRequest(BaseModel):
@@ -57,6 +61,12 @@ class AuthResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
     user: UserOut
+
+
+class RegisterResponse(AuthResponse):
+    # Story 1.4: the Home joined through invite_token; null without one or when the link was
+    # no longer valid (the account is created either way).
+    joined_home_id: uuid.UUID | None = None
 
 
 def _settings(request: Request) -> Settings:
@@ -99,12 +109,20 @@ def _signed_in(response: Response, settings: Settings, user: User) -> AuthRespon
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(
     body: RegisterRequest, request: Request, response: Response, session: SessionDep
-) -> AuthResponse:
+) -> RegisterResponse:
     try:
         user = accounts.register(session, email=body.email, name=body.name, password=body.password)
     except accounts.EmailTaken:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=EMAIL_TAKEN) from None
-    return _signed_in(response, _settings(request), user)
+    joined_home_id = None
+    if body.invite_token is not None:
+        try:
+            joined_home_id = invites.accept(session, body.invite_token, user).home.id
+        except (invites.InviteInvalid, homes.AlreadyMember, homes.InOtherHome):
+            # The account stays; the invite page then shows why the link did not work.
+            pass
+    signed_in = _signed_in(response, _settings(request), user)
+    return RegisterResponse(**signed_in.model_dump(), joined_home_id=joined_home_id)
 
 
 @router.post("/login")

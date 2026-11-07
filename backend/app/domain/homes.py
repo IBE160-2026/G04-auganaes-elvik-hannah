@@ -1,9 +1,12 @@
-"""Creating Homes and adding Members (Story 1.3, FR-1, FR-3, AD-1, AD-2).
+"""Creating Homes and adding Members (Story 1.3, FR-1, FR-3, AD-1, AD-2; Story 1.4, FR-2).
 
 The creation rule and the Role a Member gets live only here. A caller never picks a Role:
 the creator of a Household Home and anyone who joins it is a Household Member; the creator of a
 Landlord Home is its Landlord and anyone who joins it is a Tenant. So a Home never mixes
 Household Members with a Landlord or Tenants, and a Landlord Home has exactly one Landlord.
+
+Story 1.4 (team decision 3, 2026-11-07): a user is Household Member or Tenant in at most one
+Home. Landlord Memberships do not count, so a Landlord may also join one such Home.
 """
 
 from typing import NamedTuple
@@ -18,6 +21,20 @@ from app.models.user import User
 _CREATOR_ROLE: dict[HomeType, Role] = {"household": "household_member", "landlord": "landlord"}
 _JOINER_ROLE: dict[HomeType, Role] = {"household": "household_member", "landlord": "tenant"}
 
+# Story 1.4: who may invite. household_member exists only in Household Homes and landlord only
+# in Landlord Homes, so this one set means "any Household Member, or the Landlord" without
+# looking at the Home type. Used by the route check (require_role) and by can_invite.
+INVITER_ROLES: frozenset[Role] = frozenset({"household_member", "landlord"})
+
+
+def can_invite(role: str) -> bool:
+    return role in INVITER_ROLES
+
+
+def joiner_role(home: Home) -> Role:
+    """The Role anyone who joins this Home gets (an invite link carries it)."""
+    return _JOINER_ROLE[home.type]
+
 
 class HomeCreationNotAllowed(Exception):
     """The user may not create a Home of this type. `allowed` is what they may create."""
@@ -29,6 +46,18 @@ class HomeCreationNotAllowed(Exception):
 
 class AlreadyMember(Exception):
     """The user already has a Membership in this Home."""
+
+    def __init__(self, home: Home) -> None:
+        super().__init__(f"already a member of {home.id}")
+        self.home = home
+
+
+class InOtherHome(Exception):
+    """The user is Household Member or Tenant in another Home, `home` (decision 3)."""
+
+    def __init__(self, home: Home) -> None:
+        super().__init__(f"already in another home: {home.id}")
+        self.home = home
 
 
 class MemberHome(NamedTuple):
@@ -79,27 +108,54 @@ def create_home(session: Session, user: User, *, name: str, type: HomeType) -> M
     return MemberHome(home, role)
 
 
+def join_blocker(session: Session, home: Home, user: User) -> AlreadyMember | InOtherHome | None:
+    """Why the user may not join this Home, or None. The one place the joining rule lives.
+
+    The invite preview shows it before the tap; add_member enforces it.
+    """
+    rows = session.exec(
+        select(Membership.home_id, Membership.role).where(Membership.user_id == user.id)
+    ).all()
+    if any(home_id == home.id for home_id, _ in rows):
+        return AlreadyMember(home)
+    other = next((home_id for home_id, role in rows if role != "landlord"), None)
+    if other is not None:
+        return InOtherHome(session.exec(select(Home).where(Home.id == other)).one())
+    return None
+
+
 def add_member(session: Session, home: Home, user: User) -> Membership:
-    """Add a user to a Home as a joiner (Story 1.4 reuses this). Raises AlreadyMember."""
-    role = _JOINER_ROLE[home.type]
-    membership = Membership(user_id=user.id, home_id=home.id, role=role)
+    """Add a user to a Home as a joiner and commit. Raises AlreadyMember or InOtherHome.
+
+    Commits whatever the caller has pending in the same transaction (invites.accept marks the
+    link used first). A refused join rolls back first, so nothing of it is written.
+    """
+    # Locks the user's row until commit, so two parallel joins cannot both pass the rule below
+    # (same as create_home). Postgres only; SQLite ignores FOR UPDATE.
+    session.exec(select(User).where(User.id == user.id).with_for_update()).one()
+    blocker = join_blocker(session, home, user)
+    if blocker is not None:
+        session.rollback()
+        raise blocker
+    membership = Membership(user_id=user.id, home_id=home.id, role=joiner_role(home))
     session.add(membership)
     try:
         session.commit()
     except IntegrityError:
         session.rollback()
-        raise AlreadyMember from None
+        raise AlreadyMember(home) from None
     session.refresh(membership)
     return membership
 
 
 def homes_for(session: Session, user: User) -> list[MemberHome]:
-    """The user's Homes, newest first, each with the user's Role in it."""
+    """The user's Homes, the one they most recently created or joined first, with their Role."""
     rows = session.exec(
         select(Home, Membership.role)
         .join(Membership, col(Membership.home_id) == col(Home.id))
         .where(Membership.user_id == user.id)
+        # Story 1.4: by the Membership, so a user who joins an older Home sees it on "/".
         # id breaks ties: on Windows the clock ticks ~15.6 ms, so two creates can share a time.
-        .order_by(col(Home.created_at).desc(), col(Home.id).desc())
+        .order_by(col(Membership.created_at).desc(), col(Home.id).desc())
     ).all()
     return [MemberHome(home, role) for home, role in rows]

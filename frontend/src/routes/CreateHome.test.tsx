@@ -76,7 +76,7 @@ describe('Create Home', () => {
   });
 
   it('shows a 409 inline at the action, in the server\'s words, and refetches the allowed types', async () => {
-    const detail = 'Du er allerede med i et hjem. Vil du bli med i et annet, trenger du en invitasjon.';
+    const detail = 'Du er allerede med i et hjem, og du kan bare være med i ett hjem om gangen.';
     const server = fakeApi({ ...signedInWith([], ['household', 'landlord']), 'POST /api/homes': () => json(409, { detail }) });
     renderAt('/nytt-hjem');
 

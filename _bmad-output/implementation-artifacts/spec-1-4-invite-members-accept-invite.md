@@ -2,9 +2,10 @@
 title: 'Story 1.4: Invite Members via Scoped Link & Accept Invite'
 type: 'feature'
 created: '2026-11-07'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: '583117da3c2ad9557ca4e28793f4c64e10bdf1dc'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -95,24 +96,24 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `sprint-status.yaml` -- 1-4 to `in-progress` now, `review` when the PR opens
-- [ ] `backend/app/models/invite_link.py`, `models/__init__.py` -- `InviteLink` (`invite_links`): `home_id`, `role` (`ck_invite_links_role`: household_member, tenant), `token_hash` (unique), `created_by_user_id`, `created_at`, `expires_at`, `used_at`, `used_by_user_id`; named PK/FKs/unique, index on `home_id` -- AD-1
-- [ ] `backend/alembic/versions/<rev>_create_invite_links.py` -- autogenerate, review, working downgrade
-- [ ] `backend/app/domain/homes.py` -- `INVITER_ROLES`, `can_invite(role)`; `add_member` locks the user row, raises `AlreadyMember` or `InOtherHome(home)` (the user has any non-`landlord` Membership in another Home), rolling back before raising and committing otherwise; `homes_for` ordered by `Membership.created_at` desc, then `Home.id`
-- [ ] `backend/app/domain/invites.py` -- `create_invite`, `preview` (viewer state incl. "used by this viewer" → `already_member`), `accept` (commit semantics above), `InviteInvalid`; 7-day constant; hash helper; optional `now`
-- [ ] `backend/app/permissions/require_role.py` -- `require_role(*roles)` as above; 403 with one Norwegian detail for wrong Role, no Membership or unknown Home
-- [ ] `backend/app/routes/invites.py`, `routes/homes.py`, `routes/auth.py`, `main.py` -- `POST /api/homes/{home_id}/invites` (201), `GET /api/invites/{token}` (optional Bearer; a present invalid Bearer → 401), `POST /api/invites/{token}/accept` (200 `HomeOut`; 409/410 declared); `HomeOut.can_invite`; reword `ALREADY_IN_HOME`; `RegisterRequest.invite_token` optional (max 64), `RegisterResponse` for `/register` only
-- [ ] `backend/tests/test_invites.py`, `test_invites_routes.py`, `test_homes.py`, `test_homes_routes.py` -- every matrix row; expiry via `now`; "sequential second accept fails" (named so; parallel is reasoned only); refused join leaves the link unused; only the hash is stored; Tenant and outsider 403; `homes_for` order after a join; registration with a dead link still creates the account; update `ALREADY_IN_HOME` and any exact `HomeOut` assertions
-- [ ] `backend/app/seed/users.py`, `seed/homes.py`, `tests/test_seed.py` -- append Kari and Anders after Mari and Jonas (index 0/1 stay); Kari's Landlord Home "Storgata 12" created unless it exists, skipped with a reason when `"landlord"` is not in her `allowed_types`; Anders checked by Membership first, and an invite is created only when he will be added; `InOtherHome`/`AlreadyMember` printed as a skip. New counts: 4 users, 2 Homes, 4 Memberships, 1 invite link; update every hard-coded count and the "finnes allerede" total; fresh, rerun and partial tests
-- [ ] `.github/workflows/ci.yml` -- counts 4 users, 2 Homes, 4 Memberships, 1 invite link; an insert into `invite_links` with `role='landlord'` (selecting an existing Home and User) fails naming `ck_invite_links_role`
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts`, `src/api/invites.ts`, `src/api/queries.ts` -- `useCreateInvite`, `useInvite(token)` keyed on token and `session?.user.id` (so a failed refresh refetches signed out), `useAcceptInvite` (writes the Home first into the homes cache, then navigates); register passes the token
-- [ ] `frontend/src/test-utils/fakeApi.ts`, existing `*.test.tsx` -- add `can_invite` to `OLAS_HOME` and every `Home` fixture
-- [ ] `frontend/src/routes/MembersPage.tsx` + `.css` -- `/hjem/:homeId/medlemmer`: "Laster …" while pending, `HomesLoadError` without data, `/` only when the loaded list lacks the id; invite control only when `can_invite`; link in a read-only field with "Kopier lenke", "Kan brukes én gang, gyldig til <dato>", and "Lag ny lenke"; Tenant sees "Det er utleieren som inviterer nye leietakere."
-- [ ] `frontend/src/routes/InvitePage.tsx` + `.css`, `Register.tsx`, `SignIn.tsx`, `HomePage.tsx`, `App.tsx` -- every invite state in the matrix; `?invitasjon=` handling as above; Home page links "Medlemmer og invitasjon"
-- [ ] `frontend/src/**/*.test.tsx` -- invite page states incl. expired session with failed refresh, register with the token (joined and dead link), sign-in and the links between them keep the token, a bad token is ignored, members page for Member/Landlord/Tenant (control absent) and loading/error, generate error with retry, join without bounce
-- [ ] `README.md` -- Kari and Anders in the user table, "prøv invitasjon" steps, CI paragraph counts
-- [ ] `_bmad-output/planning-artifacts/epics.md`, `implementation-artifacts/deferred-work.md` -- note `require_role` moved to 1.4 and the link policy confirmed; mark the 1.3 second-Home entry settled
-- [ ] `docs/ki-logg/korrigeringer.md` -- corrections found in review
+- [x] `sprint-status.yaml` -- 1-4 to `in-progress` now, `review` when the PR opens
+- [x] `backend/app/models/invite_link.py`, `models/__init__.py` -- `InviteLink` (`invite_links`): `home_id`, `role` (`ck_invite_links_role`: household_member, tenant), `token_hash` (unique), `created_by_user_id`, `created_at`, `expires_at`, `used_at`, `used_by_user_id`; named PK/FKs/unique, index on `home_id` -- AD-1
+- [x] `backend/alembic/versions/<rev>_create_invite_links.py` -- autogenerate, review, working downgrade
+- [x] `backend/app/domain/homes.py` -- `INVITER_ROLES`, `can_invite(role)`; `add_member` locks the user row, raises `AlreadyMember` or `InOtherHome(home)` (the user has any non-`landlord` Membership in another Home), rolling back before raising and committing otherwise; `homes_for` ordered by `Membership.created_at` desc, then `Home.id`
+- [x] `backend/app/domain/invites.py` -- `create_invite`, `preview` (viewer state incl. "used by this viewer" → `already_member`), `accept` (commit semantics above), `InviteInvalid`; 7-day constant; hash helper; optional `now`
+- [x] `backend/app/permissions/require_role.py` -- `require_role(*roles)` as above; 403 with one Norwegian detail for wrong Role, no Membership or unknown Home
+- [x] `backend/app/routes/invites.py`, `routes/homes.py`, `routes/auth.py`, `main.py` -- `POST /api/homes/{home_id}/invites` (201), `GET /api/invites/{token}` (optional Bearer; a present invalid Bearer → 401), `POST /api/invites/{token}/accept` (200 `HomeOut`; 409/410 declared); `HomeOut.can_invite`; reword `ALREADY_IN_HOME`; `RegisterRequest.invite_token` optional (max 64), `RegisterResponse` for `/register` only
+- [x] `backend/tests/test_invites.py`, `test_invites_routes.py`, `test_homes.py`, `test_homes_routes.py` -- every matrix row; expiry via `now`; "sequential second accept fails" (named so; parallel is reasoned only); refused join leaves the link unused; only the hash is stored; Tenant and outsider 403; `homes_for` order after a join; registration with a dead link still creates the account; update `ALREADY_IN_HOME` and any exact `HomeOut` assertions
+- [x] `backend/app/seed/users.py`, `seed/homes.py`, `tests/test_seed.py` -- append Kari and Anders after Mari and Jonas (index 0/1 stay); Kari's Landlord Home "Storgata 12" created unless it exists, skipped with a reason when `"landlord"` is not in her `allowed_types`; Anders checked by Membership first, and an invite is created only when he will be added; `InOtherHome`/`AlreadyMember` printed as a skip. New counts: 4 users, 2 Homes, 4 Memberships, 1 invite link; update every hard-coded count and the "finnes allerede" total; fresh, rerun and partial tests
+- [x] `.github/workflows/ci.yml` -- counts 4 users, 2 Homes, 4 Memberships, 1 invite link; an insert into `invite_links` with `role='landlord'` (selecting an existing Home and User) fails naming `ck_invite_links_role`
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts`, `src/api/invites.ts`, `src/api/queries.ts` -- `useCreateInvite`, `useInvite(token)` keyed on token and `session?.user.id` (so a failed refresh refetches signed out), `useAcceptInvite` (writes the Home first into the homes cache, then navigates); register passes the token
+- [x] `frontend/src/test-utils/fakeApi.ts`, existing `*.test.tsx` -- add `can_invite` to `OLAS_HOME` and every `Home` fixture
+- [x] `frontend/src/routes/MembersPage.tsx` + `.css` -- `/hjem/:homeId/medlemmer`: "Laster …" while pending, `HomesLoadError` without data, `/` only when the loaded list lacks the id; invite control only when `can_invite`; link in a read-only field with "Kopier lenke", "Kan brukes én gang, gyldig til <dato>", and "Lag ny lenke"; Tenant sees "Det er utleieren som inviterer nye leietakere."
+- [x] `frontend/src/routes/InvitePage.tsx` + `.css`, `Register.tsx`, `SignIn.tsx`, `HomePage.tsx`, `App.tsx` -- every invite state in the matrix; `?invitasjon=` handling as above; Home page links "Medlemmer og invitasjon"
+- [x] `frontend/src/**/*.test.tsx` -- invite page states incl. expired session with failed refresh, register with the token (joined and dead link), sign-in and the links between them keep the token, a bad token is ignored, members page for Member/Landlord/Tenant (control absent) and loading/error, generate error with retry, join without bounce
+- [x] `README.md` -- Kari and Anders in the user table, "prøv invitasjon" steps, CI paragraph counts
+- [x] `_bmad-output/planning-artifacts/epics.md`, `implementation-artifacts/deferred-work.md` -- note `require_role` moved to 1.4 and the link policy confirmed; mark the 1.3 second-Home entry settled
+- [x] `docs/ki-logg/korrigeringer.md` -- corrections found in review
 
 **Acceptance Criteria:**
 - Given a clean clone and the seed, when signing in as Anders and calling `POST /api/homes/<Storgata 12>/invites` in `/docs`, then the answer is 403, and his Members page shows no invite control.
@@ -148,6 +149,30 @@ Spec review 2026-11-07 (one adversarial reviewer; 19 findings, verified against 
 | 17 | Token in URL path ends up in logs | low | accepted, Design Note |
 | 18 | CI bad-role check vague; `RequireAuth` loses deep link | low | `role='landlord'` insert; deep link accepted |
 | 19 | `export_openapi` missing from Verification | low | added |
+
+Code review 2026-11-07 (Blind Hunter, Edge Case Hunter, Verification Gap; 22 findings, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| README step 3: private windows share one session, so the new user sees "allerede med", not the invalid message (B) | medium | patch: sign out first, then open the link again |
+| README step 4 does not say how to call the API as Anders in `/docs` (B) | low | patch: login, Authorize, `GET /api/homes`, then POST |
+| epics.md bullet still "unconfirmed" and says "Confirmed in the Story 1.4 PR" before the PR exists (B) | low | patch: reworded |
+| epics.md Story 1.5 AC names the old `require_role(home_id, allowed_roles)` signature (B) | low | patch: delivered signature |
+| Invite page `in_other_home` heading "Bli med i «X»" though joining is impossible (B) | low | patch: neutral heading |
+| `already_member` "Gå til hjemmet" links to `/`, which may show another Home for a Landlord (B, E) | low | patch: relabelled "Gå til forsiden" |
+| Parallel double accept / parallel second join untested; removing either lock passes every check (B, V) | medium | defer: needs the Postgres test harness; deferred-work entry |
+| `sprint-status.yaml` not in the diff (B) | false | set to `in-progress` in the baseline commit; `review` when the PR opens, as the task says |
+| `korrigeringer.md` ticked before the code review (B) | false | review corrections are added when the story is presented (step 5), as in 1.3 |
+| Generated client and KI-logg missing from the diff (B) | false | excluded from the review diff on purpose; `test_openapi_sync` and `gen:api` diff check pass; KI-logg is committed with the work |
+| No revoke, no cap on links, used rows never cleaned (B) | false | team decision 1 excludes revoking; no harm named for unused rows at this scale |
+| Token in URL path, no `Referrer-Policy` (B) | false | accepted in Design Notes; the invite page links only to same-origin pages |
+| `register` returns 500 if `accept` fails unexpectedly after the account is committed; `AlreadyMember`/`InOtherHome` unreachable for a new user (B, E) | low | rejected: needs a DB failure between two statements; the fix adds a catch-all branch |
+| `add_member` maps every `IntegrityError` to `AlreadyMember` (B) | low | carried: rejected in 1.3; the link update adds no constraint a valid flow can violate |
+| Seed leaves an unused link if `accept` raises `InviteInvalid` (B, E) | false | the link is created and accepted at once, after `join_blocker`; it cannot be expired or used by another outside a concurrent seed run |
+| Seed crashes with `InviteNotAllowed` if Kari is a Tenant/Member in another Home named «Storgata 12» (E) | low | rejected: needs hand-made local data with that exact name; same reasoning as 1.3's name-only match |
+| `useAcceptInvite` writes `allowed_types: []`, briefly hiding a Landlord's create link (B, E) | low | rejected: keeping the old value would briefly offer a new user a create the server now refuses; same placeholder reasoning as 1.3 |
+| Members page note assumes `can_invite: false` means Tenant (B) | false | Tenant is the only Role without `can_invite` (`INVITER_ROLES`) |
+| No frontend test for a Landlord who is also a Household Member opening Members (B) | low | rejected: the page uses each Home's own `can_invite`; backend tests cover the dual Role |
 
 ## Design Notes
 
