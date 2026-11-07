@@ -43,3 +43,21 @@ def current_user(
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
+
+
+def optional_user(
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+) -> User | None:
+    """Story 1.4: the signed-in user, or None without a Bearer token.
+
+    A Bearer token that is present but invalid or expired still gives 401, so the frontend
+    refreshes and retries instead of being shown the signed-out view by mistake.
+    """
+    if credentials is None:
+        return None
+    return current_user(request, session, credentials)
+
+
+OptionalUser = Annotated[User | None, Depends(optional_user)]

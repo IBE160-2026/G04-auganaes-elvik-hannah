@@ -55,7 +55,9 @@ def test_register_returns_201_token_user_and_refresh_cookie(client: TestClient) 
 
     assert response.status_code == 201
     body = response.json()
-    assert set(body) == {"access_token", "token_type", "user"}
+    # Story 1.4: joined_home_id only on /register, null without an invite link.
+    assert set(body) == {"access_token", "token_type", "user", "joined_home_id"}
+    assert body["joined_home_id"] is None
     assert body["token_type"] == "bearer"
     assert body["user"]["email"] == EMAIL
     assert body["user"]["name"] == "Ola"
@@ -149,6 +151,8 @@ def test_login_with_any_casing_returns_token_and_new_cookie(client: TestClient) 
 
     assert response.status_code == 200
     assert response.json()["user"]["email"] == EMAIL
+    # Story 1.4: login keeps the plain AuthResponse.
+    assert "joined_home_id" not in response.json()
     header = set_cookie_header(response)
     assert_refresh_cookie_set(header, secure=False)
     assert refresh_cookie_value(response) != first

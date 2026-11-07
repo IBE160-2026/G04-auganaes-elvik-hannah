@@ -4,11 +4,14 @@ import type { components } from './schema';
 import { setSession } from './session';
 
 type AuthResponse = components['schemas']['AuthResponse'];
+type RegisterResponse = components['schemas']['RegisterResponse'];
 type ValidationError = components['schemas']['ValidationError'];
 
 export type Field = 'email' | 'name' | 'password';
 export type FieldErrors = Partial<Record<Field, string>>;
 export type RegisterInput = { email: string; name: string; password: string };
+/** Story 1.4: registering through an invite link joins its Home in the same request. */
+export type RegisterRequest = RegisterInput & { invite_token?: string };
 export type SignInInput = { email: string; password: string };
 
 // Same limits as backend/app/routes/auth.py.
@@ -92,7 +95,7 @@ function toAuthError(response: Response, error: unknown): AuthError {
   return new AuthError(response.status, message);
 }
 
-function signedIn(data: AuthResponse): AuthResponse {
+function signedIn<T extends AuthResponse>(data: T): T {
   setSession({ accessToken: data.access_token, user: data.user });
   return data;
 }
@@ -103,7 +106,7 @@ export async function signIn(body: SignInInput): Promise<AuthResponse> {
   return signedIn(data);
 }
 
-export async function register(body: RegisterInput): Promise<AuthResponse> {
+export async function register(body: RegisterRequest): Promise<RegisterResponse> {
   const { data, error, response } = await api.POST('/api/auth/register', { body });
   if (!data) throw toAuthError(response, error);
   return signedIn(data);

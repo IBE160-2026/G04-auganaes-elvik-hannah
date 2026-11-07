@@ -27,10 +27,14 @@ def new_user(session: Session, name: str = "Ola") -> User:
 T0 = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
 
 
-def set_created_at(session: Session, home: Home, when: datetime) -> None:
-    """Pins created_at, so ordering tests never depend on the clock's resolution."""
-    home.created_at = when
-    session.add(home)
+def set_joined_at(session: Session, user: User, home: Home, when: datetime) -> None:
+    """Pins the Membership's created_at (homes_for orders by it, Story 1.4), so ordering tests
+    never depend on the clock's resolution."""
+    membership = session.exec(
+        select(Membership).where(Membership.user_id == user.id, Membership.home_id == home.id)
+    ).one()
+    membership.created_at = when
+    session.add(membership)
     session.commit()
 
 
@@ -75,8 +79,8 @@ def test_landlord_may_create_another_landlord_home(session: Session) -> None:
     user = new_user(session)
     first = homes.create_home(session, user, name="Storgata 1", type="landlord")
     second = homes.create_home(session, user, name="Storgata 2", type="landlord")
-    set_created_at(session, first.home, T0)
-    set_created_at(session, second.home, T0 + timedelta(seconds=1))
+    set_joined_at(session, user, first.home, T0)
+    set_joined_at(session, user, second.home, T0 + timedelta(seconds=1))
 
     assert second.role == "landlord"
     assert [h.home.name for h in homes.homes_for(session, user)] == ["Storgata 2", "Storgata 1"]
@@ -166,8 +170,8 @@ def test_homes_for_returns_only_the_callers_homes_newest_first(session: Session)
     a = homes.create_home(session, ola, name="A", type="landlord").home
     homes.create_home(session, kari, name="Karis", type="household")
     b = homes.create_home(session, ola, name="B", type="landlord").home
-    set_created_at(session, a, T0)
-    set_created_at(session, b, T0 + timedelta(seconds=1))
+    set_joined_at(session, ola, a, T0)
+    set_joined_at(session, ola, b, T0 + timedelta(seconds=1))
 
     assert [(h.home.name, h.role) for h in homes.homes_for(session, ola)] == [
         ("B", "landlord"),
@@ -181,7 +185,7 @@ def test_homes_for_breaks_a_created_at_tie_by_id_stably(session: Session) -> Non
         homes.create_home(session, user, name=n, type="landlord").home for n in ("A", "B", "C")
     ]
     for home in created:
-        set_created_at(session, home, T0)
+        set_joined_at(session, user, home, T0)
 
     first = [h.home.id for h in homes.homes_for(session, user)]
     assert first == sorted((h.id for h in created), reverse=True)
@@ -228,3 +232,48 @@ def test_foreign_key_rejects_membership_to_missing_home(session: Session) -> Non
     session.add(Membership(user_id=user.id, home_id=uuid.uuid4(), role="household_member"))
     with pytest.raises(IntegrityError, match="FOREIGN KEY"):
         session.commit()
+
+
+# Story 1.4: who may invite, and the one-Home rule for joining (decision 3).
+@pytest.mark.parametrize(
+    ("role", "allowed"), [("household_member", True), ("landlord", True), ("tenant", False)]
+)
+def test_can_invite_follows_inviter_roles(role: str, allowed: bool) -> None:
+    assert homes.can_invite(role) is allowed
+    assert (role in homes.INVITER_ROLES) is allowed
+
+
+@pytest.mark.parametrize("other_type", ["household", "landlord"])
+def test_household_member_cannot_join_a_second_home(session: Session, other_type: str) -> None:
+    mari, kari = new_user(session, "Mari"), new_user(session, "Kari")
+    own = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    other = homes.create_home(session, kari, name="Annet", type=other_type).home  # type: ignore[arg-type]
+
+    with pytest.raises(homes.InOtherHome) as exc:
+        homes.add_member(session, other, mari)
+    assert exc.value.home.id == own.id
+    assert count(session, Membership) == 2
+
+
+def test_tenant_cannot_join_a_second_home(session: Session) -> None:
+    landlord, tenant = new_user(session, "Utleier"), new_user(session, "Leietaker")
+    first = homes.create_home(session, landlord, name="Storgata 1", type="landlord").home
+    second = homes.create_home(session, landlord, name="Storgata 2", type="landlord").home
+    homes.add_member(session, first, tenant)
+
+    with pytest.raises(homes.InOtherHome):
+        homes.add_member(session, second, tenant)
+    assert {h.home.id for h in homes.homes_for(session, tenant)} == {first.id}
+
+
+def test_refused_add_member_rolls_back_pending_changes(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    home.name = "Endret uten commit"
+    session.add(home)
+
+    with pytest.raises(homes.AlreadyMember):
+        homes.add_member(session, home, mari)
+    session.expire_all()
+    assert session.get(Home, home.id).name == "Kollektivet"  # type: ignore[union-attr]
+    assert homes.join_blocker(session, home, jonas) is None

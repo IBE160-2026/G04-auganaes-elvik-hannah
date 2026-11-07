@@ -1,6 +1,7 @@
 // Story 1.3: the post-creation landing page. Shows the newest Home, the user's Role in it and
 // "Logg ut"; Landlords also see their Homes and "Opprett nytt hjem". Task Overview replaces this
-// page in Stories 2.1–2.2, and the tab bar comes with Story 2.2.
+// page in Stories 2.1–2.2, and the tab bar comes with Story 2.2. Story 1.4: links to
+// "Medlemmer og invitasjon" for the shown Home, and for each of a Landlord's Homes.
 import { Link, Navigate } from 'react-router';
 import { ROLE_LABELS, TYPE_LABELS } from '../api/homes';
 import { useHomes, useMe, useSignOut } from '../api/queries';
@@ -42,6 +43,9 @@ export function HomePage() {
           <dd>{ROLE_LABELS[home.role]}</dd>
         </div>
       </dl>
+      <Link to={`/hjem/${home.id}/medlemmer`} className="home-page__link">
+        Medlemmer og invitasjon
+      </Link>
       {isLandlord && (
         <section className="home-page__section" aria-labelledby="home-page-homes">
           <h2 id="home-page-homes" className="home-page__subtitle">
@@ -50,7 +54,14 @@ export function HomePage() {
           <ul className="home-page__list">
             {homes.data.homes.map((h) => (
               <li key={h.id}>
-                {h.name} <span className="home-page__meta">({ROLE_LABELS[h.role]})</span>
+                {h.name} <span className="home-page__meta">({ROLE_LABELS[h.role]})</span>{' '}
+                <Link
+                  to={`/hjem/${h.id}/medlemmer`}
+                  className="home-page__list-link"
+                  aria-label={`Medlemmer og invitasjon for ${h.name}`}
+                >
+                  Medlemmer
+                </Link>
               </li>
             ))}
           </ul>

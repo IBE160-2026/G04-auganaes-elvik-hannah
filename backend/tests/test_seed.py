@@ -1,4 +1,7 @@
-"""Story 1.6 (FR-22, AD-15): the seed command. Steps run on SQLite; run() gets fakes."""
+"""Story 1.6 (FR-22, AD-15): the seed command. Steps run on SQLite; run() gets fakes.
+
+Story 1.4: plus the Landlord Kari's Home and the Tenant Anders, who joins it by invite link.
+"""
 
 import pytest
 from sqlalchemy.exc import OperationalError
@@ -8,9 +11,10 @@ from app import seed
 from app.domain import homes
 from app.domain.accounts import authenticate, register
 from app.models.home import Home
+from app.models.invite_link import InviteLink
 from app.models.membership import Membership
 from app.models.user import User
-from app.seed.homes import EXAMPLE_HOME_NAME, seed_homes
+from app.seed.homes import EXAMPLE_HOME_NAME, LANDLORD_HOME_NAME, seed_homes
 from app.seed.users import EXAMPLE_PASSWORD, EXAMPLE_USERS, seed_users
 
 
@@ -32,7 +36,14 @@ def by_email(session: Session, email: str) -> User:
     return session.exec(select(User).where(User.email == email)).one()
 
 
-MARI, JONAS = (user.email for user in EXAMPLE_USERS[:2])
+MARI, JONAS, KARI, ANDERS = (user.email for user in EXAMPLE_USERS[:4])
+
+# What a full seed gives: users, Homes, Memberships, invite links.
+FULL = (4, 2, 4, 1)
+
+
+def counts(session: Session) -> tuple[int, ...]:
+    return tuple(count(session, model) for model in (User, Home, Membership, InviteLink))
 
 
 class Calls:
@@ -56,7 +67,14 @@ def test_steps_are_users_then_homes() -> None:
 
 def test_example_emails_are_normalised() -> None:
     assert all(user.email == user.email.strip().lower() for user in EXAMPLE_USERS)
-    assert len(EXAMPLE_USERS) >= 2
+    assert len(EXAMPLE_USERS) >= 4
+    # seed/homes.py picks users by index; Mari and Jonas must stay first.
+    assert [u.email for u in EXAMPLE_USERS[:4]] == [
+        "mari@example.com",
+        "jonas@example.com",
+        "kari@example.com",
+        "anders@example.com",
+    ]
 
 
 def test_fresh_db_migrates_and_creates_users(
@@ -65,12 +83,14 @@ def test_fresh_db_migrates_and_creates_users(
     calls = Calls(session)
     assert seed.run(upgrade=calls.upgrade, session_factory=calls.session_factory) == 0
     assert calls.upgraded == 1
-    assert user_count(session) == 2
+    assert counts(session) == FULL
     for user in EXAMPLE_USERS:
         assert authenticate(session, email=user.email, password=EXAMPLE_PASSWORD) is not None
     out = capsys.readouterr().out
     assert "Opprettet bruker mari@example.com" in out
     assert f"Opprettet hjemmet «{EXAMPLE_HOME_NAME}»" in out
+    assert f"Opprettet hjemmet «{LANDLORD_HOME_NAME}»" in out
+    assert f"La til {ANDERS}" in out
 
 
 def test_fresh_db_gives_mari_and_jonas_one_household_home(session: Session) -> None:
@@ -82,7 +102,24 @@ def test_fresh_db_gives_mari_and_jonas_one_household_home(session: Session) -> N
         assert [(h.home.name, h.home.type, h.role) for h in member_homes] == [
             (EXAMPLE_HOME_NAME, "household", "household_member")
         ]
-    assert count(session, Home) == 1 and count(session, Membership) == 2
+    assert count(session, Home) == 2 and count(session, Membership) == 4
+
+
+def test_fresh_db_gives_kari_a_landlord_home_and_anders_joins_by_invite(session: Session) -> None:
+    seed_users(session)
+    seed_homes(session)
+
+    kari_homes = homes.homes_for(session, by_email(session, KARI))
+    assert [(h.home.name, h.home.type, h.role) for h in kari_homes] == [
+        (LANDLORD_HOME_NAME, "landlord", "landlord")
+    ]
+    anders = by_email(session, ANDERS)
+    assert [(h.home.name, h.role) for h in homes.homes_for(session, anders)] == [
+        (LANDLORD_HOME_NAME, "tenant")
+    ]
+    link = session.exec(select(InviteLink)).one()
+    assert (link.role, link.used_by_user_id) == ("tenant", anders.id)
+    assert link.used_at is not None
 
 
 def test_rerun_is_idempotent(session: Session, capsys: pytest.CaptureFixture[str]) -> None:
@@ -92,13 +129,13 @@ def test_rerun_is_idempotent(session: Session, capsys: pytest.CaptureFixture[str
     capsys.readouterr()
 
     assert seed.run(upgrade=calls.upgrade, session_factory=calls.session_factory) == 0
-    assert user_count(session) == 2
     assert set(session.exec(select(User.id)).all()) == ids
-    assert count(session, Home) == 1 and count(session, Membership) == 2
+    assert counts(session) == FULL
     out = capsys.readouterr().out
-    # Two users and the Home; Jonas's Membership says "er allerede med".
-    assert out.count("finnes allerede") == 3
+    # Four users and two Homes; Jonas's and Anders's Memberships say "er allerede med".
+    assert out.count("finnes allerede") == 6
     assert f"{JONAS} er allerede med" in out
+    assert f"{ANDERS} er allerede med" in out
 
 
 def test_partial_skips_existing_user_with_other_casing(
@@ -107,7 +144,7 @@ def test_partial_skips_existing_user_with_other_casing(
     existing = register(session, email="  Mari@Example.COM ", name="Mari", password="annet-passord")
     seed_users(session)
 
-    assert user_count(session) == 2
+    assert user_count(session) == 4
     mari = session.exec(select(User).where(User.email == "mari@example.com")).one()
     # Never overwritten: the existing row keeps its name and password.
     assert mari.id == existing.id and mari.name == "Mari"
@@ -128,7 +165,7 @@ def test_partial_run_adds_jonas_to_the_existing_home(
 
     seed_homes(session)
 
-    assert count(session, Home) == 1
+    assert count(session, Home) == 2
     assert [h.home.id for h in homes.homes_for(session, by_email(session, JONAS))] == [home.id]
     out = capsys.readouterr().out
     assert "finnes allerede" in out and f"La til {JONAS}" in out
@@ -145,7 +182,8 @@ def test_jonas_in_another_home_is_skipped_with_a_reason(
     seed_homes(session)
 
     assert [h.home.id for h in homes.homes_for(session, jonas)] == [other.id]
-    assert count(session, Home) == 2 and count(session, Membership) == 2
+    # Plus Kari's Home with Kari and Anders.
+    assert count(session, Home) == 3 and count(session, Membership) == 4
     assert f"Hoppet over {JONAS}" in capsys.readouterr().out
 
 
@@ -158,8 +196,55 @@ def test_mari_in_another_home_is_skipped_and_nothing_is_written(
 
     seed_homes(session)
 
-    assert count(session, Home) == 1 and count(session, Membership) == 1
+    # Mari's own Home, then Kari's with Kari and Anders.
+    assert count(session, Home) == 2 and count(session, Membership) == 3
     assert f"Hoppet over «{EXAMPLE_HOME_NAME}»" in capsys.readouterr().out
+
+
+def test_partial_run_adds_anders_to_karis_existing_home_with_one_link(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    home = homes.create_home(
+        session, by_email(session, KARI), name=LANDLORD_HOME_NAME, type="landlord"
+    ).home
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    assert [h.home.id for h in homes.homes_for(session, by_email(session, ANDERS))] == [home.id]
+    assert counts(session) == FULL
+    out = capsys.readouterr().out
+    assert f"Hjemmet «{LANDLORD_HOME_NAME}» finnes allerede" in out and f"La til {ANDERS}" in out
+
+
+def test_anders_in_another_home_is_skipped_and_no_link_is_made(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    anders = by_email(session, ANDERS)
+    other = homes.create_home(session, anders, name="Anders sitt", type="household").home
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    assert [h.home.id for h in homes.homes_for(session, anders)] == [other.id]
+    assert count(session, InviteLink) == 0
+    assert f"Hoppet over {ANDERS}: er allerede med i «Anders sitt»" in capsys.readouterr().out
+
+
+def test_kari_in_a_household_home_is_skipped_with_a_reason(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    homes.create_home(session, by_email(session, KARI), name="Karis", type="household")
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    assert count(session, InviteLink) == 0
+    assert not homes.homes_for(session, by_email(session, ANDERS))
+    assert f"Hoppet over «{LANDLORD_HOME_NAME}»" in capsys.readouterr().out
 
 
 def _db_down() -> None:

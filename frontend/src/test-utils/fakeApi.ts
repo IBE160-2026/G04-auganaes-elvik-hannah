@@ -46,6 +46,7 @@ export const OLAS_HOME: Home = {
   type: 'household',
   role: 'household_member',
   created_at: '2026-11-07T12:00:00Z',
+  can_invite: true,
 };
 
 export function homesResponse(homes: readonly Home[] = [OLAS_HOME], allowed_types: HomeType[] = []) {

@@ -1,8 +1,11 @@
 // Story 1.2 (FR-1): create an account with email, display name and password.
+// Story 1.4 (FR-2): with ?invitasjon=<token>, the account joins that Home in the same request,
+// and the user goes back to the invite page (never straight to "/"), which shows the result.
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, Navigate } from 'react-router';
+import { Link, Navigate, useSearchParams } from 'react-router';
 import { AuthError, MESSAGES, PASSWORD_MIN, validateRegister, type FieldErrors } from '../api/auth';
+import { validInviteToken } from '../api/invites';
 import { useRegister } from '../api/queries';
 import { useSession } from '../api/session';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -17,8 +20,15 @@ export function Register() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [emailTaken, setEmailTaken] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const inviteToken = validInviteToken(searchParams.get('invitasjon'));
+  const signInPath = inviteToken ? `/logg-inn?invitasjon=${inviteToken}` : '/logg-inn';
 
-  if (session) return <Navigate to="/" replace />;
+  if (session) {
+    if (!inviteToken) return <Navigate to="/" replace />;
+    // The invite page greets a just-registered user instead of saying "already a Member".
+    return <Navigate to={`/invitasjon/${inviteToken}`} replace state={{ justRegistered: true }} />;
+  }
 
   function showErrors(next: FieldErrors) {
     flushSync(() => setErrors(next));
@@ -38,7 +48,7 @@ export function Register() {
     const invalid = validateRegister(input);
     if (Object.keys(invalid).length > 0) return showErrors(invalid);
     setErrors({});
-    register.mutate(input, {
+    register.mutate(inviteToken ? { ...input, invite_token: inviteToken } : input, {
       onError: (error) => {
         if (error instanceof AuthError && error.status === 409) {
           setEmailTaken(true);
@@ -62,7 +72,7 @@ export function Register() {
           type="email"
           autoComplete="email"
           error={errors.email}
-          errorAction={emailTaken ? <Link to="/logg-inn">Logg inn i stedet</Link> : undefined}
+          errorAction={emailTaken ? <Link to={signInPath}>Logg inn i stedet</Link> : undefined}
         />
         <TextField
           label="Navn"
@@ -89,7 +99,7 @@ export function Register() {
         </PrimaryButton>
       </form>
       <p className="auth-page__switch">
-        Har du allerede en konto? <Link to="/logg-inn">Logg inn</Link>
+        Har du allerede en konto? <Link to={signInPath}>Logg inn</Link>
       </p>
     </div>
   );

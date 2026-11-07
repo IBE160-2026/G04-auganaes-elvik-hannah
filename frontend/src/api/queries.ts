@@ -1,7 +1,8 @@
 // Story 1.2: TanStack Query hooks, the only way components reach the API (AD-7).
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchMe, register, signIn, signOut } from './auth';
-import { createHome, fetchHomes, type Homes } from './homes';
+import { createHome, fetchHomes, type Home, type Homes } from './homes';
+import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 
 export function createQueryClient(): QueryClient {
@@ -73,6 +74,46 @@ export function useCreateHome() {
         allowed_types: [],
       }));
       void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+// Story 1.4: keyed on the token and the user, so a failed refresh (session gone) refetches
+// the preview signed out instead of showing an error.
+export function inviteKey(token: string, userId: string | undefined) {
+  return ['invite', token, userId] as const;
+}
+
+export function useInvite(token: string) {
+  const session = useSession();
+  return useQuery({
+    queryKey: inviteKey(token, session?.user.id),
+    queryFn: () => fetchInvite(token),
+  });
+}
+
+export function useCreateInvite(homeId: string) {
+  return useMutation({ mutationFn: () => createInvite(homeId) });
+}
+
+/**
+ * Like useCreateHome: the joined Home goes first into the cache before the caller navigates,
+ * so "/" shows it at once (the server also orders it first) and never bounces.
+ */
+export function useAcceptInvite(token: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  return useMutation({
+    mutationFn: () => acceptInvite(token),
+    onSuccess: (home: Home) => {
+      const key = homesKey(session?.user.id);
+      queryClient.setQueryData<Homes>(key, (old) => ({
+        homes: [home, ...(old?.homes ?? []).filter((h) => h.id !== home.id)],
+        // Unknown until the refetch; empty offers nothing the server might refuse.
+        allowed_types: [],
+      }));
+      void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: ['invite', token] });
     },
   });
 }

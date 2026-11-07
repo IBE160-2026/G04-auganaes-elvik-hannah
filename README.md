@@ -54,7 +54,7 @@ uv run python -m app.seed
 uv run fastapi dev
 ```
 
-`uv run python -m app.seed` er én kommando for både migreringer og eksempeldata (Story 1.6): den kjører `alembic upgrade head` og lager eksempelbrukerne under og et eksempelhjem de bor i (Story 1.3). Den kan kjøres så mange ganger du vil, og sletter eller overskriver aldri noe; finnes en bruker fra før, skriver den «finnes allerede». Kjøres den før databasen er startet, avslutter den med en melding om å kjøre `docker compose up -d --wait`. Kjør den fra `backend/`.
+`uv run python -m app.seed` er én kommando for både migreringer og eksempeldata (Story 1.6): den kjører `alembic upgrade head` og lager eksempelbrukerne under og eksempelhjemmene de bor i (Story 1.3 og 1.4). Den kan kjøres så mange ganger du vil, og sletter eller overskriver aldri noe; finnes en bruker fra før, skriver den «finnes allerede». Kjøres den før databasen er startet, avslutter den med en melding om å kjøre `docker compose up -d --wait`. Kjør den fra `backend/`.
 
 API-et kjører på <http://localhost:8000>. Sjekk at det svarer: <http://localhost:8000/api/health> skal gi `{"status":"ok"}`, og <http://localhost:8000/api/health/db> skal gi `{"database":"ok"}` når databasen kjører. API-dokumentasjon ligger på <http://localhost:8000/docs>.
 
@@ -80,14 +80,26 @@ Seed-kommandoen lager disse eksempelbrukerne:
 |---|---|---|---|
 | Mari Nordmann | `mari@example.com` | `husly-demo` | «Mari og Jonas sitt hjem», husstand (husstandsmedlem) |
 | Jonas Berg | `jonas@example.com` | `husly-demo` | «Mari og Jonas sitt hjem», husstand (husstandsmedlem) |
-
-Eksempler på utleier og leietaker kommer med Story 1.4–1.5.
+| Kari Hansen | `kari@example.com` | `husly-demo` | «Storgata 12», utleiebolig (utleier) |
+| Anders Johnsen | `anders@example.com` | `husly-demo` | «Storgata 12», utleiebolig (leietaker, kom inn via en invitasjonslenke) |
 
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
 2. Logg inn som Mari. Du havner på hjemsiden for «Mari og Jonas sitt hjem», med type og rolle. Last siden på nytt; du er fortsatt logget inn.
 3. **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
 4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Med en husstand blir du husstandsmedlem og får ikke tilbud om å lage flere hjem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier, ser listen over hjemmene dine og kan lage flere med **Opprett nytt hjem**.
 5. **Logg ut** sender deg tilbake til innloggingen.
+
+**Prøv invitasjon (Story 1.4):**
+
+1. Logg inn som Mari og velg **Medlemmer og invitasjon** på hjemsiden. Trykk **Lag invitasjonslenke**. Lenken kan brukes én gang og gjelder i 7 dager; **Lag ny lenke** lager en til, og de gamle virker fortsatt.
+2. Åpne lenken i et privat vindu. Du ser hjemmet og rollen. Velg **Opprett konto og bli med** og lag en ny bruker. Du er da med i «Mari og Jonas sitt hjem» som husstandsmedlem.
+3. Logg ut (private vinduer i samme nettleser deler innlogging), eller bruk en annen nettleser, og åpne den samme lenken igjen. Nå står det at lenken ikke lenger er gyldig.
+4. Logg inn som Anders (leietaker) og åpne **Medlemmer og invitasjon**: der er det ingen knapp for å invitere. Serveren nekter også, hvis han prøver direkte i <http://localhost:8000/docs>:
+   1. Kjør `POST /api/auth/login` med `anders@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
+   2. Trykk **Authorize** øverst og lim inn tokenet.
+   3. Kjør `GET /api/homes` og kopier `id` til «Storgata 12».
+   4. Kjør `POST /api/homes/{home_id}/invites` med den `id`-en. Svaret er 403.
+5. Er du allerede husstandsmedlem eller leietaker i ett hjem, kan du ikke bli med i et annet; invitasjonssiden sier fra om det. En utleier kan i tillegg bli med i ett slikt hjem.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 
@@ -121,7 +133,7 @@ npm run build && npm run preview
 
 ### Tester og lint
 
-Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig to brukere, ett hjem og to medlemskap) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
+Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig fire brukere, to hjem, fire medlemskap og én invitasjonslenke) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
 
 ```bash
 cd backend

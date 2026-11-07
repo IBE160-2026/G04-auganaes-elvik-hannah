@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-08-2026 00:10
+last_updated: 11-07-2026 23:56
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -43,8 +43,8 @@ development_status:
   epic-1: in-progress
   1-1-project-scaffold-design-tokens-responsive-app-shell: done
   1-2-account-registration-login: done
-  1-3-create-a-home-household-or-landlord: review
-  1-4-invite-members-via-scoped-link-accept-invite: backlog
+  1-3-create-a-home-household-or-landlord: done
+  1-4-invite-members-via-scoped-link-accept-invite: review
   1-5-view-home-members-list-enforce-role-based-permissions: backlog
   1-6-run-locally-with-docker-seed-data-and-mock-modes: done
   1-7-hosted-demo-on-vercel-services-neon: done

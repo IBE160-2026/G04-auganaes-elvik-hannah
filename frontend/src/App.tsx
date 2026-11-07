@@ -7,6 +7,8 @@ import { AppShell } from './components/AppShell';
 import { InstallPrompt } from './components/InstallPrompt';
 import { CreateHome } from './routes/CreateHome';
 import { HomePage } from './routes/HomePage';
+import { InvitePage } from './routes/InvitePage';
+import { MembersPage } from './routes/MembersPage';
 import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
 import { SignIn } from './routes/SignIn';
@@ -48,6 +50,16 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <CreateHome />
+          </RequireAuth>
+        }
+      />
+      {/* Story 1.4: public, so a signed-out visitor sees the Home before registering. */}
+      <Route path="/invitasjon/:token" element={<InvitePage />} />
+      <Route
+        path="/hjem/:homeId/medlemmer"
+        element={
+          <RequireAuth>
+            <MembersPage />
           </RequireAuth>
         }
       />
