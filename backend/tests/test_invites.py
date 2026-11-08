@@ -192,6 +192,18 @@ def test_preview_of_a_link_used_by_the_viewer_is_already_member(session: Session
     assert (result.status, result.viewer) == ("valid", "already_member")
 
 
+def test_preview_of_a_link_the_viewer_used_before_leaving_is_invalid(session: Session) -> None:
+    # Story 1.8: "used by the viewer" counts only while they are still a Member.
+    home, creator = home_with_creator(session, "household")
+    token = link_for(session, home, creator)
+    jonas = new_user(session, "Jonas")
+    invites.accept(session, token, jonas, now=T0)
+    homes.leave(session, membership(session, jonas, home))
+
+    result = invites.preview(session, token, jonas, now=T0)
+    assert (result.status, result.home_type, result.viewer) == ("invalid", "household", None)
+
+
 # Accept
 def test_accept_adds_the_member_with_the_link_role_and_marks_the_link_used(
     session: Session,
@@ -228,6 +240,19 @@ def test_accept_by_the_same_user_again_is_already_member(session: Session) -> No
 
     with pytest.raises(homes.AlreadyMember):
         invites.accept(session, token, jonas, now=T0)
+
+
+def test_accept_of_a_link_the_user_used_before_leaving_is_invalid(session: Session) -> None:
+    home, creator = home_with_creator(session, "household")
+    token = link_for(session, home, creator)
+    jonas = new_user(session, "Jonas")
+    invites.accept(session, token, jonas, now=T0)
+    homes.leave(session, membership(session, jonas, home))
+
+    with pytest.raises(invites.InviteInvalid) as exc:
+        invites.accept(session, token, jonas, now=T0)
+    assert exc.value.home_type == "household"
+    assert count(session, Membership) == 1
 
 
 def test_accept_after_expiry_is_invalid_and_writes_nothing(session: Session) -> None:

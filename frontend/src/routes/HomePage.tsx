@@ -2,9 +2,11 @@
 // "Logg ut"; Landlords also see their Homes and "Opprett nytt hjem". Task Overview replaces this
 // page in Stories 2.1–2.2, and the tab bar comes with Story 2.2. Story 1.4: links to
 // "Medlemmer og invitasjon" for the shown Home, and for each of a Landlord's Homes.
+// Story 1.8: shows «Du har forlatt «X».» when a Landlord who also lived in a Household left it.
 import { Link, Navigate } from 'react-router';
 import { ROLE_LABELS, TYPE_LABELS } from '../api/homes';
 import { useHomes, useMe, useSignOut } from '../api/queries';
+import { PendingNotice } from '../components/PendingNotice';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import './HomePage.css';
@@ -27,6 +29,7 @@ export function HomePage() {
 
   return (
     <div className="home-page">
+      <PendingNotice className="home-page__notice" />
       <h1 className="home-page__title">{home.name}</h1>
       {home.type === 'household' ? (
         <p className="home-page__lead">Velkommen hjem{firstName ? `, ${firstName}` : ''}! Her deler dere på husarbeidet.</p>

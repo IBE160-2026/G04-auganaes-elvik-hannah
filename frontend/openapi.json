@@ -363,6 +363,118 @@
         }
       }
     },
+    "/api/homes/{home_id}/members/me": {
+      "delete": {
+        "tags": [
+          "homes"
+        ],
+        "summary": "Leave Home",
+        "operationId": "leave_home_api_homes__home_id__members_me_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "A Landlord in their own Home, not a Member, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/homes/{home_id}/members/{user_id}": {
+      "delete": {
+        "tags": [
+          "homes"
+        ],
+        "summary": "Remove Member",
+        "operationId": "remove_member_api_homes__home_id__members__user_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Not the Landlord here, no such Home, or the user is not a Tenant here",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/homes/{home_id}/invites": {
       "post": {
         "tags": [
@@ -654,6 +766,10 @@
           "can_invite": {
             "type": "boolean",
             "title": "Can Invite"
+          },
+          "can_leave": {
+            "type": "boolean",
+            "title": "Can Leave"
           }
         },
         "type": "object",
@@ -663,7 +779,8 @@
           "type",
           "role",
           "created_at",
-          "can_invite"
+          "can_invite",
+          "can_leave"
         ],
         "title": "HomeOut"
       },
@@ -854,6 +971,10 @@
           "is_you": {
             "type": "boolean",
             "title": "Is You"
+          },
+          "can_remove": {
+            "type": "boolean",
+            "title": "Can Remove"
           }
         },
         "type": "object",
@@ -861,7 +982,8 @@
           "user_id",
           "name",
           "role",
-          "is_you"
+          "is_you",
+          "can_remove"
         ],
         "title": "MemberOut"
       },

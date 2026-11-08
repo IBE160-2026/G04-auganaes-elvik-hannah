@@ -102,6 +102,13 @@ Seed-kommandoen lager disse eksempelbrukerne:
    5. Logg inn som Mari på samme måte og kjør `GET /api/homes/{home_id}/members` med `id`-en til «Storgata 12». Svaret er 403, fordi hun ikke er medlem der (Story 1.5).
 5. Er du allerede husstandsmedlem eller leietaker i ett hjem, kan du ikke bli med i et annet; invitasjonssiden sier fra om det. En utleier kan i tillegg bli med i ett slikt hjem.
 
+**Prøv å forlate et hjem (Story 1.8):**
+
+1. Logg inn som Jonas og åpne **Medlemmer og invitasjon**. Trykk **Forlat hjemmet**. Teksten forklarer hva som skjer; ingenting er sendt ennå, og **Avbryt** tar deg tilbake. Trykk **Ja, forlat hjemmet**. Du havner på **Opprett hjemmet ditt** med beskjeden «Du har forlatt «Mari og Jonas sitt hjem».», og kan opprette et eget hjem eller bli med via en ny invitasjon.
+2. Logg inn som Mari og åpne **Medlemmer og invitasjon**. Under **Medlemmer** står bare hun. Hun har ingen **Fjern**-knapp: et husstandsmedlem kan bare forlate selv.
+3. Logg inn som Anders i én nettleser og åpne **Medlemmer og invitasjon** for «Storgata 12». Logg inn som Kari i en annen nettleser (eller et privat vindu), åpne samme side og trykk **Fjern** ved Anders og så **Ja, fjern Anders Johnsen**. Kari ser «Anders Johnsen er fjernet.». Bytt så til en annen fane i Anders sin nettleser (eller minimer vinduet) og tilbake, uten å laste siden på nytt: han blir sendt til **Opprett hjemmet ditt**, uten feilside. Det holder ikke å klikke mellom to vinduer som står side om side; appen henter data på nytt når fanen blir synlig igjen, ikke når vinduet får fokus. Kari har ingen **Forlat hjemmet**-knapp: en utleier kan ikke forlate sin egen utleiebolig.
+4. Angre ved å kjøre `uv run python -m app.seed` fra `backend/` igjen. Den legger Jonas tilbake i «Mari og Jonas sitt hjem» og Anders tilbake i «Storgata 12» (med en ny invitasjonslenke), og sletter ingenting. Har Jonas eller Anders laget eller blitt med i et annet hjem i mellomtiden, hopper seed-en over dem.
+
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 
 ### Mock-modus og ekte nøkler

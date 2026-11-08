@@ -1,5 +1,6 @@
 // Story 1.3 (FR-1, FR-3): list and create the signed-in user's Homes, with Norwegian errors.
 // Story 1.5 (FR-3): the Members of one Home.
+// Story 1.8 (FR-23): leave a Home, or (a Landlord) remove a Tenant.
 import { api } from './client';
 import { ApiError, GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
@@ -29,6 +30,10 @@ export const HOME_MESSAGES = {
 
 export const MEMBER_MESSAGES = {
   loadFailed: 'Vi fikk ikke hentet medlemmene.',
+  leaveFailed: 'Vi fikk ikke meldt deg ut av hjemmet.',
+  removeFailed: 'Vi fikk ikke fjernet medlemmet.',
+  leftNotice: (homeName: string) => `Du har forlatt «${homeName}».`,
+  removedNotice: (name: string) => `${name} er fjernet.`,
 } as const;
 
 export const TYPE_LABELS: Record<HomeType, string> = {
@@ -94,4 +99,20 @@ export async function fetchMembers(homeId: string): Promise<Member[]> {
   });
   if (!data) throw new ApiError(response.status, MEMBER_MESSAGES.loadFailed);
   return data.members;
+}
+
+/** Story 1.8: the caller leaves the Home. A 204 has no body, so success is response.ok. */
+export async function leaveHome(homeId: string): Promise<void> {
+  const { response } = await api.DELETE('/api/homes/{home_id}/members/me', {
+    params: { path: { home_id: homeId } },
+  });
+  if (!response.ok) throw new ApiError(response.status, MEMBER_MESSAGES.leaveFailed);
+}
+
+/** Story 1.8: the Landlord removes a Tenant. A 204 has no body, so success is response.ok. */
+export async function removeMember(homeId: string, userId: string): Promise<void> {
+  const { response } = await api.DELETE('/api/homes/{home_id}/members/{user_id}', {
+    params: { path: { home_id: homeId, user_id: userId } },
+  });
+  if (!response.ok) throw new ApiError(response.status, MEMBER_MESSAGES.removeFailed);
 }

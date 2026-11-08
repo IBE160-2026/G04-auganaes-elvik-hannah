@@ -5,7 +5,7 @@ import { App } from '../App';
 import { HOME_MESSAGES, type Home } from '../api/homes';
 import { OLAS_HOME, fakeApi, homesResponse, json, resetApi, signedInWith } from '../test-utils/fakeApi';
 
-const RENTAL: Home = { ...OLAS_HOME, name: 'Storgata 1', type: 'landlord', role: 'landlord' };
+const RENTAL: Home = { ...OLAS_HOME, name: 'Storgata 1', type: 'landlord', role: 'landlord', can_leave: false };
 
 function renderAt(path: string) {
   window.history.pushState({}, '', path);

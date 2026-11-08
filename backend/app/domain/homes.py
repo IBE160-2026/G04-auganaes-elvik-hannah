@@ -13,13 +13,18 @@ Story 1.5 (FR-3, team decision 2, 2026-11-08): members_of lists a Home's Members
 only places a Membership is made, and a test guards against a new Membership constructor
 elsewhere in app code. fr3_violations is the one check of that rule, run by the tests
 over every write path and by CI on the seeded database.
+
+Story 1.8 (FR-23, AD-16, decisions 1-4, 2026-11-08): a Household Member or Tenant may leave a
+Home (leave); a Landlord may remove a Tenant of their Landlord Home (remove_tenant). Both delete
+the Membership row only, never the Home, the User or invite links. can_leave and can_remove are
+the one statement of who may do this; routes and the frontend read them, never the Roles.
 """
 
 import uuid
 from datetime import datetime
 from typing import NamedTuple
 
-from sqlalchemy import case, text
+from sqlalchemy import case, delete, text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
@@ -38,6 +43,20 @@ INVITER_ROLES: frozenset[Role] = frozenset({"household_member", "landlord"})
 
 def can_invite(role: str) -> bool:
     return role in INVITER_ROLES
+
+
+# Story 1.8 (decisions 1 and 2): Household Members and Tenants may leave themselves; a Landlord
+# may not leave their own Landlord Home, which keeps exactly one Landlord.
+LEAVER_ROLES: frozenset[Role] = frozenset({"household_member", "tenant"})
+
+
+def can_leave(role: str) -> bool:
+    return role in LEAVER_ROLES
+
+
+def can_remove(caller_role: str, target_role: str) -> bool:
+    """Only a Landlord removes, and only a Tenant (decision 1: no Household Member removes)."""
+    return caller_role == "landlord" and target_role == "tenant"
 
 
 def joiner_role(home: Home) -> Role:
@@ -67,6 +86,10 @@ class InOtherHome(Exception):
     def __init__(self, home: Home) -> None:
         super().__init__(f"already in another home: {home.id}")
         self.home = home
+
+
+class NotATenant(Exception):
+    """The caller may not remove this user: not a Tenant of the caller's Landlord Home."""
 
 
 class MemberHome(NamedTuple):
@@ -155,6 +178,60 @@ def add_member(session: Session, home: Home, user: User) -> Membership:
         raise AlreadyMember(home) from None
     session.refresh(membership)
     return membership
+
+
+def is_member(session: Session, home_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    """Whether the user currently has a Membership in the Home (AD-16: only current Members)."""
+    found = session.exec(
+        select(Membership.id).where(Membership.home_id == home_id, Membership.user_id == user_id)
+    ).first()
+    return found is not None
+
+
+def leave(session: Session, membership: Membership) -> None:
+    """Delete the caller's own Membership and commit (Story 1.8, FR-23).
+
+    `membership` is what require_role returned. Deletes by statement, not by the loaded object,
+    so a repeated or racing call (left twice, or removed meanwhile) deletes nothing and raises
+    nothing. The Home stays, also when the last Household Member leaves (decision 3).
+    """
+    if not can_leave(membership.role):
+        raise ValueError(f"role {membership.role!r} may not leave")
+    session.execute(
+        delete(Membership).where(
+            col(Membership.user_id) == membership.user_id,
+            col(Membership.home_id) == membership.home_id,
+        )
+    )
+    session.commit()
+
+
+def remove_tenant(session: Session, landlord_membership: Membership, user_id: uuid.UUID) -> None:
+    """Delete a Tenant's Membership in the Landlord's Home and commit (Story 1.8, FR-23).
+
+    `landlord_membership` is what require_role returned. Raises NotATenant when the caller may
+    not remove this user (can_remove), or the user has no Membership in this Home (also the
+    caller themselves). The delete repeats the Tenant condition, so a Membership that changed
+    meanwhile is never touched; if the Tenant left in between, nothing is deleted and it raises
+    NotATenant too, so the route never answers 204 for a delete that did not happen.
+    """
+    home_id = landlord_membership.home_id
+    target_role = session.exec(
+        select(Membership.role).where(Membership.home_id == home_id, Membership.user_id == user_id)
+    ).first()
+    if target_role is None or not can_remove(landlord_membership.role, target_role):
+        raise NotATenant
+    result = session.execute(
+        delete(Membership).where(
+            col(Membership.home_id) == home_id,
+            col(Membership.user_id) == user_id,
+            col(Membership.role) == "tenant",
+        )
+    )
+    if result.rowcount == 0:
+        session.rollback()
+        raise NotATenant
+    session.commit()
 
 
 def homes_for(session: Session, user: User) -> list[MemberHome]:

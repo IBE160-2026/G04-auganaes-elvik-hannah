@@ -1,4 +1,9 @@
 /* Story 1.3: the Home type choice. One column at every width; each option is a full tap target. */
+/* Story 1.8: «Du har forlatt «X».» */
+.create-home__notice {
+  font-weight: var(--font-weight-bold);
+}
+
 .create-home__lead {
   color: var(--color-ink-secondary);
 }

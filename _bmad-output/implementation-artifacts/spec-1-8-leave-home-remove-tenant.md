@@ -2,9 +2,10 @@
 title: 'Story 1.8: Leave a Home & Landlord Removes a Tenant'
 type: 'feature'
 created: '2026-11-08'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: 'cb5ed9027c5f8c58614f92096cdd7c420b3de42e'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -82,24 +83,41 @@ context:
 
 **Execution:**
 - [x] `_bmad-output/implementation-artifacts/sprint-status.yaml` -- 1-8 to `in-progress` now, `review` when the PR opens
-- [ ] `backend/app/domain/homes.py` -- `can_leave`, `can_remove`, `leave`, `remove_tenant` (raises `NotATenant` when `can_remove` is false or the target has no Membership here) -- FR-23, AD-16
-- [ ] `backend/app/domain/invites.py` -- used-by-viewer requires a current Membership (preview and accept)
-- [ ] `backend/app/routes/homes.py` -- the two DELETE routes (204, 403 declared), `HomeOut.can_leave`, `MemberOut.can_remove`
-- [ ] `backend/tests/test_homes.py`, `test_homes_routes.py`, `test_invites*.py`, `test_clock.py` -- every matrix row on the backend side; `fr3_violations` `[]` after each leave/remove; old link by a leaver still accepted; rejoin; `can_leave` on list, create and accept responses; `can_remove` false on own row; both `members/me` calls 204 (route order)
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate
-- [ ] `frontend/src/api/homes.ts`, `api/queries.ts` -- `leaveHome`, `removeMember` (check `response.ok`), `useLeaveHome` (notice key, then refetch Homes), `useRemoveMember`, messages (`leaveFailed`, `removeFailed`, notices); 403 handler in `createQueryClient`
-- [ ] `frontend/src/components/ConfirmAction.tsx` + `.css` -- the inline confirmation, used by both actions
-- [ ] `frontend/src/routes/MembersPage.tsx` + `.css`, `HomePage.tsx`, `CreateHome.tsx` -- «Forlat hjemmet» section when `home.can_leave`; «Fjern» on rows with `can_remove`; left notice on both destinations
-- [ ] `frontend/src/test-utils/fakeApi.ts`, `**/*.test.tsx` -- `can_leave`/`can_remove` in fixtures; every matrix row on the frontend side, asserting `document.activeElement` on confirm, cancel, failure and after remove; a 204 fake response; the removed-while-signed-in redirect without reload and with one members call; the leave notice surviving the redirect to `/nytt-hjem`
-- [ ] `README.md` -- "prøv å forlate et hjem" steps (Jonas leaves, Kari removes Anders); undo by re-running `uv run python -m app.seed`, which puts both back and deletes nothing
-- [ ] `docs/ki-logg/korrigeringer.md` -- corrections found in review
+- [x] `backend/app/domain/homes.py` -- `can_leave`, `can_remove`, `leave`, `remove_tenant` (raises `NotATenant` when `can_remove` is false or the target has no Membership here) -- FR-23, AD-16
+- [x] `backend/app/domain/invites.py` -- used-by-viewer requires a current Membership (preview and accept)
+- [x] `backend/app/routes/homes.py` -- the two DELETE routes (204, 403 declared), `HomeOut.can_leave`, `MemberOut.can_remove`
+- [x] `backend/tests/test_homes.py`, `test_homes_routes.py`, `test_invites*.py`, `test_clock.py` -- every matrix row on the backend side; `fr3_violations` `[]` after each leave/remove; old link by a leaver still accepted; rejoin; `can_leave` on list, create and accept responses; `can_remove` false on own row; both `members/me` calls 204 (route order)
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate
+- [x] `frontend/src/api/homes.ts`, `api/queries.ts` -- `leaveHome`, `removeMember` (check `response.ok`), `useLeaveHome` (notice key, then refetch Homes), `useRemoveMember`, messages (`leaveFailed`, `removeFailed`, notices); 403 handler in `createQueryClient`
+- [x] `frontend/src/components/ConfirmAction.tsx` + `.css` -- the inline confirmation, used by both actions
+- [x] `frontend/src/routes/MembersPage.tsx` + `.css`, `HomePage.tsx`, `CreateHome.tsx` -- «Forlat hjemmet» section when `home.can_leave`; «Fjern» on rows with `can_remove`; left notice on both destinations
+- [x] `frontend/src/test-utils/fakeApi.ts`, `**/*.test.tsx` -- `can_leave`/`can_remove` in fixtures; every matrix row on the frontend side, asserting `document.activeElement` on confirm, cancel, failure and after remove; a 204 fake response; the removed-while-signed-in redirect without reload and with one members call; the leave notice surviving the redirect to `/nytt-hjem`
+- [x] `README.md` -- "prøv å forlate et hjem" steps (Jonas leaves, Kari removes Anders); undo by re-running `uv run python -m app.seed`, which puts both back and deletes nothing
+- [x] `docs/ki-logg/korrigeringer.md` -- corrections found in review
 
 **Acceptance Criteria:**
 - Given the seed, when Jonas signs in and leaves «Mari og Jonas sitt hjem», then he lands on Create Home with «Du har forlatt «Mari og Jonas sitt hjem».», and Mari's members list shows only her.
-- Given the seed, when Kari removes Anders while Anders has Members & Invite open, and Anders returns to that tab (window focus), then he lands on Create Home without an error page.
+- Given the seed, when Kari removes Anders while Anders has Members & Invite open, and Anders switches away from that tab and back (the tab becomes visible again; TanStack Query 5 refetches on `visibilitychange`, not on window focus), then he lands on Create Home without an error page.
 - Given the route walk in `test_permissions.py`, when the suite runs, then both new routes are found and pass every check without editing that file.
 
 ## Implementation Notes
+
+Implementation 2026-11-08 (dev agent), choices the spec left open:
+
+- `domain/homes.is_member(session, home_id, user_id)` is the "still has a Membership" check used by `invites.preview`/`accept`.
+- `leave` also refuses a Role that `can_leave` rejects (`ValueError`), so the Landlord rule holds in the domain and not only behind `require_role`.
+- The global 403 handler leaves out the query that failed (`predicate: query !== failed`). Without that, a members query that answers 403 invalidates itself and refetches in a loop until the Homes refetch redirects (verified: the test runs out of memory without the predicate). Mutations have no failing query, so every members list refetches.
+- The notice is read by `useNotice` in a `setTimeout` after mount (lint forbids `setState` directly in an effect, and the empty live region is then in the DOM before the text). It renders through `components/PendingNotice.tsx`, mounted only where the page is shown, so a redirect never consumes it.
+- Remove explanation text (not given by the spec): «<navn> mister tilgangen til «X».» After a 403 on remove, focus also moves to the «Medlemmer» heading, since the row disappears on the refetch.
+- In a failed state the confirm button reads «Prøv igjen» (same element, so focus stays).
+
+Code review fixes 2026-11-08:
+
+- Each Tenant row owns its `useRemoveMember` (`RemoveControl`) and reports back through `mutateAsync`, so «Avbryt» on one row can no longer reset another row's pending remove.
+- A 403 on leave or remove folds the confirmation back to the first button (`ConfirmAction` passes `close` to `onConfirm`), so no second DELETE can be sent during the refetch.
+- `remove_tenant` raises `NotATenant` when the DELETE's `rowcount` is 0 (the Tenant left between the SELECT and the DELETE), so the route never answers 204 for a delete that did not happen.
+- The leave route uses `require_role(*sorted(homes.LEAVER_ROLES))`. A source-scan test keeps `delete(Membership` to `leave` and `remove_tenant`, and the route walk now names both new paths.
+- The matrix row "Removed while signed in" says "window focus". TanStack Query 5 refetches on `visibilitychange`, so the AC and README say "switch to another tab and back". The test already dispatches `visibilitychange`.
 
 ## Spec Change Log
 
@@ -127,6 +145,24 @@ Spec review 2026-11-08 (one adversarial reviewer; 18 findings, verified against 
 | 16 | UI absence per Role and create-after-leave not in the matrix | low | rows added |
 | 17 | README undo: re-running the seed already restores Jonas and Anders | low | README task changed |
 | 18 | Route order unguarded | low | 204 test for both `members/me` callers |
+
+Code review 2026-11-08 (Blind Hunter, Edge Case Hunter, Verification Gap; 15 findings, verified against the code by the orchestrator). First run with `_bmad/custom/review-conventions.md`: no reviewer filed KI-logg, `korrigeringer.md` or sprint-status as a finding.
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| One remove mutation shared by all Tenant rows; cancelling or confirming another row drops the first row's notice and focus (B, E) | medium | patch: one mutation per row; two-Tenant test |
+| After a 403 on remove/leave the confirmation stays open and can fire again (B) | low | patch: close on 403 |
+| Double-submit guard in `ConfirmAction` untested (V, B) | low | patch: test with a pending DELETE |
+| "Notice shown once" untested (B) | low | patch: test |
+| `remove_tenant` answers 204 if the Tenant left between SELECT and DELETE (E) | low | patch: `rowcount == 0` → `NotATenant` |
+| Leave route hard-codes the Roles beside `LEAVER_ROLES` (B) | low | patch: `require_role(*sorted(LEAVER_ROLES))` |
+| No guard for where Memberships are deleted (B) | low | patch: source-scan test |
+| Route walk's anchor set misses the new routes (B) | low | patch |
+| README step relies on window focus; TanStack Query 5 refetches on `visibilitychange` (B) | low | patch: switch tab and back |
+| Leave succeeds but the Homes refetch fails: user stays, notice lingers (E, B) | low | rejected: needs a network failure right after a successful DELETE; the next Homes load routes correctly and shows the notice once, so nothing is lost |
+| Last Household Member leaves; an old link still lets someone join the empty Home (E, B) | false | decisions 3 and 6 (Eirik) keep the Home and the links; joining it is the intended outcome of a valid link |
+| A removed Tenant gets no explanation (B) | low | rejected: EXPERIENCE.md "Removed while signed in" defines a silent redirect; a notice would need a new UX decision |
+| Verification gap: everything else traced is covered (V) | false | not a defect |
 
 ## Design Notes
 

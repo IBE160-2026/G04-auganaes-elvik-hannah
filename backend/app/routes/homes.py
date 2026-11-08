@@ -3,12 +3,16 @@
 GET and POST /homes are user-scoped: there is no home_id in their paths, and the list is
 filtered on the caller's own Memberships. GET /homes/{home_id}/members is Home-scoped and goes
 through require_role, like every route with {home_id} (AD-2, tests/test_permissions.py).
+
+Story 1.8 (FR-23, AD-16): DELETE /homes/{home_id}/members/me (leave) and
+DELETE /homes/{home_id}/members/{user_id} (a Landlord removes a Tenant), both through require_role
+and domain/homes. Every refusal is the same 403 as require_role's.
 """
 
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
@@ -18,7 +22,7 @@ from app.domain import homes
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
 from app.models.membership import ROLES, Membership, Role
 from app.permissions.current_user import CurrentUser
-from app.permissions.require_role import require_role
+from app.permissions.require_role import FORBIDDEN, require_role
 
 router = APIRouter(prefix="/homes", tags=["homes"])
 
@@ -54,6 +58,8 @@ class HomeOut(BaseModel):
     # Story 1.4: whether the caller may create invite links here. Decided by the domain, so
     # the frontend never re-implements the rule.
     can_invite: bool
+    # Story 1.8: whether the caller may leave this Home (not a Landlord in their own Home).
+    can_leave: bool
 
 
 class HomesOut(BaseModel):
@@ -72,6 +78,7 @@ def home_out(member_home: homes.MemberHome) -> HomeOut:
         role=member_home.role,
         created_at=home.created_at,
         can_invite=homes.can_invite(member_home.role),
+        can_leave=homes.can_leave(member_home.role),
     )
 
 
@@ -113,6 +120,9 @@ class MemberOut(BaseModel):
     # True on the caller's own row. No email is sent (decision 1), so a Tenant cannot collect
     # the other Tenants' addresses.
     is_you: bool
+    # Story 1.8: whether the caller may remove this Member (a Landlord, on a Tenant's row).
+    # Never true on the caller's own row.
+    can_remove: bool
 
 
 class MembersOut(BaseModel):
@@ -134,8 +144,51 @@ def list_members(member: AnyMember, session: SessionDep) -> MembersOut:
     return MembersOut(
         members=[
             MemberOut(
-                user_id=m.user_id, name=m.name, role=m.role, is_you=m.user_id == member.user_id
+                user_id=m.user_id,
+                name=m.name,
+                role=m.role,
+                is_you=m.user_id == member.user_id,
+                can_remove=m.user_id != member.user_id and homes.can_remove(member.role, m.role),
             )
             for m in homes.members_of(session, member.home_id)
         ]
     )
+
+
+# Story 1.8 (decisions 1 and 2): who may leave, and who may remove.
+Leaver = Annotated[Membership, Depends(require_role(*sorted(homes.LEAVER_ROLES)))]
+Landlord = Annotated[Membership, Depends(require_role("landlord"))]
+
+
+# Registered before /members/{user_id}, so "me" is never read as a user id.
+@router.delete(
+    "/{home_id}/members/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorOut,
+            "description": "A Landlord in their own Home, not a Member, or no such Home",
+        }
+    },
+)
+def leave_home(member: Leaver, session: SessionDep) -> None:
+    homes.leave(session, member)
+
+
+@router.delete(
+    "/{home_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses={
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorOut,
+            "description": "Not the Landlord here, no such Home, or the user is not a Tenant here",
+        }
+    },
+)
+def remove_member(user_id: uuid.UUID, landlord: Landlord, session: SessionDep) -> None:
+    try:
+        homes.remove_tenant(session, landlord, user_id)
+    except homes.NotATenant:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=FORBIDDEN) from None

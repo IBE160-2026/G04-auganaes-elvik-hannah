@@ -74,7 +74,13 @@ def test_the_walk_finds_the_home_scoped_routes() -> None:
     # Never passes vacuously: invites (1.4) and members (1.5) are Home-scoped today.
     assert len(HOME_ROUTES) >= 2
     paths = {r.path for r in HOME_ROUTES}
-    assert {"/api/homes/{home_id}/invites", "/api/homes/{home_id}/members"} <= paths
+    assert {
+        "/api/homes/{home_id}/invites",
+        "/api/homes/{home_id}/members",
+        # Story 1.8
+        "/api/homes/{home_id}/members/me",
+        "/api/homes/{home_id}/members/{user_id}",
+    } <= paths
 
 
 def test_the_walk_catches_a_home_id_route_without_require_role() -> None:

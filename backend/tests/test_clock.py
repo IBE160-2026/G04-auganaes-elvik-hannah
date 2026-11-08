@@ -60,6 +60,7 @@ def test_home_out_serialises_created_at_with_a_zone() -> None:
         role="household_member",
         created_at=NAIVE,
         can_invite=True,
+        can_leave=True,
     )
     assert has_zone(home.model_dump(mode="json")["created_at"])
 

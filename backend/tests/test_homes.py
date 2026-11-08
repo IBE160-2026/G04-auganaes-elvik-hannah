@@ -1,6 +1,8 @@
 """Story 1.3 (FR-1, FR-3, AD-1, AD-2): the Home creation rule and the Role a Member gets.
 
 Story 1.5: the members list (members_of) and the FR-3 "never mixed" check (fr3_violations).
+
+Story 1.8 (FR-23, AD-16): leave, remove_tenant and the rules can_leave / can_remove.
 """
 
 import re
@@ -435,3 +437,211 @@ def test_only_create_home_and_add_member_construct_a_membership() -> None:
         start = source.index(function)
         end = source.find("\ndef ", start + 1)
         assert constructor.search(source[start:end]), function
+
+
+# Story 1.8 (FR-23, AD-16): leaving and removing delete the Membership row only.
+def membership_of(session: Session, user: User, home: Home) -> Membership:
+    return session.exec(
+        select(Membership).where(Membership.user_id == user.id, Membership.home_id == home.id)
+    ).one()
+
+
+@pytest.mark.parametrize(
+    ("role", "allowed"), [("household_member", True), ("tenant", True), ("landlord", False)]
+)
+def test_can_leave_follows_leaver_roles(role: str, allowed: bool) -> None:
+    assert homes.can_leave(role) is allowed
+
+
+@pytest.mark.parametrize(
+    ("caller", "target", "allowed"),
+    [
+        ("landlord", "tenant", True),
+        ("landlord", "landlord", False),
+        ("household_member", "household_member", False),
+        ("tenant", "tenant", False),
+        ("tenant", "landlord", False),
+    ],
+)
+def test_can_remove_only_a_landlord_on_a_tenant(caller: str, target: str, allowed: bool) -> None:
+    assert homes.can_remove(caller, target) is allowed
+
+
+def test_household_member_leaves_and_the_others_stay(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+
+    homes.leave(session, membership_of(session, jonas, home))
+
+    assert [m.name for m in homes.members_of(session, home.id)] == ["Mari"]
+    assert homes.homes_for(session, jonas) == []
+    assert homes.allowed_types(session, jonas) == ["household", "landlord"]
+    assert homes.fr3_violations(session) == []
+
+
+def test_last_household_member_leaves_and_the_home_stays(session: Session) -> None:
+    ola = new_user(session, "Ola")
+    home = homes.create_home(session, ola, name="Hybel", type="household").home
+
+    homes.leave(session, membership_of(session, ola, home))
+
+    assert session.get(Home, home.id) is not None
+    assert count(session, Membership) == 0
+    assert count(session, User) == 1
+    assert homes.fr3_violations(session) == []
+
+
+def test_tenant_leaves_and_the_landlord_stays(session: Session) -> None:
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, home, anders)
+
+    homes.leave(session, membership_of(session, anders, home))
+
+    assert [(m.name, m.role) for m in homes.members_of(session, home.id)] == [("Kari", "landlord")]
+    assert homes.fr3_violations(session) == []
+
+
+def test_a_landlord_may_not_leave_her_own_home(session: Session) -> None:
+    kari = new_user(session, "Kari")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+
+    with pytest.raises(ValueError):
+        homes.leave(session, membership_of(session, kari, home))
+    assert count(session, Membership) == 1
+
+
+def test_leaving_twice_deletes_nothing_else_and_raises_nothing(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+    membership = membership_of(session, jonas, home)
+
+    homes.leave(session, membership)
+    homes.leave(session, membership)
+
+    assert [m.name for m in homes.members_of(session, home.id)] == ["Mari"]
+
+
+def test_leaving_while_being_removed_raises_nothing(session: Session) -> None:
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, home, anders)
+    anders_membership = membership_of(session, anders, home)
+
+    homes.remove_tenant(session, membership_of(session, kari, home), anders.id)
+    homes.leave(session, anders_membership)
+
+    assert [m.name for m in homes.members_of(session, home.id)] == ["Kari"]
+
+
+def test_landlord_removes_a_tenant(session: Session) -> None:
+    kari, anders, ola = new_user(session, "Kari"), new_user(session, "Anders"), new_user(session)
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, home, anders)
+    homes.add_member(session, home, ola)
+
+    homes.remove_tenant(session, membership_of(session, kari, home), anders.id)
+
+    assert [m.name for m in homes.members_of(session, home.id)] == ["Kari", "Ola"]
+    assert homes.homes_for(session, anders) == []
+    assert homes.fr3_violations(session) == []
+
+
+def test_remove_refuses_the_landlord_herself_an_outsider_and_a_tenant_elsewhere(
+    session: Session,
+) -> None:
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    other = homes.create_home(session, kari, name="Storgata 14", type="landlord").home
+    homes.add_member(session, other, anders)
+    outsider = new_user(session, "Per")
+    landlord = membership_of(session, kari, home)
+
+    for target in (kari.id, outsider.id, anders.id, uuid.uuid4()):
+        with pytest.raises(homes.NotATenant):
+            homes.remove_tenant(session, landlord, target)
+    assert count(session, Membership) == 3
+
+
+def test_a_household_member_may_not_remove_another(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+
+    with pytest.raises(homes.NotATenant):
+        homes.remove_tenant(session, membership_of(session, mari, home), jonas.id)
+    assert count(session, Membership) == 2
+
+
+def test_removing_a_tenant_who_already_left_raises_not_a_tenant(session: Session) -> None:
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, home, anders)
+    homes.leave(session, membership_of(session, anders, home))
+
+    with pytest.raises(homes.NotATenant):
+        homes.remove_tenant(session, membership_of(session, kari, home), anders.id)
+    assert count(session, Membership) == 1
+
+
+def test_after_leaving_a_user_may_create_a_home_or_rejoin(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+    homes.leave(session, membership_of(session, jonas, home))
+
+    assert homes.join_blocker(session, home, jonas) is None
+    own = homes.create_home(session, jonas, name="Jonas sin hybel", type="household")
+    assert own.role == "household_member"
+    assert homes.fr3_violations(session) == []
+
+
+def test_is_member_reads_only_current_memberships(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+    assert homes.is_member(session, home.id, jonas.id)
+
+    homes.leave(session, membership_of(session, jonas, home))
+    assert not homes.is_member(session, home.id, jonas.id)
+    assert homes.is_member(session, home.id, mari.id)
+
+
+def test_remove_raises_not_a_tenant_when_the_tenant_left_in_between(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, home, anders)
+    landlord = membership_of(session, kari, home)
+    real_can_remove = homes.can_remove
+
+    def anders_leaves_first(caller_role: str, target_role: str) -> bool:
+        # Runs between the role SELECT and the DELETE: Anders leaves in the meantime.
+        homes.leave(session, membership_of(session, anders, home))
+        return real_can_remove(caller_role, target_role)
+
+    monkeypatch.setattr(homes, "can_remove", anders_leaves_first)
+    with pytest.raises(homes.NotATenant):
+        homes.remove_tenant(session, landlord, anders.id)
+    assert [m.name for m in homes.members_of(session, home.id)] == ["Kari"]
+
+
+def test_only_leave_and_remove_tenant_delete_a_membership() -> None:
+    # Story 1.8 (AD-16): Membership rows are deleted only in domain/homes, by these two functions.
+    # Like the constructor guard above, it does not see session.delete(obj) or raw SQL.
+    statement = re.compile(r"\bdelete\(Membership\b")
+    app_dir = Path(homes.__file__).resolve().parents[1]
+    found = {
+        path.relative_to(app_dir).as_posix(): len(statement.findall(path.read_text("utf-8")))
+        for path in app_dir.rglob("*.py")
+        if statement.search(path.read_text("utf-8"))
+    }
+    assert found == {"domain/homes.py": 2}
+    source = Path(homes.__file__).read_text("utf-8")
+    for function in ("def leave(", "def remove_tenant("):
+        start = source.index(function)
+        end = source.find("\ndef ", start + 1)
+        assert statement.search(source[start:end]), function

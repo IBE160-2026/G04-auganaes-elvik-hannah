@@ -10,6 +10,11 @@
   line-height: var(--line-height-display);
 }
 
+/* Story 1.8: «Du har forlatt «X».» */
+.home-page__notice {
+  font-weight: var(--font-weight-bold);
+}
+
 .home-page__lead,
 .home-page__meta {
   color: var(--color-ink-secondary);
