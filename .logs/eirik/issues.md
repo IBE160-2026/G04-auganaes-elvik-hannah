@@ -28,6 +28,9 @@
 - [ ] 2026-11-07 [story-1-3-opprette-hjem](992-2026-11-07-23-19-16-story-1-3-opprette-hjem.md) — Samtidighetstest mot Postgres for radlåsen i `create_home` (deferred-work)
 - [ ] 2026-11-07 [story-1-3-opprette-hjem](992-2026-11-07-23-19-16-story-1-3-opprette-hjem.md) — Velge `ondelete` for fremmednøklene i `memberships` når «forlat hjem» eller sletting av konto kommer
 - [ ] 2026-11-07 [story-1-3-opprette-hjem](992-2026-11-07-23-19-16-story-1-3-opprette-hjem.md) — Sjekke i Neon at preview-branchen for 1.3 er slettet etter at PR #16 ble lukket
-- [ ] 2026-11-08 [story-1-4-invitasjoner](991-2026-11-08-00-24-17-story-1-4-invitasjoner.md) — Story 1.5: lage GitHub-issue og starte `bmad-build` (medlemsliste på den eksisterende medlemssiden, gjenbruke `require_role`)
+- [x ] 2026-11-08 [story-1-4-invitasjoner](991-2026-11-08-00-24-17-story-1-4-invitasjoner.md) — Story 1.5: lage GitHub-issue og starte `bmad-build` (medlemsliste på den eksisterende medlemssiden, gjenbruke `require_role`) (løst 2026-11-08, se [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md))
 - [ ] 2026-11-08 [story-1-4-invitasjoner](991-2026-11-08-00-24-17-story-1-4-invitasjoner.md) — Samtidighetstester mot Postgres for låsene i `invites.accept` og `homes.add_member` (deferred-work)
 - [ ] 2026-11-08 [story-1-4-invitasjoner](991-2026-11-08-00-24-17-story-1-4-invitasjoner.md) — Sjekke i Neon at preview-branchen for 1.4 er slettet etter at PR #18 ble lukket
+- [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Frontend-test for at en annen bruker aldri ser hjem, invitasjon eller medlemmer fra cachen etter at økta byttes uten utlogging (deferred-work)
+- [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Sjekke i Neon at preview-branchen for 1.5 er slettet etter at PR #20 ble lukket
+- [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Avgjøre om Epic 1 skal ha retrospektiv (`bmad-retrospective`, valgfri) før Story 2.1
