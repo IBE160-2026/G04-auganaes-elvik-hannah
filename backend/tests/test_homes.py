@@ -11,23 +11,13 @@ from pathlib import Path
 import pytest
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, func, select
+from sqlmodel import Session, select
 
 from app.domain import homes
-from app.domain.accounts import register
 from app.models.home import Home
 from app.models.membership import Membership
 from app.models.user import User
-
-
-def new_user(session: Session, name: str = "Ola") -> User:
-    return register(
-        session,
-        email=f"{name.lower()}-{uuid.uuid4().hex[:6]}@example.com",
-        name=name,
-        password="hemmelig1",
-    )
-
+from tests.helpers import count, new_user
 
 T0 = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
 
@@ -41,10 +31,6 @@ def set_joined_at(session: Session, user: User, home: Home, when: datetime) -> N
     membership.created_at = when
     session.add(membership)
     session.commit()
-
-
-def count(session: Session, model: type) -> int:
-    return session.exec(select(func.count()).select_from(model)).one()
 
 
 def test_role_is_not_a_column_on_users(session: Session) -> None:

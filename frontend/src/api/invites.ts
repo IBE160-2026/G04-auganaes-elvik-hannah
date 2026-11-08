@@ -1,5 +1,6 @@
 // Story 1.4 (FR-2): create, preview and accept invite links, with errors in Norwegian.
 import { api } from './client';
+import { GENERIC_ERROR, toApiError } from './errors';
 import type { HomeType } from './homes';
 import type { components } from './schema';
 
@@ -32,23 +33,12 @@ export function invalidInviteMessage(homeType: HomeType | null | undefined): str
 export const INVITE_MESSAGES = {
   createFailed: 'Vi fikk ikke laget en invitasjonslenke.',
   loadFailed: 'Vi fikk ikke hentet invitasjonen.',
-  unknown: 'Noe gikk galt. Prøv igjen om litt.',
+  unknown: GENERIC_ERROR,
 } as const;
 
-/** A failed invite call. A 409 or 410 carries the server's Norwegian reason. */
-export class InviteError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
-function toInviteError(response: Response, error: unknown, fallback: string): InviteError {
-  const body = (error ?? {}) as { detail?: unknown };
-  const known = (response.status === 409 || response.status === 410) && typeof body.detail === 'string';
-  return new InviteError(response.status, known ? (body.detail as string) : fallback);
+/** A 409 or 410 carries the server's Norwegian reason; anything else gets `fallback`. */
+function toInviteError(response: Response, error: unknown, fallback: string) {
+  return toApiError(response, error, { passThrough: [409, 410], fallback });
 }
 
 export async function createInvite(homeId: string): Promise<Invite> {

@@ -3,10 +3,12 @@
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Literal
 
 import jwt
+
+from app.clock import utc_now
 
 ALGORITHM = "HS256"
 ACCESS_TTL = timedelta(minutes=15)
@@ -28,7 +30,7 @@ class IssuedToken:
 
 
 def issue(user_id: uuid.UUID, token_type: TokenType, secret: str) -> IssuedToken:
-    now = datetime.now(UTC)
+    now = utc_now()
     ttl = _TTL[token_type]
     claims = {
         "sub": str(user_id),

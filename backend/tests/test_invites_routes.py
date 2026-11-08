@@ -8,11 +8,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlmodel import Session, func, select
 
+from app.clock import utc_now
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
 from app.models.user import User
 from app.permissions.require_role import FORBIDDEN
 from app.routes.invites import already_member_message, in_other_home_message, invalid_message
+from tests.helpers import register_via_api, sign_up
 
 INVALID_LANDLORD = "Denne invitasjonslenken er ikke lenger gyldig — be om en ny fra utleieren."
 INVALID_HOUSEHOLD = (
@@ -21,20 +23,6 @@ INVALID_HOUSEHOLD = (
 INVALID_UNKNOWN = (
     "Denne invitasjonslenken er ikke lenger gyldig — be om en ny fra den som inviterte deg."
 )
-
-
-def register(client: TestClient, name: str = "Ola", **extra: object):
-    email = f"{name.lower()}-{uuid.uuid4().hex[:6]}@example.com"
-    return client.post(
-        "/api/auth/register",
-        json={"email": email, "name": name, "password": "hemmelig1", **extra},
-    )
-
-
-def sign_up(client: TestClient, name: str = "Ola") -> dict[str, str]:
-    response = register(client, name)
-    assert response.status_code == 201
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 def create_home(client: TestClient, auth: dict[str, str], type: str, name: str = "Hjem") -> str:
@@ -70,7 +58,7 @@ def membership_count(engine: Engine) -> int:
 def expire_links(engine: Engine) -> None:
     with Session(engine) as session:
         for link in session.exec(select(InviteLink)).all():
-            link.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+            link.expires_at = utc_now() - timedelta(seconds=1)
             session.add(link)
         session.commit()
 
@@ -379,7 +367,7 @@ def test_register_with_a_valid_link_joins_in_the_same_request(
     _, home_id = household
     token = token_for(client, *household)
 
-    response = register(client, "Jonas", invite_token=token)
+    response = register_via_api(client, "Jonas", invite_token=token)
 
     assert response.status_code == 201
     assert response.json()["joined_home_id"] == home_id
@@ -398,7 +386,7 @@ def test_register_with_a_dead_link_still_creates_the_account(
     token = token_for(client, *rental)
     expire_links(engine)
 
-    response = register(client, "Anders", invite_token=token)
+    response = register_via_api(client, "Anders", invite_token=token)
 
     assert response.status_code == 201
     assert response.json()["joined_home_id"] is None
@@ -421,7 +409,7 @@ def test_register_with_a_taken_email_is_409_and_leaves_the_link_unused(
 
 
 def test_register_with_an_overlong_token_is_422(client: TestClient) -> None:
-    response = register(client, invite_token="x" * 65)
+    response = register_via_api(client, invite_token="x" * 65)
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "invite_token"]
 

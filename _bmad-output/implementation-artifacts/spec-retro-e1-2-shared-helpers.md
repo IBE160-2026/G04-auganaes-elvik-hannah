@@ -2,9 +2,10 @@
 title: 'Epic 1 retro, action 2: shared error helper, test helpers and time module'
 type: 'refactor'
 created: '2026-11-08'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: 'cd1e2ce2f029010c88550860b0907c94d49ef4b9'
 context: []
 ---
 
@@ -60,17 +61,17 @@ context: []
 
 **Execution:**
 - [x] `_bmad-output/implementation-artifacts/sprint-status.yaml` -- now: `uv run --no-cache .claude/skills/bmad-retrospective/scripts/sprint_status.py update --file "_bmad-output/implementation-artifacts/sprint-status.yaml" --epic 1 --set-action-status '[{"id":"epic-1-retro-item-2-before-epic-2-shared-frontend-error-help","status":"in-progress"}]'`; `done` after merge (never hand-edit the file)
-- [ ] `frontend/src/api/errors.ts` -- `GENERIC_ERROR` text, one `ApiError` class (`status`, `message`, typed `fields`), one `toApiError(response, error, { passThrough, fallback, fields })` where `passThrough` is `'any'` or a list of statuses and `fields` maps a 422 `detail` to field errors -- A1
-- [ ] `frontend/src/api/auth.ts`, `homes.ts`, `invites.ts` -- use `errors.ts`; keep each module's message constants (pointing `unknown` at `GENERIC_ERROR`) and its exported `fieldErrorsFrom422` for auth; remove `AuthError`, `HomeError`, `InviteError`
-- [ ] `frontend/src/routes/Register.tsx`, `SignIn.tsx`, `CreateHome.tsx`, `InvitePage.tsx` -- `instanceof ApiError`
-- [ ] `frontend/src/api/errors.test.ts` -- each pass-through rule (any / [409] / [409, 410]) including a 500 with a string `detail` under each, 422 with and without a `fields` mapper, non-string `detail`, missing body
-- [ ] `backend/app/clock.py` -- `utc_now`, `as_utc`, `UtcDatetime` (an `Annotated[datetime, AfterValidator(as_utc)]` for response models) -- A3
-- [ ] `backend/app/models/*.py`, `domain/invites.py`, `domain/tokens.py`, `routes/homes.py`, `routes/invites.py` -- import from `app.clock`; `HomeOut.created_at` and `InviteOut.expires_at` typed `UtcDatetime`; drop the manual `as_utc` call in `routes/invites.py`
-- [ ] `backend/tests/test_clock.py` -- `as_utc`: naive gains UTC, aware unchanged; `UtcDatetime`: naive gains UTC, `+01:00` becomes UTC; `HomeOut`/`InviteOut` serialise with a zone; route tests that `POST /api/homes` and `GET /api/homes` return `created_at` with a zone on SQLite (fail before the change)
-- [ ] `backend/tests/helpers.py` -- `PASSWORD = "hemmelig1"`, `new_user(session, name="Ola")`, `register_via_api(client, name="Ola", **extra)`, `sign_up(client, name="Ola") -> auth header`, `auth_for(client, email)`, `count(session, model)` -- A2
-- [ ] `backend/tests/test_homes.py`, `test_invites.py`, `test_permissions.py`, `test_homes_routes.py`, `test_invites_routes.py`, `test_seed.py` -- use `tests.helpers` as in Boundaries; nothing else changes
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate; expect no diff
-- [ ] `docs/ki-logg/korrigeringer.md` -- corrections found in review
+- [x] `frontend/src/api/errors.ts` -- `GENERIC_ERROR` text, one `ApiError` class (`status`, `message`, typed `fields`), one `toApiError(response, error, { passThrough, fallback, fields })` where `passThrough` is `'any'` or a list of statuses and `fields` maps a 422 `detail` to field errors -- A1
+- [x] `frontend/src/api/auth.ts`, `homes.ts`, `invites.ts` -- use `errors.ts`; keep each module's message constants (pointing `unknown` at `GENERIC_ERROR`) and its exported `fieldErrorsFrom422` for auth; remove `AuthError`, `HomeError`, `InviteError`
+- [x] `frontend/src/routes/Register.tsx`, `SignIn.tsx`, `CreateHome.tsx`, `InvitePage.tsx` -- `instanceof ApiError`
+- [x] `frontend/src/api/errors.test.ts` -- each pass-through rule (any / [409] / [409, 410]) including a 500 with a string `detail` under each, 422 with and without a `fields` mapper, non-string `detail`, missing body
+- [x] `backend/app/clock.py` -- `utc_now`, `as_utc`, `UtcDatetime` (an `Annotated[datetime, AfterValidator(as_utc)]` for response models) -- A3
+- [x] `backend/app/models/*.py`, `domain/invites.py`, `domain/tokens.py`, `routes/homes.py`, `routes/invites.py` -- import from `app.clock`; `HomeOut.created_at` and `InviteOut.expires_at` typed `UtcDatetime`; drop the manual `as_utc` call in `routes/invites.py`
+- [x] `backend/tests/test_clock.py` -- `as_utc`: naive gains UTC, aware unchanged; `UtcDatetime`: naive gains UTC, `+01:00` becomes UTC; `HomeOut`/`InviteOut` serialise with a zone; route tests that `POST /api/homes` and `GET /api/homes` return `created_at` with a zone on SQLite (fail before the change)
+- [x] `backend/tests/helpers.py` -- `PASSWORD = "hemmelig1"`, `new_user(session, name="Ola")`, `register_via_api(client, name="Ola", **extra)`, `sign_up(client, name="Ola") -> auth header`, `auth_for(client, email)`, `count(session, model)` -- A2
+- [x] `backend/tests/test_homes.py`, `test_invites.py`, `test_permissions.py`, `test_homes_routes.py`, `test_invites_routes.py`, `test_seed.py` -- use `tests.helpers` as in Boundaries; nothing else changes
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate; expect no diff
+- [x] `docs/ki-logg/korrigeringer.md` -- corrections found in review
 
 **Acceptance Criteria:**
 - Given the refactor, when `uv run pytest` and `npm test` run, then every pre-existing test passes with only import or helper-call changes in its file.
@@ -78,6 +79,8 @@ context: []
 - Given an in-memory SQLite test client, when `GET /api/homes` is called after creating a Home, then `created_at` ends in `Z` or `+00:00`.
 
 ## Implementation Notes
+
+- The Tasks line for `clock.py` says `AfterValidator(as_utc)`; the frozen Boundaries say `to_utc` (naive → UTC, aware → `astimezone(UTC)`). The code follows Boundaries.
 
 ## Spec Change Log
 
@@ -104,6 +107,28 @@ Spec review 2026-11-08 (one adversarial reviewer; 17 findings, verified against 
 | 15 | Truncated action id, no full command | low | full command |
 | 16 | No external importers of moved symbols | false | confirmed; route tests named as behaviour evidence |
 | 17 | `from tests.conftest import` already used; rationale clashes | low | rationale reworded |
+
+Code review 2026-11-08 (Blind Hunter, Edge Case Hunter, Verification Gap; 18 findings, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| No test stops a future response model from using a plain `datetime` (B) | medium | patch: sweep test over response models |
+| `accept` returns `HomeOut`, but no route test checks its zone (B) | low | patch: assertion added |
+| `expires_at` lost the explicit `as_utc` with no end-to-end check (B) | false | `test_invites_routes.py:88-89` subtracts an aware `datetime.now(UTC)` from the parsed value; a naive value raises TypeError (V confirms) |
+| "Never `model_construct`" enforced only by a comment (B) | low | rejected: no code path uses it; a grep test adds machinery for an unlikely bypass |
+| `fieldsOf` is an unchecked cast presented as narrowing (B) | low | patch: doc comment says so |
+| No case for 422 + `fields` mapper + string `detail` (B) | low | patch: tests for `'any'` and `[409]` |
+| GENERIC_ERROR test repeats the literal instead of checking the module constants (B) | low | patch |
+| `ApiError` does not set `name` (B) | low | patch |
+| `toHomeError` comment style differs (B) | low | patch |
+| `errors.test.ts` 123-character line (B) | low | patch |
+| `register_via_api` has no return type (B) | low | patch |
+| `expire_links` uses `datetime.now(UTC)` (B) | low | patch: `utc_now()` |
+| `_email` makes an invalid address from a name with a space or non-ASCII letter (E) | low | patch: local part stripped to `[a-z0-9]` |
+| `korrigeringer.md` and the `conftest.py` deviation not in the diff (B) | false | added when the change is presented (step 5) and in the PR, as in 1.3–1.5 |
+| Spec task line says `AfterValidator(as_utc)`, Boundaries and code use `to_utc` (B, E) | low | rejected as a code finding: the fix edits this spec; the code follows the frozen Boundaries; noted in Implementation Notes |
+| `to_utc` changes an aware non-UTC Postgres value's offset to `Z` (E) | false | Neon and the local Postgres run with session time zone UTC, so values are already `+00:00`; the instant is the same either way, and Boundaries require UTC |
+| Verification-gap: no gaps; every `toApiError` consumer has a behaviour test (V) | false | not a defect |
 
 ## Verification
 

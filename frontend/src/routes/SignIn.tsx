@@ -3,7 +3,8 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useSearchParams } from 'react-router';
-import { AuthError, MESSAGES, validateSignIn, type FieldErrors } from '../api/auth';
+import { MESSAGES, validateSignIn, type FieldErrors } from '../api/auth';
+import { ApiError, fieldsOf } from '../api/errors';
 import { validInviteToken } from '../api/invites';
 import { useSignIn } from '../api/queries';
 import { useSession } from '../api/session';
@@ -39,10 +40,10 @@ export function SignIn() {
     setErrors({});
     signIn.mutate(input, {
       onError: (error) => {
-        if (error instanceof AuthError && error.status === 401) {
+        if (error instanceof ApiError && error.status === 401) {
           showErrors({ password: error.message });
-        } else if (error instanceof AuthError && Object.keys(error.fields).length > 0) {
-          showErrors(error.fields);
+        } else if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
+          showErrors(fieldsOf<FieldErrors>(error));
         } else {
           setFormError(MESSAGES.unknown);
         }

@@ -7,7 +7,7 @@ from typing import Literal, get_args
 from sqlalchemy import CheckConstraint, Column, DateTime, PrimaryKeyConstraint
 from sqlmodel import Field, SQLModel
 
-from app.models.user import utc_now
+from app.clock import utc_now
 
 HOME_NAME_MAX_LENGTH = 60
 

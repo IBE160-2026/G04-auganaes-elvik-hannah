@@ -19,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlmodel import Field, SQLModel
 
-from app.models.user import utc_now
+from app.clock import utc_now
 
 # Hex SHA-256.
 TOKEN_HASH_LENGTH = 64
