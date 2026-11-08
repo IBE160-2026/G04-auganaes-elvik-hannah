@@ -6,25 +6,29 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1-project-scaffold-design-tokens-responsive-app-shell.md`
   summary: Add an automated check that `npm run build` emits `dist/service-worker.js` at the root (no hash), so a Vite config change cannot silently break PWA registration.
   evidence: Verification-gap review of Story 1.1; the check needs a build step in the test run, which the repo does not have yet. Today it is only verified by hand via `npm run preview`.
+  outcome: Settled 2026-11-01 by the CI workflow (PR #10, issue #9): the frontend job builds and then runs `test -f dist/service-worker.js` (`.github/workflows/ci.yml`, step "service-worker.js i roten av dist"). Outcome recorded 2026-11-08 (Epic 1 retro, action 4).
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Add an automated test that `backend/alembic/env.py` uses `get_migration_url()` and takes `pg_advisory_xact_lock` inside Alembic's transaction.
   evidence: Code review of Story 1.7 (R6); today only proven by hand (spec Implementation Notes). Needs a DB-backed test harness, expected with Story 1.2/1.6.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Add a CI workflow that runs pytest, ruff, Vitest, lint and build on every PR.
   evidence: Code review of Story 1.7 (R7); no workflow runs tests, so all checks are local only. Pre-existing since Story 1.1.
+  outcome: Settled 2026-11-01 by PR #10 (issue #9): `.github/workflows/ci.yml` runs pytest, ruff, Vitest, ESLint and the build on every PR and on `main`, on Linux and Windows, plus migrations and seed against Postgres 18. Outcome recorded 2026-11-08 (Epic 1 retro, action 4).
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm the Vercel build hook runs in `backend/` so `python -m alembic upgrade head` finds `alembic.ini` (unverified, would be high).
   evidence: Code review of Story 1.7 (R8); settle from the first preview build log.
+  outcome: Settled 2026-11-01: Eirik saw `alembic_version` in the Neon branch `preview/story/1-7-hosted-demo-vercel` after the first preview build, so the build step runs in `backend/` (`.logs/eirik/997-2026-11-01-13-10-35-story-1-7-hostet-demo-vercel.md`). Outcome recorded 2026-11-08 (Epic 1 retro, action 4).
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm a preview build can never migrate Neon's main branch when preview branching is off or branch creation fails (unverified, would be medium).
   evidence: Code review of Story 1.7 (R9); check what DATABASE_URL a preview gets when branching fails, and add a VERCEL_ENV guard if it is main's URL.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm the Vite service on Vercel falls back to index.html for client-side deep links (unverified, would be medium).
   evidence: Code review of Story 1.7 (R10); no client routes exist yet, so settle in the first story that adds one.
-  outcome: Fixed in Story 1.2, not yet confirmed. Production answered 404 for `/logg-inn` (checked 2026-11-01), so `vercel.json` now gives the frontend service a rewrite `/(.*)` → `/index.html`; Vercel applies it only after static files, so `/service-worker.js` and other files are unaffected, and `/assets/*` is excluded so a missing chunk still gives 404. Confirm on the Story 1.2 preview that `/logg-inn` loads and `/api/health` still reaches FastAPI.
+  outcome: Fixed in Story 1.2, not yet confirmed. Production answered 404 for `/logg-inn` (checked 2026-11-01), so `vercel.json` now gives the frontend service a rewrite `/(.*)` → `/index.html`; Vercel applies it only after static files, so `/service-worker.js` and other files are unaffected, and `/assets/*` is excluded so a missing chunk still gives 404. Confirm on the Story 1.2 preview that `/logg-inn` loads and `/api/health` still reaches FastAPI. Confirmed 2026-11-01 on the Story 1.2 preview: `/logg-inn` loads directly and `/api/health` still reaches FastAPI (`.logs/eirik/issues.md`, R10 row; recorded 2026-11-08, Epic 1 retro, action 4).
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm the Neon integration names preview branches exactly `preview/<git-branch>` so the cleanup workflow deletes them (unverified, would be medium).
   evidence: Code review of Story 1.7 (R11); settle with AC 4 after the merge.
+  outcome: Settled 2026-11-01: after PR #8 was merged, the cleanup workflow deleted the preview branch in Neon (step `success`), so the branch name matches (`.logs/eirik/997-…md`). Later PRs are still to be checked (Epic 1 retro, action 5). Outcome recorded 2026-11-08 (Epic 1 retro, action 4).
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-account-registration-login.md`
   summary: Let the database enforce lowercase emails (`CHECK (email = lower(email))` or a unique index on `lower(email)`), not only `accounts.normalize_email`.
   evidence: Review of Story 1.2. `uq_users_email` is on the raw column, so a write that bypasses `accounts.register` (e.g. the Story 1.6 seed) could create `Ola@…` beside `ola@…`. Low today, since register is the only write path; the 1.6 seed should call `accounts.register`.
