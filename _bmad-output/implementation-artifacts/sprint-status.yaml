@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-08-2026 12:58
+last_updated: 11-08-2026 13:12
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -48,7 +48,7 @@ development_status:
   1-5-view-home-members-list-enforce-role-based-permissions: done
   1-6-run-locally-with-docker-seed-data-and-mock-modes: done
   1-7-hosted-demo-on-vercel-services-neon: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-task-setup-at-home-creation: backlog
@@ -81,3 +81,66 @@ development_status:
   epic-6: backlog
   6-1-landlord-portfolio-dashboard: backlog
   epic-6-retrospective: optional
+action_items:
+  - id: "epic-1-retro-item-1-chore-pr-ci-cancels-only-pr-runs-test-po"
+    epic: 1
+    action: "Chore PR: CI cancels only PR runs, test POST retry after 401, relabel
+      in_other_home link (R3, R4, R7)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-2-before-epic-2-shared-frontend-error-help"
+    epic: 1
+    action: "Before Epic 2: shared frontend error helper, backend test helpers in
+      conftest.py, one time module (A1-A3)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-3-dated-revised-notes-in-prd-oq3-fr-3-zero"
+    epic: 1
+    action: "Dated [REVISED] notes in PRD (OQ3, FR-3 zero or more Tenants), EXPERIENCE.md
+      and Story 1.2/1.4 ACs (S3, S4)"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-4-add-outcomes-to-resolved-deferred-work-m"
+    epic: 1
+    action: "Add outcomes to resolved deferred-work.md entries R7, SW check, R8, R10,
+      R11 (S5)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-5-check-neon-preview-branches-for-prs-11-1"
+    epic: 1
+    action: "Check Neon preview branches for PRs 11, 16, 18, 20, record R9, decide
+      if the check stays manual (S2)"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-6-run-issue-14-on-windows-together-when-st"
+    epic: 1
+    action: "Run issue 14 on Windows together when Steffen is back (S1)"
+    owner: "Eirik + Steffen"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-7-give-code-reviewers-the-commit-conventio"
+    epic: 1
+    action: "Give code reviewers the commit conventions so KI-logg/sprint-status are
+      not filed as findings (P5)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-8-plan-leave-home-and-landlord-removes-mem"
+    epic: 1
+    action: "Plan leave Home and Landlord removes Member with bmad-correct-course;
+      document manual reset until then (R2)"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-1-retro-item-9-record-postgres-lock-tests-and-missing-l"
+    epic: 1
+    action: "Record Postgres lock tests and missing login rate limit as accepted risks
+      in the plan and spec-1-2 (P3, R9)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
