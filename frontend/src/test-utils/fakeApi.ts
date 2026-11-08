@@ -1,5 +1,5 @@
 // Story 1.2 test helper: stubs globalThis.fetch with handlers per "METHOD /path".
-import type { Home, HomeType } from '../api/homes';
+import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
 
 export type Handler = (request: Request) => Response | Promise<Response>;
@@ -53,11 +53,24 @@ export function homesResponse(homes: readonly Home[] = [OLAS_HOME], allowed_type
   return { homes, allowed_types };
 }
 
-/** Signed in as Ola on load, with these Homes. */
-export function signedInWith(homes: readonly Home[] = [OLAS_HOME], allowed_types: HomeType[] = []) {
+// Story 1.5: Ola's own row, as GET /api/homes/<id>/members returns it.
+export function olaAs(role: Member['role']): Member {
+  return { user_id: OLA.id, name: OLA.name, role, is_you: true };
+}
+
+export const membersPath = (home: Pick<Home, 'id'>) => `/api/homes/${home.id}/members`;
+
+/** Signed in as Ola on load, with these Homes; each Home's members list holds only Ola. */
+export function signedInWith(
+  homes: readonly Home[] = [OLAS_HOME],
+  allowed_types: HomeType[] = [],
+): Record<string, Handler> {
   return {
     'POST /api/auth/refresh': () => json(200, authResponse('a1')),
     'GET /api/auth/me': () => json(200, OLA),
     'GET /api/homes': () => json(200, homesResponse(homes, allowed_types)),
+    ...Object.fromEntries(
+      homes.map((home) => [`GET ${membersPath(home)}`, () => json(200, { members: [olaAs(home.role)] })]),
+    ),
   };
 }

@@ -43,6 +43,8 @@ graph LR
   CRON["Vercel Cron"] -->|once a day| API
 ```
 
+`[REVISED 2026-11-08]` — delivered as `require_role(*roles)`; `home_id` is read from the path only (see AD-2).
+
 Layers may only depend downward (UI → routes → permission → domain → persistence/external adapters). Nothing below the domain layer may import or call back up into routes or UI.
 
 ## Invariants & Rules
@@ -57,7 +59,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 - **Binds:** FR-3, FR-5, FR-8, FR-13, Cross-Cutting NFR "Permission enforcement"; depends on AD-1
 - **Prevents:** a flat `role` JWT claim, which would be wrong the moment a user holds different Roles in different Homes (AD-1) — e.g. correctly enforced as Landlord in Home A but incorrectly enforced as that same flat role in Home B.
-- **Rule:** The JWT carries only identity (`user_id`) — never a Role claim. Every Home-scoped route takes `home_id` as a path parameter; its `require_role(home_id, allowed_roles)` dependency loads the caller's Membership row for `(user_id, home_id)` from the database and checks *that* row's Role. A user with no Membership in the target Home is rejected regardless of their Role elsewhere. No route reads Role from the request body or query params.
+- **Rule:** The JWT carries only identity (`user_id`) — never a Role claim. Every Home-scoped route takes `home_id` as a path parameter; its `require_role(home_id, allowed_roles)` dependency loads the caller's Membership row for `(user_id, home_id)` from the database and checks *that* row's Role. A user with no Membership in the target Home is rejected regardless of their Role elsewhere. No route reads Role from the request body or query params. `[REVISED 2026-11-08]` — delivered as `require_role(*roles)` (Story 1.4, reused in Story 1.5): the roles are given when the dependency is built, and `home_id` is read from the path only (`Path()`), never from the query or body. `backend/tests/test_permissions.py` walks every route and fails if a `{home_id}` route lacks `require_role` or `require_role` sits on a route without `{home_id}`.
 
 ### AD-3 — One domain function owns task-completion state
 
@@ -222,7 +224,7 @@ erDiagram
   HOME ||--o{ NOTIFICATION_CADENCE_SETTING : "configures (Landlord Homes)"
 ```
 
-`TASK_TYPE` is the system-seeded catalog AD-6 presumes — each row carries the `photo_evidence_eligible` flag; `TASK` references one `TASK_TYPE` and never defines eligibility itself. `PHOTO_EVIDENCE` is per-`TASK` (AD-5), not per-`TASK_INSTANCE` — see AD-5 for why. `INVITE_LINK` carries its own validity state (token, target Role, used/expired/revoked) distinct from `MEMBERSHIP` — EXPERIENCE.md's "invalid/expired invite link" and "duplicate registration attempt" states need something to check against before a Membership exists. `[ASSUMPTION: default policy is single-use + 7-day expiry, regenerable by whoever can invite (AD-2); confirm with the team before building, easy to change since it's just two column defaults.]` `PUSH_SUBSCRIPTION` holds each browser/device's Web Push endpoint + keys per User (a User may have more than one, one per installed device) — needed for AD-8/AD-12 to know where to send a notification, and to represent EXPERIENCE.md's "no push permission granted" state.
+`TASK_TYPE` is the system-seeded catalog AD-6 presumes — each row carries the `photo_evidence_eligible` flag; `TASK` references one `TASK_TYPE` and never defines eligibility itself. `PHOTO_EVIDENCE` is per-`TASK` (AD-5), not per-`TASK_INSTANCE` — see AD-5 for why. `INVITE_LINK` carries its own validity state (token, target Role, used/expired/revoked) distinct from `MEMBERSHIP` — EXPERIENCE.md's "invalid/expired invite link" and "duplicate registration attempt" states need something to check against before a Membership exists. `[ASSUMPTION: default policy is single-use + 7-day expiry, regenerable by whoever can invite (AD-2); confirm with the team before building, easy to change since it's just two column defaults.]` `[REVISED 2026-11-08]` — policy settled by the team on 2026-11-07 (Story 1.4, decision 1): single-use, valid 7 days; any Household Member or the Landlord can make a link, a Tenant cannot (server rejects with 403); "Lag ny lenke" leaves earlier unused links valid; no revoking in v1. `PUSH_SUBSCRIPTION` holds each browser/device's Web Push endpoint + keys per User (a User may have more than one, one per installed device) — needed for AD-8/AD-12 to know where to send a notification, and to represent EXPERIENCE.md's "no push permission granted" state.
 
 ### Source tree
 

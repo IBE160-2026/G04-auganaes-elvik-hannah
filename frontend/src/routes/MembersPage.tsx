@@ -1,12 +1,13 @@
 // Story 1.4 (FR-2, team decision 4): "Medlemmer og invitasjon" for one Home. A Household Member
 // or the Landlord makes an invite link here; for a Tenant the control is absent, not disabled.
-// Whether the caller may invite is the server's can_invite, never decided here. Story 1.5 adds
-// the members list to this page.
+// Whether the caller may invite is the server's can_invite, never decided here.
+// Story 1.5 (FR-3, SM-6): every Member sees every Member of the Home and their Role, above the
+// invite control. A failed members load is shown at the list and never hides the invite control.
 import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import type { Home } from '../api/homes';
+import { MEMBER_MESSAGES, ROLE_LABELS, type Home } from '../api/homes';
 import { INVITE_MESSAGES, inviteUrl, type Invite } from '../api/invites';
-import { useCreateInvite, useHomes } from '../api/queries';
+import { useCreateInvite, useHomes, useMembers } from '../api/queries';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import './AuthForm.css';
@@ -34,6 +35,7 @@ export function MembersPage() {
     <div className="members-page">
       <h1 className="members-page__title">Medlemmer og invitasjon</h1>
       <p className="members-page__lead">{home.name}</p>
+      <MembersList key={home.id} homeId={home.id} />
       {home.can_invite ? (
         <InviteControl key={home.id} home={home} />
       ) : (
@@ -43,6 +45,50 @@ export function MembersPage() {
         Tilbake til hjemmet
       </Link>
     </div>
+  );
+}
+
+// Rendered only once the Home is found, so a foreign or mistyped id is never fetched.
+function MembersList({ homeId }: { homeId: string }) {
+  const members = useMembers(homeId);
+
+  return (
+    <section className="members-page__section" aria-labelledby="members-page-members">
+      <h2 id="members-page-members" className="members-page__subtitle">
+        Medlemmer
+      </h2>
+      {members.data ? (
+        <ul className="members-page__list">
+          {members.data.map((member) => (
+            <li key={member.user_id} className="members-page__member">
+              <span className="members-page__name">
+                {member.name}
+                {member.is_you && ' (deg)'}
+              </span>
+              <span className="members-page__visually-hidden">, </span>
+              <span className="members-page__role">{ROLE_LABELS[member.role]}</span>
+            </li>
+          ))}
+        </ul>
+      ) : members.isError ? (
+        <>
+          <p className="auth-form__error" role="alert">
+            {MEMBER_MESSAGES.loadFailed}
+          </p>
+          <button
+            type="button"
+            className="members-page__secondary"
+            aria-label="Prøv å hente medlemmene igjen"
+            onClick={() => void members.refetch()}
+          >
+            Prøv igjen
+          </button>
+        </>
+      ) : (
+        // No role="status": the Homes loading above already uses it.
+        <p className="members-page__note">Henter medlemmer …</p>
+      )}
+    </section>
   );
 }
 

@@ -1,4 +1,4 @@
-/* Story 1.4: Members & Invite. One column at every width. */
+/* Story 1.4: Members & Invite. One column at every width. Story 1.5: the members list. */
 .members-page,
 .members-page__section,
 .members-page__invite {
@@ -67,4 +67,38 @@
   min-height: var(--tap-min);
   color: var(--color-primary);
   font-weight: var(--font-weight-bold);
+}
+
+/* Story 1.5: one row per Member, name over Role. */
+.members-page__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.members-page__member {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--tap-min);
+  padding: var(--space-2) 0;
+  overflow-wrap: anywhere;
+}
+
+.members-page__name {
+  font-weight: var(--font-weight-bold);
+}
+
+.members-page__role {
+  color: var(--color-ink-secondary);
+}
+
+/* Read by screen readers and kept on copy, never shown: separates name from Role. */
+.members-page__visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

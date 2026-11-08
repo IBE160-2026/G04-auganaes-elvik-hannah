@@ -1,4 +1,5 @@
 // Story 1.3 (FR-1, FR-3): list and create the signed-in user's Homes, with Norwegian errors.
+// Story 1.5 (FR-3): the Members of one Home.
 import { api } from './client';
 import type { components } from './schema';
 
@@ -7,6 +8,7 @@ export type Homes = components['schemas']['HomesOut'];
 export type HomeType = Home['type'];
 export type Role = Home['role'];
 export type CreateHomeInput = components['schemas']['CreateHomeRequest'];
+export type Member = components['schemas']['MemberOut'];
 
 type ValidationError = components['schemas']['ValidationError'];
 
@@ -22,6 +24,10 @@ export const HOME_MESSAGES = {
   typeMissing: 'Velg hva slags hjem dette er.',
   loadFailed: 'Vi fikk ikke hentet hjemmene dine.',
   unknown: 'Noe gikk galt. Prøv igjen om litt.',
+} as const;
+
+export const MEMBER_MESSAGES = {
+  loadFailed: 'Vi fikk ikke hentet medlemmene.',
 } as const;
 
 export const TYPE_LABELS: Record<HomeType, string> = {
@@ -91,4 +97,13 @@ export async function createHome(body: CreateHomeInput): Promise<Home> {
   const { data, error, response } = await api.POST('/api/homes', { body });
   if (!data) throw toHomeError(response, error);
   return data;
+}
+
+/** Every Member of the Home, the Landlord first. Any failure gets the one load message. */
+export async function fetchMembers(homeId: string): Promise<Member[]> {
+  const { data, response } = await api.GET('/api/homes/{home_id}/members', {
+    params: { path: { home_id: homeId } },
+  });
+  if (!data) throw new HomeError(response.status, MEMBER_MESSAGES.loadFailed);
+  return data.members;
 }
