@@ -35,3 +35,5 @@
 - [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Sjekke i Neon at preview-branchen for 1.5 er slettet etter at PR #20 ble lukket
 - [x] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Avgjøre om Epic 1 skal ha retrospektiv (`bmad-retrospective`, valgfri) før Story 2.1 (løst 2026-11-08: kjørt, se `epic-1-retro-2026-11-08.md`)
 - [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Ni tiltak fra retrospektiven for Epic 1 (`action_items` i `sprint-status.yaml`), blant annet correct-course for «forlat hjem / utleier fjerner medlem» og Windows-test med Steffen
+- [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Tiltak 8: `bmad-correct-course` for «forlat hjem / utleier fjerner medlem» før Story 2.1 (branch `change/leave-home-remove-member`)
+- [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Tiltak 5: sjekke Neon-konsollet for preview-branchene til PR #11–#22
