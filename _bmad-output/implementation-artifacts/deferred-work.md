@@ -10,6 +10,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Add an automated test that `backend/alembic/env.py` uses `get_migration_url()` and takes `pg_advisory_xact_lock` inside Alembic's transaction.
   evidence: Code review of Story 1.7 (R6); today only proven by hand (spec Implementation Notes). Needs a DB-backed test harness, expected with Story 1.2/1.6.
+  outcome: Accepted risk 2026-11-08 (Epic 1 retrospective, P3): no Postgres concurrency test job before Epic 2; the lock is reasoned, not tested. Recorded in `epics.md` (Additional Requirements, deferred by Architecture). Revisit if the hosted demo gets real users.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Add a CI workflow that runs pytest, ruff, Vitest, lint and build on every PR.
   evidence: Code review of Story 1.7 (R7); no workflow runs tests, so all checks are local only. Pre-existing since Story 1.1.
@@ -39,6 +40,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-create-a-home.md`
   summary: Add a concurrent Postgres test that two parallel `POST /api/homes` for a user without a Home create exactly one Home (the `with_for_update` lock in `domain/homes.create_home`).
   evidence: Code review of Story 1.3; SQLite ignores `FOR UPDATE` and CI runs pytest only on SQLite, so deleting the lock passes every check. Needs a Postgres-backed test harness (same gap as the 1.7 `env.py` lock entry).
+  outcome: Accepted risk 2026-11-08 (Epic 1 retrospective, P3): no Postgres concurrency test job before Epic 2; the lock is reasoned, not tested. Recorded in `epics.md` (Additional Requirements, deferred by Architecture). Revisit if the hosted demo gets real users.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-create-a-home.md`
   summary: Decide in Story 1.4 whether accepting an invite may give a Household Member or Tenant a second Home, and enforce it in `domain/homes.add_member` rather than only in the seed.
   evidence: Code review of Story 1.3 (unverified, would be medium). `add_member` adds a Membership to any Home; only `seed/homes.py` skips Jonas when he is already in another Home. The 1.3 intent covers only the create flow ("not re-prompted"), so the rule for joining belongs to 1.4's invite acceptance.
@@ -46,6 +48,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-4-invite-members-accept-invite.md`
   summary: Add concurrent Postgres tests that two parallel accepts of one invite link give exactly one Membership (the `with_for_update` lock in `domain/invites.accept`), and that two parallel joins by one Household Member through different links give exactly one Membership (the user-row lock in `domain/homes.add_member`).
   evidence: Verification-gap review of Story 1.4. Removing either lock passes every check, because pytest runs on SQLite (which ignores `FOR UPDATE`) and the CI Postgres steps never run two accepts at once; `test_sequential_second_accept_fails` fails on `used_at`, not on the lock. Needs the same Postgres-backed test harness as the 1.3 `create_home` entry.
+  outcome: Accepted risk 2026-11-08 (Epic 1 retrospective, P3): no Postgres concurrency test job before Epic 2; the lock is reasoned, not tested. Recorded in `epics.md` (Additional Requirements, deferred by Architecture). Revisit if the hosted demo gets real users.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-5-view-home-members-list-enforce-role-based-permissions.md`
   summary: Add a frontend test that a session change to another user without sign-out never shows the previous user's cached Homes, invite preview or members list (the user id in `homesKey`, `inviteKey` and `membersKey`).
   evidence: Verification-gap review of Story 1.5. Dropping the user id from `membersKey` passes every test, because each test has one user and a fresh `QueryClient`, and sign-out clears the cache. The same holds for `homesKey` and `inviteKey`, so one shared test fits better than one per story.

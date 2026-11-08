@@ -177,6 +177,7 @@ Code review 2026-11-01 (Blind Hunter, Edge Case Hunter, Verification Gap; 33 fin
 - **Register 409 reveals that an email exists** (team decision): this is accepted for Trinn 1, because it matches "Logg inn i stedet". Login never reveals it.
 - **`prepare_threshold` (spec-review finding #8 from 1.7):** kept. Neon's PgBouncer supports prepared statements in transaction mode, so it is probably unnecessary, but turning prepares off costs nothing at this load. Removing it is the only way to settle the question, and that is not worth the risk. Closed as "kept".
 - **Refresh on 401, one at a time:** concurrent 401s, and StrictMode's double effect on app load, share one in-flight refresh promise. This avoids duplicate requests and the browser's cookie ending up as a different value than the token in memory.
+- **No rate limit on login and registration (accepted 2026-11-08, Epic 1 retrospective R9):** neither endpoint limits attempts or locks accounts, also on the hosted demo, where each attempt runs one Argon2 hash. Accepted because the demo holds no real data and is a course project; a Vercel WAF rate-limit rule on `/api/auth/login` and `/api/auth/register` is the fix if that changes.
 
 ## Verification
 
