@@ -36,6 +36,30 @@ describe('API client', () => {
     expect(getSession()?.accessToken).toBe('fresh');
   });
 
+  // Epic 1 retro (R4): every write in later epics takes this path when the access token expires.
+  it('retries a POST with the same body after a 401', async () => {
+    setSession({ accessToken: 'expired', user: OLA });
+    const body = { name: 'Kollektivet', type: 'household' } as const;
+    const server = fakeApi({
+      'POST /api/homes': async (request) => {
+        expect(await request.json()).toEqual(body);
+        return bearer(request) === 'Bearer fresh'
+          ? json(201, { id: 'h1', ...body, role: 'household_member', created_at: '2026-11-08T12:00:00Z', can_invite: true })
+          : json(401, { detail: 'x' });
+      },
+      'POST /api/auth/refresh': () => json(200, authResponse('fresh')),
+    });
+
+    const { data, response } = await api.POST('/api/homes', { body });
+
+    expect(response.status).toBe(201);
+    expect(data?.name).toBe('Kollektivet');
+    expect(server.calls('POST', '/api/auth/refresh')).toHaveLength(1);
+    const sent = server.calls('POST', '/api/homes');
+    expect(sent.map(bearer)).toEqual(['Bearer expired', 'Bearer fresh']);
+    expect(await Promise.all(sent.map((r) => r.json()))).toEqual([body, body]);
+  });
+
   it('shares one refresh between concurrent 401s', async () => {
     setSession({ accessToken: 'expired', user: OLA });
     const server = fakeApi({

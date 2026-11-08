@@ -3,9 +3,9 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate } from 'react-router';
+import { ApiError, fieldsOf } from '../api/errors';
 import {
   HOME_MESSAGES,
-  HomeError,
   TYPE_LABELS,
   validateCreateHome,
   type HomeFieldErrors,
@@ -66,9 +66,9 @@ export function CreateHome() {
       {
         onSuccess: () => navigate('/', { replace: true }),
         onError: (error) => {
-          if (error instanceof HomeError && Object.keys(error.fields).length > 0) {
-            showErrors(error.fields);
-          } else if (error instanceof HomeError && error.status === 409) {
+          if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
+            showErrors(fieldsOf<HomeFieldErrors>(error));
+          } else if (error instanceof ApiError && error.status === 409) {
             setFormError(error.message);
             // The allowed types changed (e.g. a Home made in another tab): re-render from the
             // server's, which sends the user to "/" when none remain.

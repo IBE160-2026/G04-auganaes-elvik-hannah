@@ -20,12 +20,11 @@ from sqlmodel import Session
 
 from app.config import Settings
 from app.domain import homes
-from app.domain.accounts import register
 from app.main import create_app
 from app.models.membership import ROLES
-from app.models.user import User
 from app.permissions.current_user import CurrentUser
 from app.permissions.require_role import FORBIDDEN
+from tests.helpers import auth_for, new_user
 
 REQUIRE_ROLE = "require_role.<locals>.dependency"
 PLACEHOLDER = re.compile(r"\{([^}:]+)(?::[^}]*)?\}")
@@ -135,35 +134,25 @@ def test_no_route_takes_home_id_from_anywhere_but_the_path(route: RouteContext) 
             assert "home_id" not in fields, route.path
 
 
-def _user(session: Session, name: str) -> User:
-    return register(
-        session, email=f"{name}-{uuid.uuid4().hex[:6]}@example.com", name=name, password="hemmelig1"
-    )
-
-
-def _auth(client: TestClient, email: str) -> dict[str, str]:
-    response = client.post("/api/auth/login", json={"email": email, "password": "hemmelig1"})
-    assert response.status_code == 200
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-
 @pytest.mark.parametrize("role", ROLES)
 def test_a_member_of_one_home_gets_403_on_every_route_of_another(
     client: TestClient, engine: Engine, role: str
 ) -> None:
     """Cross-Home sweep: whatever the caller's Role in A, every {home_id} route for B is 403."""
     with Session(engine) as session:
-        caller = _user(session, "Caller")
+        caller = new_user(session, "Caller")
         if role == "tenant":
-            home_a = homes.create_home(session, _user(session, "Eier"), name="A", type="landlord")
+            home_a = homes.create_home(
+                session, new_user(session, "Eier"), name="A", type="landlord"
+            )
             homes.add_member(session, home_a.home, caller)
         else:
             home_type = "landlord" if role == "landlord" else "household"
             homes.create_home(session, caller, name="A", type=home_type)
-        home_b = homes.create_home(session, _user(session, "B"), name="B", type="household").home
+        home_b = homes.create_home(session, new_user(session, "B"), name="B", type="household").home
         assert [h.role for h in homes.homes_for(session, caller)] == [role]
         home_b_id, email = str(home_b.id), caller.email
-    auth = _auth(client, email)
+    auth = auth_for(client, email)
 
     for route in HOME_ROUTES:
         path = PLACEHOLDER.sub(

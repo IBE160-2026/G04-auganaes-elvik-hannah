@@ -1,17 +1,15 @@
 """The account row (Story 1.2, FR-1). A Role never lives here; it belongs on Membership (AD-2)."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
+from app.clock import utc_now
+
 EMAIL_MAX_LENGTH = 320
 NAME_MAX_LENGTH = 50
-
-
-def utc_now() -> datetime:
-    return datetime.now(UTC)
 
 
 class User(SQLModel, table=True):

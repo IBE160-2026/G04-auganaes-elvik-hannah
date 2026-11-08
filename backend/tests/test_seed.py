@@ -5,7 +5,7 @@ Story 1.4: plus the Landlord Kari's Home and the Tenant Anders, who joins it by 
 
 import pytest
 from sqlalchemy.exc import OperationalError
-from sqlmodel import Session, func, select
+from sqlmodel import Session, select
 
 from app import seed
 from app.domain import homes
@@ -16,20 +16,13 @@ from app.models.membership import Membership
 from app.models.user import User
 from app.seed.homes import EXAMPLE_HOME_NAME, LANDLORD_HOME_NAME, seed_homes
 from app.seed.users import EXAMPLE_PASSWORD, EXAMPLE_USERS, seed_users
+from tests.helpers import count
 
 
 @pytest.fixture(autouse=True)
 def local_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("DATABASE_URL", "DATABASE_URL_UNPOOLED", "VERCEL"):
         monkeypatch.delenv(name, raising=False)
-
-
-def user_count(session: Session) -> int:
-    return session.exec(select(func.count()).select_from(User)).one()
-
-
-def count(session: Session, model: type) -> int:
-    return session.exec(select(func.count()).select_from(model)).one()
 
 
 def by_email(session: Session, email: str) -> User:
@@ -144,7 +137,7 @@ def test_partial_skips_existing_user_with_other_casing(
     existing = register(session, email="  Mari@Example.COM ", name="Mari", password="annet-passord")
     seed_users(session)
 
-    assert user_count(session) == 4
+    assert count(session, User) == 4
     mari = session.exec(select(User).where(User.email == "mari@example.com")).one()
     # Never overwritten: the existing row keeps its name and password.
     assert mari.id == existing.id and mari.name == "Mari"

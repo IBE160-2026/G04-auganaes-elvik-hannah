@@ -1,6 +1,7 @@
 // Story 1.3 (FR-1, FR-3): list and create the signed-in user's Homes, with Norwegian errors.
 // Story 1.5 (FR-3): the Members of one Home.
 import { api } from './client';
+import { ApiError, GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
 
 export type Home = components['schemas']['HomeOut'];
@@ -23,7 +24,7 @@ export const HOME_MESSAGES = {
   nameTooLong: `Navnet kan ha maks ${HOME_NAME_MAX} tegn.`,
   typeMissing: 'Velg hva slags hjem dette er.',
   loadFailed: 'Vi fikk ikke hentet hjemmene dine.',
-  unknown: 'Noe gikk galt. Prøv igjen om litt.',
+  unknown: GENERIC_ERROR,
 } as const;
 
 export const MEMBER_MESSAGES = {
@@ -40,18 +41,6 @@ export const ROLE_LABELS: Record<Role, string> = {
   landlord: 'Utleier',
   tenant: 'Leietaker',
 };
-
-/** A failed Home call. `fields` holds messages per input; `message` is for the form. */
-export class HomeError extends Error {
-  readonly status: number;
-  readonly fields: HomeFieldErrors;
-
-  constructor(status: number, message: string, fields: HomeFieldErrors = {}) {
-    super(message);
-    this.status = status;
-    this.fields = fields;
-  }
-}
 
 /** Client-side checks, mirroring the server's 422 rules. `type` is null until one is chosen. */
 export function validateCreateHome(name: string, type: HomeType | null): HomeFieldErrors {
@@ -77,14 +66,13 @@ function fieldErrorsFrom422(detail: ValidationError[]): HomeFieldErrors {
   return errors;
 }
 
-function toHomeError(response: Response, error: unknown): HomeError {
-  const body = (error ?? {}) as { detail?: unknown };
-  if (response.status === 422 && Array.isArray(body.detail)) {
-    return new HomeError(422, HOME_MESSAGES.unknown, fieldErrorsFrom422(body.detail as ValidationError[]));
-  }
-  // A 409 carries the server's Norwegian reason; anything else gets the generic message.
-  const message = response.status === 409 && typeof body.detail === 'string' ? body.detail : HOME_MESSAGES.unknown;
-  return new HomeError(response.status, message);
+/** A 409 carries the server's Norwegian reason; anything else gets the generic message. */
+function toHomeError(response: Response, error: unknown) {
+  return toApiError(response, error, {
+    passThrough: [409],
+    fallback: HOME_MESSAGES.unknown,
+    fields: fieldErrorsFrom422,
+  });
 }
 
 export async function fetchHomes(): Promise<Homes> {
@@ -104,6 +92,6 @@ export async function fetchMembers(homeId: string): Promise<Member[]> {
   const { data, response } = await api.GET('/api/homes/{home_id}/members', {
     params: { path: { home_id: homeId } },
   });
-  if (!data) throw new HomeError(response.status, MEMBER_MESSAGES.loadFailed);
+  if (!data) throw new ApiError(response.status, MEMBER_MESSAGES.loadFailed);
   return data.members;
 }

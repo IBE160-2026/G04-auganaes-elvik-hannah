@@ -4,7 +4,8 @@
 // one-Home rule is never copied here. An invalid link shows a message, never a 404.
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ROLE_LABELS } from '../api/homes';
-import { INVITE_MESSAGES, InviteError, invalidInviteMessage, validInviteToken, type InvitePreview } from '../api/invites';
+import { ApiError } from '../api/errors';
+import { INVITE_MESSAGES, invalidInviteMessage, validInviteToken, type InvitePreview } from '../api/invites';
 import { useAcceptInvite, useInvite } from '../api/queries';
 import { useSession } from '../api/session';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -108,8 +109,9 @@ function ValidTokenInvite({ token }: { token: string }) {
         <p className="invite-page__message">
           Du er allerede med i «{preview.other_home_name}». Du kan bare være med i ett hjem om gangen.
         </p>
+        {/* "/" shows the newest Home, which may not be the one named above (Epic 1 retro, R7). */}
         <Link to="/" className="invite-page__link">
-          Gå til hjemmet ditt
+          Gå til forsiden
         </Link>
       </div>
     );
@@ -123,7 +125,7 @@ function ValidTokenInvite({ token }: { token: string }) {
     });
   }
 
-  const joinError = accept.error instanceof InviteError ? accept.error.message : INVITE_MESSAGES.unknown;
+  const joinError = accept.error instanceof ApiError ? accept.error.message : INVITE_MESSAGES.unknown;
 
   return (
     <div className="auth-page">

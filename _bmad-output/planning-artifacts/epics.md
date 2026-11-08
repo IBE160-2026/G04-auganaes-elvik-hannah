@@ -123,7 +123,7 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 - **Deployment/infrastructure (optional hosted demo):** one Vercel project (`g04husly`) with the Vite frontend and FastAPI backend as Vercel Services on one domain (`/api/*` → backend); Neon Postgres via the Vercel integration, with a Neon branch per PR preview migrated in the build step and deleted when the PR closes; a private Vercel Blob store for Photo Evidence; Vercel Cron for the daily due-check; Google Gemini API for AI. This is an optional demo deployment of the same code, not a requirement for running the app, and Trinn 1 needs none of cron, push or Blob there (Story 1.7).
 - **Secrets:** Gemini key, VAPID keys, DB URL, JWT signing key, `CRON_SECRET` and `BLOB_READ_WRITE_TOKEN` via environment variables only (Vercel project settings in the hosted demo), never committed.
 - **Core entities (names/relationships only):** User, Membership (scoped to one Role per Home), Home, InviteLink (own validity state: token, target Role, used/expired/revoked, distinct from Membership), Task, TaskType (system-seeded catalog carrying `photo_evidence_eligible`), TaskInstance, MemberCompletion (attribution), PhotoEvidence (per-Task), NotificationCadenceSetting (Landlord Homes), PushSubscription (per User, one per device). `[ASSUMPTION carried from Architecture, confirm with team before building]`: invite link default policy is single-use + 7-day expiry, regenerable by whoever can invite. `[REVISED 2026-11-08]` — policy settled by the team on 2026-11-07 (Story 1.4, decision 1): single-use, valid 7 days; any Household Member or the Landlord can make a link, a Tenant cannot (server rejects with 403); "Lag ny lenke" leaves earlier unused links valid; no revoking in v1.
-- **Explicitly deferred by Architecture (flag for sprint planning, not pre-decided):** observability/logging strategy (left to Vercel's runtime logs + basic logging); automated testing strategy (pytest/Vitest suggested, not binding — the one binding rule is that the suite runs offline against the mock adapters, AD-15); rate-limiting/abuse protection on AI endpoints (none beyond the one-service chokepoint + Gemini's own free-tier cap); internationalization infrastructure (not needed — Norwegian-only v1 per UX).
+- **Explicitly deferred by Architecture (flag for sprint planning, not pre-decided):** observability/logging strategy (left to Vercel's runtime logs + basic logging); automated testing strategy (pytest/Vitest suggested, not binding — the one binding rule is that the suite runs offline against the mock adapters, AD-15); rate-limiting/abuse protection on AI endpoints (none beyond the one-service chokepoint + Gemini's own free-tier cap); internationalization infrastructure (not needed — Norwegian-only v1 per UX). `[REVISED 2026-11-08]` Two risks accepted in the Epic 1 retrospective (P3, R9; Eirik): (1) the row locks in `create_home`, `invites.accept`, `homes.add_member` and the migration lock in `alembic/env.py` are reasoned, not tested, because pytest runs on SQLite; no Postgres concurrency test job is built before Epic 2. (2) Login and registration have no rate limit or lockout, also on the hosted demo, where each attempt runs Argon2; the demo holds no real data and is a course project. Revisit both if the hosted demo gets real users.
 
 ### UX Design Requirements
 
@@ -158,7 +158,7 @@ UX-DR21: Task completed — checkbox filled, title strikethrough, due-date line 
 UX-DR22: Empty task list — "Ingen oppgaver akkurat nå — nyt det! 🎉" (household) or "Ingen aktive oppgaver i dette hjemmet." (landlord Home Admin) — never an illustration with no text.
 UX-DR23: Invalid or expired invite link — "Denne invitasjonslenken er ikke lenger gyldig — be om en ny fra [utleier/husstandsmedlem]." — never a generic 404.
 UX-DR24: Failed login — inline field-level error, not a full-page reload; message never confirms or denies whether an email/username exists.
-UX-DR25: Duplicate registration attempt via invite link — if the invited email already has an account, offer "Logg inn i stedet" rather than a flat error.
+UX-DR25: Duplicate registration attempt via invite link — if the invited email already has an account, offer "Logg inn i stedet" rather than a flat error. `[REVISED 2026-11-08]` The invite link carries no email (Story 1.4, team decision 2). "Logg inn i stedet" is shown when registration through the link hits an email that already has an account (409), and it keeps the invite.
 UX-DR26: Tenant views a locked field — rendered read-only with visible lock affordance + "Satt av utleier" label via `aria-readonly` — never a disabled-looking grayed control with no explanation.
 UX-DR27: AI answer pending — short inline skeleton-line loading state announced via `aria-live="polite"`, not a full-screen spinner.
 UX-DR28: AI cannot answer / low confidence — says so plainly ("Usikker på svaret her — spør gjerne på nytt eller sjekk med noen andre") rather than guessing silently; the FR-14 disclaimer stays visible regardless of confidence.
@@ -352,6 +352,8 @@ So that I can access my Homes securely.
 **When** a user logs in on local running and on the PR preview
 **Then** the refresh cookie is set and `/api/auth/refresh` works; if Safari rejects the `Secure` cookie on `http://localhost`, the `Secure` flag is relaxed by an environment variable for local running only, never in the hosted demo
 
+*Revised 2026-11-08:* as built, `Secure` is off for local running by default and on in the hosted demo (on Vercel, or with `AUTH_COOKIE_SECURE=true`), so Safari works on `http://localhost` without any setting (Story 1.2 spec, finding 9).
+
 ### Story 1.3: Create a Home (Household or Landlord)
 
 **Stage:** Trinn 1
@@ -423,6 +425,8 @@ So that I can bring others in with the right Role.
 **Given** an invite link whose target email already has an account
 **When** that person opens it while logged out
 **Then** they are offered "Logg inn i stedet" rather than a flat error
+
+*Revised 2026-11-08:* The invite link carries no email (Story 1.4, team decision 2). "Logg inn i stedet" is shown when registration through the link hits an email that already has an account (409), and it keeps the invite.
 
 **Given** invite-link generation fails server-side
 **When** the Member sees the result

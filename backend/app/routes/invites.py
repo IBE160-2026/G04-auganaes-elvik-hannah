@@ -5,12 +5,12 @@ of that Home (homes.INVITER_ROLES). The preview is public, so the invite page ca
 before sign-in; with a Bearer token it also says whether the viewer can join.
 """
 
-from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel
 
+from app.clock import UtcDatetime
 from app.domain import homes, invites
 from app.models.home import HomeType
 from app.models.membership import Membership, Role
@@ -48,7 +48,7 @@ class InviteOut(BaseModel):
     token: str
     # The Role whoever joins gets, from the Home type.
     role: Role
-    expires_at: datetime
+    expires_at: UtcDatetime
 
 
 class InvitePreviewOut(BaseModel):
@@ -78,7 +78,7 @@ def create_invite(inviter: Inviter, session: SessionDep) -> InviteOut:
     return InviteOut(
         token=created.token,
         role=created.link.role,
-        expires_at=invites.as_utc(created.link.expires_at),
+        expires_at=created.link.expires_at,
     )
 
 

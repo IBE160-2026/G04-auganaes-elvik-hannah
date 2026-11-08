@@ -19,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlmodel import Field, SQLModel
 
-from app.models.user import utc_now
+from app.clock import utc_now
 
 Role = Literal["household_member", "landlord", "tenant"]
 ROLES: tuple[Role, ...] = get_args(Role)

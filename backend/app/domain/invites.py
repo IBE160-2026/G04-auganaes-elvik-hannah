@@ -11,16 +11,17 @@ Every function takes an optional `now`, so tests can fix the clock.
 
 import hashlib
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Literal, NamedTuple
 
 from sqlmodel import Session, select
 
+from app.clock import as_utc, utc_now
 from app.domain import homes
 from app.models.home import Home, HomeType
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership, Role
-from app.models.user import User, utc_now
+from app.models.user import User
 
 INVITE_TTL = timedelta(days=7)
 # token_urlsafe(32) gives 43 characters; anything longer than this is never a real token.
@@ -64,11 +65,6 @@ class Preview(NamedTuple):
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
-
-
-def as_utc(moment: datetime) -> datetime:
-    """SQLite gives timestamps back without a zone; they were written in UTC."""
-    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
 
 
 def _find(session: Session, token: str, *, lock: bool = False) -> InviteLink | None:

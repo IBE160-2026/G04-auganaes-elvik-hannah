@@ -12,25 +12,17 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, func, select
+from sqlmodel import Session, select
 
+from app.clock import as_utc
 from app.domain import homes, invites
-from app.domain.accounts import register
 from app.models.home import Home
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
 from app.models.user import User
+from tests.helpers import count, new_user
 
 T0 = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
-
-
-def new_user(session: Session, name: str = "Ola") -> User:
-    return register(
-        session,
-        email=f"{name.lower()}-{uuid.uuid4().hex[:6]}@example.com",
-        name=name,
-        password="hemmelig1",
-    )
 
 
 def membership(session: Session, user: User, home: Home) -> Membership:
@@ -47,10 +39,6 @@ def home_with_creator(session: Session, type: str, name: str = "Hjem") -> tuple[
 
 def link_for(session: Session, home: Home, creator: User, now: datetime = T0) -> str:
     return invites.create_invite(session, membership(session, creator, home), now=now).token
-
-
-def count(session: Session, model: type) -> int:
-    return session.exec(select(func.count()).select_from(model)).one()
 
 
 # Create
@@ -74,7 +62,7 @@ def test_link_expires_after_seven_days(session: Session) -> None:
 
     assert invites.INVITE_TTL == timedelta(days=7)
     session.refresh(link)
-    assert invites.as_utc(link.expires_at) == T0 + timedelta(days=7)
+    assert as_utc(link.expires_at) == T0 + timedelta(days=7)
 
 
 def test_only_the_hash_of_the_token_is_stored(session: Session) -> None:
@@ -217,7 +205,7 @@ def test_accept_adds_the_member_with_the_link_role_and_marks_the_link_used(
     assert (joined.home.id, joined.role) == (home.id, "tenant")
     link = session.exec(select(InviteLink)).one()
     assert link.used_by_user_id == tenant.id
-    assert invites.as_utc(link.used_at) == T0 + timedelta(hours=1)  # type: ignore[arg-type]
+    assert as_utc(link.used_at) == T0 + timedelta(hours=1)  # type: ignore[arg-type]
     assert membership(session, tenant, home).role == "tenant"
 
 

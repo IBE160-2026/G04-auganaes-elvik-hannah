@@ -6,13 +6,13 @@ through require_role, like every route with {home_id} (AD-2, tests/test_permissi
 """
 
 import uuid
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
+from app.clock import UtcDatetime
 from app.db import get_session
 from app.domain import homes
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
@@ -50,7 +50,7 @@ class HomeOut(BaseModel):
     type: HomeType
     # The caller's Role in this Home.
     role: Role
-    created_at: datetime
+    created_at: UtcDatetime
     # Story 1.4: whether the caller may create invite links here. Decided by the domain, so
     # the frontend never re-implements the rule.
     can_invite: bool

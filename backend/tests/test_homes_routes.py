@@ -18,16 +18,7 @@ from app.models.membership import Membership
 from app.models.user import User
 from app.permissions.require_role import FORBIDDEN
 from app.routes.homes import ALREADY_IN_HOME, LANDLORD_ONLY
-
-
-def sign_up(client: TestClient, name: str = "Ola") -> dict[str, str]:
-    """Registers a new user and returns the Authorization header for them."""
-    email = f"{name.lower()}-{uuid.uuid4().hex[:6]}@example.com"
-    response = client.post(
-        "/api/auth/register", json={"email": email, "name": name, "password": "hemmelig1"}
-    )
-    assert response.status_code == 201
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+from tests.helpers import sign_up
 
 
 def create(client: TestClient, auth: dict[str, str], name: str, type: str):

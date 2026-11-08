@@ -1,5 +1,6 @@
 // Story 1.2 (FR-1): sign in, register and sign out, with errors turned into Norwegian copy.
 import { api } from './client';
+import { GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
 import { setSession } from './session';
 
@@ -27,20 +28,8 @@ export const MESSAGES = {
   passwordMissing: 'Skriv inn passordet ditt.',
   passwordTooShort: `Passordet må ha minst ${PASSWORD_MIN} tegn.`,
   passwordTooLong: `Passordet kan ha maks ${PASSWORD_MAX} tegn.`,
-  unknown: 'Noe gikk galt. Prøv igjen om litt.',
+  unknown: GENERIC_ERROR,
 } as const;
-
-/** A failed auth call. `fields` holds messages per input; `message` is for the form. */
-export class AuthError extends Error {
-  readonly status: number;
-  readonly fields: FieldErrors;
-
-  constructor(status: number, message: string, fields: FieldErrors = {}) {
-    super(message);
-    this.status = status;
-    this.fields = fields;
-  }
-}
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -86,13 +75,13 @@ export function fieldErrorsFrom422(detail: ValidationError[] | undefined): Field
   return errors;
 }
 
-function toAuthError(response: Response, error: unknown): AuthError {
-  const body = (error ?? {}) as { detail?: unknown };
-  if (response.status === 422 && Array.isArray(body.detail)) {
-    return new AuthError(422, MESSAGES.unknown, fieldErrorsFrom422(body.detail as ValidationError[]));
-  }
-  const message = typeof body.detail === 'string' ? body.detail : MESSAGES.unknown;
-  return new AuthError(response.status, message);
+/** Any string reason from the server is shown (wrong password, email taken, expired session). */
+function toAuthError(response: Response, error: unknown) {
+  return toApiError(response, error, {
+    passThrough: 'any',
+    fallback: MESSAGES.unknown,
+    fields: fieldErrorsFrom422,
+  });
 }
 
 function signedIn<T extends AuthResponse>(data: T): T {
