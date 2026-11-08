@@ -142,5 +142,5 @@ action_items:
     action: "Record Postgres lock tests and missing login rate limit as accepted risks
       in the plan and spec-1-2 (P3, R9)"
     owner: "Eirik + Claude"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
