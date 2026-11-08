@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-08-2026 13:24
+last_updated: 11-08-2026 16:57
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -108,7 +108,7 @@ action_items:
     action: "Add outcomes to resolved deferred-work.md entries R7, SW check, R8, R10,
       R11 (S5)"
     owner: "Eirik + Claude"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
   - id: "epic-1-retro-item-5-check-neon-preview-branches-for-prs-11-1"
     epic: 1
@@ -128,7 +128,7 @@ action_items:
     action: "Give code reviewers the commit conventions so KI-logg/sprint-status are
       not filed as findings (P5)"
     owner: "Eirik + Claude"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
   - id: "epic-1-retro-item-8-plan-leave-home-and-landlord-removes-mem"
     epic: 1
