@@ -4,13 +4,16 @@
 loads the caller's Membership in that Home from the database (never from the JWT, body or
 query) and returns it. A wrong Role, no Membership and an unknown Home all give the same 403,
 so the answer does not reveal whether a Home exists.
+
+Story 1.5: tests/test_permissions.py walks every route and fails when a {home_id} route lacks
+this dependency, or when this dependency sits on a route without {home_id}.
 """
 
 import uuid
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Path, status
 from sqlmodel import Session, select
 
 from app.db import get_session
@@ -24,7 +27,8 @@ def require_role(*roles: Role) -> Callable[..., Membership]:
     allowed = frozenset(roles)
 
     def dependency(
-        home_id: uuid.UUID,
+        # Path() only: a route without {home_id} in its path can never read it from the query.
+        home_id: Annotated[uuid.UUID, Path()],
         user: CurrentUser,
         session: Annotated[Session, Depends(get_session)],
     ) -> Membership:

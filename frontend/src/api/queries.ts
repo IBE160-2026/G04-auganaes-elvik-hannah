@@ -1,7 +1,7 @@
 // Story 1.2: TanStack Query hooks, the only way components reach the API (AD-7).
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchMe, register, signIn, signOut } from './auth';
-import { createHome, fetchHomes, type Home, type Homes } from './homes';
+import { createHome, fetchHomes, fetchMembers, type Home, type Homes } from './homes';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 
@@ -53,6 +53,20 @@ export function useHomes() {
   return useQuery({
     queryKey: homesKey(session?.user.id),
     queryFn: fetchHomes,
+    enabled: session !== null,
+  });
+}
+
+// Story 1.5: keyed on the Home and the user. Refetched on mount and window focus, no polling.
+export function membersKey(homeId: string, userId: string | undefined) {
+  return ['members', homeId, userId] as const;
+}
+
+export function useMembers(homeId: string) {
+  const session = useSession();
+  return useQuery({
+    queryKey: membersKey(homeId, session?.user.id),
+    queryFn: () => fetchMembers(homeId),
     enabled: session !== null,
   });
 }

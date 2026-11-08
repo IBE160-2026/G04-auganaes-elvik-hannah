@@ -1,7 +1,12 @@
-"""Story 1.3 (FR-1, FR-3, AD-1, AD-2): the Home creation rule and the Role a Member gets."""
+"""Story 1.3 (FR-1, FR-3, AD-1, AD-2): the Home creation rule and the Role a Member gets.
 
+Story 1.5: the members list (members_of) and the FR-3 "never mixed" check (fr3_violations).
+"""
+
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import inspect, text
@@ -277,3 +282,170 @@ def test_refused_add_member_rolls_back_pending_changes(session: Session) -> None
     session.expire_all()
     assert session.get(Home, home.id).name == "Kollektivet"  # type: ignore[union-attr]
     assert homes.join_blocker(session, home, jonas) is None
+
+
+# Story 1.5: the members list and the FR-3 "never mixed" invariant.
+def test_members_of_lists_household_members_in_join_order(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+    set_joined_at(session, mari, home, T0)
+    set_joined_at(session, jonas, home, T0 + timedelta(seconds=1))
+
+    members = homes.members_of(session, home.id)
+
+    assert [(m.user_id, m.name, m.role) for m in members] == [
+        (mari.id, "Mari", "household_member"),
+        (jonas.id, "Jonas", "household_member"),
+    ]
+
+
+def test_members_of_orders_by_join_time_not_by_who_created(session: Session) -> None:
+    mari, jonas = new_user(session, "Mari"), new_user(session, "Jonas")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, home, jonas)
+    set_joined_at(session, mari, home, T0 + timedelta(seconds=1))
+    set_joined_at(session, jonas, home, T0)
+
+    assert [m.name for m in homes.members_of(session, home.id)] == ["Jonas", "Mari"]
+
+
+def test_members_of_puts_the_landlord_first_even_if_a_tenant_joined_earlier(
+    session: Session,
+) -> None:
+    kari, anders, ola = new_user(session, "Kari"), new_user(session, "Anders"), new_user(session)
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, home, anders)
+    homes.add_member(session, home, ola)
+    set_joined_at(session, anders, home, T0)
+    set_joined_at(session, ola, home, T0 + timedelta(seconds=1))
+    set_joined_at(session, kari, home, T0 + timedelta(seconds=2))
+
+    assert [(m.name, m.role) for m in homes.members_of(session, home.id)] == [
+        ("Kari", "landlord"),
+        ("Anders", "tenant"),
+        ("Ola", "tenant"),
+    ]
+
+
+def test_members_of_breaks_a_join_time_tie_by_membership_id(session: Session) -> None:
+    users = [new_user(session, n) for n in ("A", "B", "C")]
+    home = homes.create_home(session, users[0], name="Kollektivet", type="household").home
+    for user in users[1:]:
+        homes.add_member(session, home, user)
+    for user in users:
+        set_joined_at(session, user, home, T0)
+    by_membership = {
+        m.user_id: m.id
+        for m in session.exec(select(Membership).where(Membership.home_id == home.id)).all()
+    }
+
+    first = [m.user_id for m in homes.members_of(session, home.id)]
+    assert first == sorted(by_membership, key=by_membership.__getitem__)
+
+
+def test_members_of_shows_only_that_homes_members_and_a_landlords_role_per_home(
+    session: Session,
+) -> None:
+    kari, anders, mari = new_user(session, "Kari"), new_user(session, "Anders"), new_user(session)
+    rental = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    homes.add_member(session, rental, anders)
+    kollektiv = homes.create_home(session, mari, name="Kollektivet", type="household").home
+    homes.add_member(session, kollektiv, kari)
+
+    assert {(m.name, m.role) for m in homes.members_of(session, rental.id)} == {
+        ("Kari", "landlord"),
+        ("Anders", "tenant"),
+    }
+    assert {(m.name, m.role) for m in homes.members_of(session, kollektiv.id)} == {
+        ("Ola", "household_member"),
+        ("Kari", "household_member"),
+    }
+    assert homes.fr3_violations(session) == []
+
+
+def test_members_of_an_unknown_home_is_empty(session: Session) -> None:
+    assert homes.members_of(session, uuid.uuid4()) == []
+
+
+@pytest.mark.parametrize("type", ["household", "landlord"])
+def test_fr3_holds_after_create_home_and_add_member(session: Session, type: str) -> None:
+    creator, joiner, other = new_user(session, "A"), new_user(session, "B"), new_user(session)
+    home = homes.create_home(session, creator, name="Hjem", type=type).home  # type: ignore[arg-type]
+    assert homes.fr3_violations(session) == []
+
+    homes.add_member(session, home, joiner)
+    homes.add_member(session, home, other)
+    assert homes.fr3_violations(session) == []
+
+
+def test_fr3_holds_when_a_landlord_joins_another_landlord_home(session: Session) -> None:
+    kari, per = new_user(session, "Kari"), new_user(session, "Per")
+    homes.create_home(session, per, name="Pers bygg", type="landlord")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+
+    homes.add_member(session, home, per)
+
+    assert homes.fr3_violations(session) == []
+
+
+def _insert_membership(session: Session, home: Home, role: str) -> None:
+    # Bypasses the domain on purpose, to prove the check is not vacuous.
+    session.execute(
+        text(
+            "INSERT INTO memberships (id, user_id, home_id, role, created_at) "
+            "VALUES (:id, :u, :h, :r, :t)"
+        ),
+        {
+            "id": uuid.uuid4().hex,
+            "u": new_user(session, "Inntrenger").id.hex,
+            "h": home.id.hex,
+            "r": role,
+            "t": "2026-11-08 12:00:00",
+        },
+    )
+    session.commit()
+
+
+@pytest.mark.parametrize(
+    ("type", "role"),
+    [
+        ("household", "tenant"),
+        ("household", "landlord"),
+        ("landlord", "household_member"),
+        ("landlord", "landlord"),
+    ],
+)
+def test_fr3_check_finds_a_mixed_home(session: Session, type: str, role: str) -> None:
+    home = homes.create_home(session, new_user(session), name="Hjem", type=type).home  # type: ignore[arg-type]
+    _insert_membership(session, home, role)
+
+    assert homes.fr3_violations(session) == [home.id]
+
+
+def test_fr3_check_finds_a_landlord_home_without_a_landlord(session: Session) -> None:
+    home = Home(name="Uten utleier", type="landlord")
+    session.add(home)
+    session.commit()
+    _insert_membership(session, home, "tenant")
+
+    assert homes.fr3_violations(session) == [home.id]
+
+
+def test_only_create_home_and_add_member_construct_a_membership() -> None:
+    # Every other write path (register with invite_token, invites.accept, the seed) goes through
+    # add_member. Guards against a new Membership(...) constructor outside create_home/add_member;
+    # it does not see model_validate, insert(Membership) or raw SQL.
+    constructor = re.compile(r"(?<!class )\bMembership\(")
+    app_dir = Path(homes.__file__).resolve().parents[1]
+    found = {
+        path.relative_to(app_dir).as_posix(): len(constructor.findall(path.read_text("utf-8")))
+        for path in app_dir.rglob("*.py")
+        if constructor.search(path.read_text("utf-8"))
+    }
+    assert found == {"domain/homes.py": 2}
+    source = Path(homes.__file__).read_text("utf-8")
+    for function in ("def create_home(", "def add_member("):
+        start = source.index(function)
+        end = source.find("\ndef ", start + 1)
+        assert constructor.search(source[start:end]), function

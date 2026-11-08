@@ -1,7 +1,8 @@
-"""The caller's Homes: list and create (Story 1.3, FR-1, FR-3).
+"""The caller's Homes: list and create (Story 1.3, FR-1, FR-3), and one Home's Members (Story 1.5).
 
-User-scoped, not Home-scoped: there is no home_id in these paths, and the list is filtered on
-the caller's own Memberships, so require_role (permissions/require_role.py) is not needed here.
+GET and POST /homes are user-scoped: there is no home_id in their paths, and the list is
+filtered on the caller's own Memberships. GET /homes/{home_id}/members is Home-scoped and goes
+through require_role, like every route with {home_id} (AD-2, tests/test_permissions.py).
 """
 
 import uuid
@@ -15,8 +16,9 @@ from sqlmodel import Session
 from app.db import get_session
 from app.domain import homes
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
-from app.models.membership import Role
+from app.models.membership import ROLES, Membership, Role
 from app.permissions.current_user import CurrentUser
+from app.permissions.require_role import require_role
 
 router = APIRouter(prefix="/homes", tags=["homes"])
 
@@ -98,3 +100,42 @@ def create_home(body: CreateHomeRequest, user: CurrentUser, session: SessionDep)
         detail = LANDLORD_ONLY if exc.allowed else ALREADY_IN_HOME
         raise HTTPException(status.HTTP_409_CONFLICT, detail=detail) from None
     return home_out(created)
+
+
+# Story 1.5: any Member of the Home, whatever their Role.
+AnyMember = Annotated[Membership, Depends(require_role(*ROLES))]
+
+
+class MemberOut(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    role: Role
+    # True on the caller's own row. No email is sent (decision 1), so a Tenant cannot collect
+    # the other Tenants' addresses.
+    is_you: bool
+
+
+class MembersOut(BaseModel):
+    # The Landlord first, then in the order they joined.
+    members: list[MemberOut]
+
+
+@router.get(
+    "/{home_id}/members",
+    responses={
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorOut,
+            "description": "Not a Member of this Home, or no such Home",
+        }
+    },
+)
+def list_members(member: AnyMember, session: SessionDep) -> MembersOut:
+    # home_id is read by require_role, which also puts it in the OpenAPI path.
+    return MembersOut(
+        members=[
+            MemberOut(
+                user_id=m.user_id, name=m.name, role=m.role, is_you=m.user_id == member.user_id
+            )
+            for m in homes.members_of(session, member.home_id)
+        ]
+    )

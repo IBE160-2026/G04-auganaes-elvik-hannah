@@ -91,14 +91,15 @@ Seed-kommandoen lager disse eksempelbrukerne:
 
 **Prøv invitasjon (Story 1.4):**
 
-1. Logg inn som Mari og velg **Medlemmer og invitasjon** på hjemsiden. Trykk **Lag invitasjonslenke**. Lenken kan brukes én gang og gjelder i 7 dager; **Lag ny lenke** lager en til, og de gamle virker fortsatt.
+1. Logg inn som Mari og velg **Medlemmer og invitasjon** på hjemsiden. Under **Medlemmer** ser hun seg selv («(deg)») og Jonas som husstandsmedlemmer. Trykk **Lag invitasjonslenke**. Lenken kan brukes én gang og gjelder i 7 dager; **Lag ny lenke** lager en til, og de gamle virker fortsatt.
 2. Åpne lenken i et privat vindu. Du ser hjemmet og rollen. Velg **Opprett konto og bli med** og lag en ny bruker. Du er da med i «Mari og Jonas sitt hjem» som husstandsmedlem.
 3. Logg ut (private vinduer i samme nettleser deler innlogging), eller bruk en annen nettleser, og åpne den samme lenken igjen. Nå står det at lenken ikke lenger er gyldig.
-4. Logg inn som Anders (leietaker) og åpne **Medlemmer og invitasjon**: der er det ingen knapp for å invitere. Serveren nekter også, hvis han prøver direkte i <http://localhost:8000/docs>:
+4. Logg inn som Anders (leietaker) og åpne **Medlemmer og invitasjon** for «Storgata 12». Under **Medlemmer** ser han Kari Hansen (Utleier) og seg selv (Leietaker, «(deg)»), men ingen knapp for å invitere (Story 1.5). Serveren nekter også, hvis han prøver direkte i <http://localhost:8000/docs>:
    1. Kjør `POST /api/auth/login` med `anders@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
    2. Trykk **Authorize** øverst og lim inn tokenet.
    3. Kjør `GET /api/homes` og kopier `id` til «Storgata 12».
    4. Kjør `POST /api/homes/{home_id}/invites` med den `id`-en. Svaret er 403.
+   5. Logg inn som Mari på samme måte og kjør `GET /api/homes/{home_id}/members` med `id`-en til «Storgata 12». Svaret er 403, fordi hun ikke er medlem der (Story 1.5).
 5. Er du allerede husstandsmedlem eller leietaker i ett hjem, kan du ikke bli med i et annet; invitasjonssiden sier fra om det. En utleier kan i tillegg bli med i ett slikt hjem.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
@@ -133,7 +134,7 @@ npm run build && npm run preview
 
 ### Tester og lint
 
-Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig fire brukere, to hjem, fire medlemskap og én invitasjonslenke) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
+Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig fire brukere, to hjem, fire medlemskap og én invitasjonslenke, og at ingen hjem blander roller: et husstandshjem har bare husstandsmedlemmer, en utleiebolig nøyaktig én utleier og ellers bare leietakere) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
 
 ```bash
 cd backend

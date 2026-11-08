@@ -7,10 +7,19 @@ Household Members with a Landlord or Tenants, and a Landlord Home has exactly on
 
 Story 1.4 (team decision 3, 2026-11-07): a user is Household Member or Tenant in at most one
 Home. Landlord Memberships do not count, so a Landlord may also join one such Home.
+
+Story 1.5 (FR-3, team decision 2, 2026-11-08): members_of lists a Home's Members. The
+"never mixed" rule stays here (_CREATOR_ROLE, _JOINER_ROLE); create_home and add_member are the
+only places a Membership is made, and a test guards against a new Membership constructor
+elsewhere in app code. fr3_violations is the one check of that rule, run by the tests
+over every write path and by CI on the seeded database.
 """
 
+import uuid
+from datetime import datetime
 from typing import NamedTuple
 
+from sqlalchemy import case, text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
@@ -159,3 +168,50 @@ def homes_for(session: Session, user: User) -> list[MemberHome]:
         .order_by(col(Membership.created_at).desc(), col(Home.id).desc())
     ).all()
     return [MemberHome(home, role) for home, role in rows]
+
+
+class HomeMember(NamedTuple):
+    user_id: uuid.UUID
+    name: str
+    role: Role
+    joined_at: datetime
+
+
+def members_of(session: Session, home_id: uuid.UUID) -> list[HomeMember]:
+    """Every Member of the Home with their Role: the Landlord first, then in the order they joined.
+
+    The id breaks ties: on Windows the clock ticks ~15.6 ms, so two joins can share a time.
+    """
+    rows = session.exec(
+        select(User.id, User.name, Membership.role, Membership.created_at)
+        .join(Membership, col(Membership.user_id) == col(User.id))
+        .where(Membership.home_id == home_id)
+        .order_by(
+            case((col(Membership.role) == "landlord", 0), else_=1),
+            col(Membership.created_at),
+            col(Membership.id),
+        )
+    ).all()
+    return [HomeMember(user_id, name, role, joined_at) for user_id, name, role, joined_at in rows]
+
+
+# FR-3: a Household Home has only Household Members; a Landlord Home has exactly one Landlord and
+# otherwise only Tenants. Plain SQL, so CI can run it on the seeded Postgres database as well.
+_FR3_VIOLATIONS = text(
+    """
+    SELECT h.id FROM homes h LEFT JOIN memberships m ON m.home_id = h.id
+    GROUP BY h.id, h.type
+    HAVING (h.type = 'household'
+            AND SUM(CASE WHEN m.role <> 'household_member' THEN 1 ELSE 0 END) > 0)
+        OR (h.type = 'landlord'
+            AND (SUM(CASE WHEN m.role = 'landlord' THEN 1 ELSE 0 END) <> 1
+                 OR SUM(CASE WHEN m.role NOT IN ('landlord', 'tenant') THEN 1 ELSE 0 END) > 0))
+        OR h.type NOT IN ('household', 'landlord')
+    """
+)
+
+
+def fr3_violations(session: Session) -> list[uuid.UUID]:
+    """Ids of Homes that break FR-3 (empty when the rule holds). Used by the tests and CI."""
+    # SQLite gives the id back as hex text, Postgres as a UUID.
+    return [uuid.UUID(str(home_id)) for home_id in session.execute(_FR3_VIOLATIONS).scalars()]

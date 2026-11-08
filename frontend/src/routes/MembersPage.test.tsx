@@ -1,10 +1,11 @@
 // Story 1.4 (FR-2, team decision 4): "Medlemmer og invitasjon". The invite control follows the
 // server's can_invite; a Tenant never sees it.
-import { render, screen, waitFor } from '@testing-library/react';
+// Story 1.5 (FR-3, SM-6): the members list on the same page, for every Role.
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
-import { HOME_MESSAGES, type Home } from '../api/homes';
-import { OLAS_HOME, fakeApi, json, resetApi, signedInWith } from '../test-utils/fakeApi';
+import { HOME_MESSAGES, MEMBER_MESSAGES, type Home, type Member } from '../api/homes';
+import { OLAS_HOME, fakeApi, json, membersPath, olaAs, resetApi, signedInWith } from '../test-utils/fakeApi';
 
 const RENTAL: Home = {
   ...OLAS_HOME,
@@ -139,5 +140,117 @@ describe('Members & Invite page', () => {
 
     expect(await screen.findByRole('heading', { name: OLAS_HOME.name })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
+  });
+});
+
+const KARI: Member = { user_id: '00000000-0000-4000-8000-000000000002', name: 'Kari', role: 'landlord', is_you: false };
+const JONAS: Member = {
+  user_id: '00000000-0000-4000-8000-000000000003',
+  name: 'Jonas',
+  role: 'household_member',
+  is_you: false,
+};
+
+async function memberRows() {
+  const section = await screen.findByRole('region', { name: 'Medlemmer' });
+  const list = await within(section).findByRole('list');
+  return within(list)
+    .getAllByRole('listitem')
+    .map((item) => item.textContent);
+}
+
+describe('Members list', () => {
+  it('shows a Household Member every Member with their Role, and marks their own row', async () => {
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${membersPath(OLAS_HOME)}`]: () => json(200, { members: [olaAs('household_member'), JONAS] }),
+    });
+    renderAt(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    expect(await screen.findByRole('heading', { name: 'Medlemmer' })).toBeInTheDocument();
+    expect(await memberRows()).toEqual(['Ola (deg), Husstandsmedlem', 'Jonas, Husstandsmedlem']);
+    expect(screen.getByRole('button', { name: 'Lag invitasjonslenke' })).toBeInTheDocument();
+  });
+
+  it('shows the Landlord herself first, then the Tenants', async () => {
+    const anders: Member = { user_id: '00000000-0000-4000-8000-000000000004', name: 'Anders', role: 'tenant', is_you: false };
+    fakeApi({
+      ...signedInWith([RENTAL], ['landlord']),
+      [`GET ${membersPath(RENTAL)}`]: () => json(200, { members: [olaAs('landlord'), anders] }),
+    });
+    renderAt(`/hjem/${RENTAL.id}/medlemmer`);
+
+    expect(await memberRows()).toEqual(['Ola (deg), Utleier', 'Anders, Leietaker']);
+  });
+
+  it('shows a Tenant the list but no invite control', async () => {
+    fakeApi({
+      ...signedInWith([TENANCY], []),
+      [`GET ${membersPath(TENANCY)}`]: () => json(200, { members: [KARI, olaAs('tenant')] }),
+    });
+    renderAt(`/hjem/${TENANCY.id}/medlemmer`);
+
+    expect(await memberRows()).toEqual(['Kari, Utleier', 'Ola (deg), Leietaker']);
+    expect(screen.getByText('Det er utleieren som inviterer nye leietakere.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Inviter' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /lenke/ })).not.toBeInTheDocument();
+  });
+
+  it('marks only the caller when two Members share a name', async () => {
+    const otherOla: Member = { ...JONAS, name: 'Ola' };
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${membersPath(OLAS_HOME)}`]: () => json(200, { members: [otherOla, olaAs('household_member')] }),
+    });
+    renderAt(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    expect(await memberRows()).toEqual(['Ola, Husstandsmedlem', 'Ola (deg), Husstandsmedlem']);
+  });
+
+  it('shows a single Member as one row marked "(deg)"', async () => {
+    fakeApi(signedInWith());
+    renderAt(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    expect(await memberRows()).toEqual(['Ola (deg), Husstandsmedlem']);
+  });
+
+  it('shows a failed members load at the list with a retry, and the invite control still works', async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${membersPath(OLAS_HOME)}`]: () =>
+        fail ? json(500, { detail: 'x' }) : json(200, { members: [olaAs('household_member'), JONAS] }),
+      [`POST ${invitesPath(OLAS_HOME)}`]: () => json(201, invite('t1')),
+    });
+    renderAt(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(MEMBER_MESSAGES.loadFailed);
+    await user.click(screen.getByRole('button', { name: 'Lag invitasjonslenke' }));
+    expect(await screen.findByLabelText('Invitasjonslenke')).toHaveValue(`${window.location.origin}/invitasjon/t1`);
+
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Prøv å hente medlemmene igjen' }));
+    expect(await memberRows()).toEqual(['Ola (deg), Husstandsmedlem', 'Jonas, Husstandsmedlem']);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(server.calls('GET', membersPath(OLAS_HOME))).toHaveLength(2);
+  });
+
+  it('shows its own loading text without a second status region', async () => {
+    fakeApi({ ...signedInWith(), [`GET ${membersPath(OLAS_HOME)}`]: () => new Promise<Response>(() => {}) });
+    renderAt(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    expect(await screen.findByText('Henter medlemmer …')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lag invitasjonslenke' })).toBeInTheDocument();
+  });
+
+  it('never asks for the members of a Home that is not in the list', async () => {
+    const foreign = { id: '00000000-0000-4000-8000-0000000000ff' };
+    const server = fakeApi(signedInWith());
+    renderAt(`/hjem/${foreign.id}/medlemmer`);
+
+    expect(await screen.findByRole('heading', { name: OLAS_HOME.name })).toBeInTheDocument();
+    expect(server.calls('GET', membersPath(foreign))).toHaveLength(0);
   });
 });
