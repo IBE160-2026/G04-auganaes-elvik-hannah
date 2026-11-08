@@ -4,7 +4,7 @@
 
 ## Goal
 
-Lay the foundation every later epic builds on. Users can register and log in, create a Home (Household or Landlord), invite others through a scoped link, and have their Role (Household Member, Landlord, Tenant) enforced on the server. Underneath sits a responsive, installable app shell with the design tokens wired in, the backend layering (routes → permissions → domain → persistence), local running with Docker and a seed command as the primary path, and an optional hosted demo on the course's Vercel project (the only hosting the course supports). A course reviewer must be able to run and test the app without the team's accounts or keys. The whole epic is Trinn 1, the minimal core flow that has to be finished and stable before any Trinn 2 work starts.
+Lay the foundation every later epic builds on. Users can register and log in, create a Home (Household or Landlord), invite others through a scoped link, leave a Home they no longer belong to (or, as Landlord, remove a Tenant who moved out), and have their Role (Household Member, Landlord, Tenant) enforced on the server. Underneath sits a responsive, installable app shell with the design tokens wired in, the backend layering (routes → permissions → domain → persistence), local running with Docker and a seed command as the primary path, and an optional hosted demo on the course's Vercel project. A course reviewer must be able to run and test the app without the team's accounts or keys. The whole epic is Trinn 1. Stories 1.1–1.7 are done and retrospected; the retrospective found that a user who accepts the wrong invite is locked into that Home for good, so Story 1.8 (leave / remove) was added and is the only story left before Epic 2.
 
 ## Stories
 
@@ -15,44 +15,55 @@ Lay the foundation every later epic builds on. Users can register and log in, cr
 - Story 1.5: View Home Members List & Enforce Role-Based Permissions (done)
 - Story 1.6: Run Locally with Docker, Seed Data and Mock Modes (done)
 - Story 1.7: Hosted Demo on Vercel (Services + Neon) (done)
+- Story 1.8: Leave a Home & Landlord Removes a Tenant (backlog — next)
 
 ## Requirements & Constraints
 
-- **Homes:** The creator of a Household Home becomes a Household Member with the same standing as any later invitee (no creator privilege). The creator of a Landlord Home becomes its only Landlord, and the Home must be fully configurable with zero Tenants. A Home holds either only Household Members, or one Landlord plus Tenants, never a mix.
-- **One-Home rule (server-enforced):** A user may be Household Member or Tenant in at most one Home; Landlord Memberships do not count, so a Landlord may also join one such Home. Landlords are never blocked from creating more Homes (Epic 6 depends on it). A second join is refused with "Du er allerede med i «X». Du kan bare være med i ett hjem om gangen." No Home switcher in v1.
-- **Invites (settled policy):** Any Household Member can invite to a Household Home (Role Household Member); only the Landlord can invite to a Landlord Home (Role Tenant). A Tenant calling the invite endpoint directly is rejected by the server. Links are single-use with 7-day expiry; "Lag ny lenke" makes another link and earlier unused links stay valid; no revoking in v1. A used or expired link shows "Denne invitasjonslenken er ikke lenger gyldig — be om en ny fra [utleier/husstandsmedlem]", never a 404.
-- **Members list:** Every Member of the Home sees every current Member and their Role. For a Tenant the invite control is absent from the layout, not disabled.
-- **Isolation:** A Member of Home A cannot read or change Home B, whatever their Role in A. Role rules are enforced on the server, never only hidden in the UI.
-- **Responsive:** Usable on phone, tablet and desktop; at 320 CSS px / 400% zoom every surface reflows to one column with no horizontal scroll.
-- **Local runnability:** `docker compose up` plus one seed command (which also runs migrations) gives a working app with example users listed in the README. The seed is idempotent, refuses to run on Vercel or against a non-local database, and is extended (never duplicated) by stories that need example data. The test suite passes offline with no keys. `.env.example` lists exactly the variables the app reads. Stories that change setup update README and `.env.example` in the same PR; the README must work on macOS and Windows (Git Bash).
-- **Hosted demo is optional** and never required to run, test or review the app. No secret is committed.
-- **Must be covered by automated tests:** role rules (who may invite, who sees what), cross-Home isolation, the no-mixing invariant, and the one-Home rule.
+- **Homes:** A Home holds either only Household Members, or exactly one Landlord plus zero or more Tenants, never a mix. The Household creator has no special standing; the Landlord creator is the Home's only Landlord.
+- **One-Home rule (server-enforced):** a user may be Household Member or Tenant in at most one Home; Landlord Memberships do not count. Landlords may always create more Homes. Accepted as built: a Household Member cannot create a Landlord Home. No Home switcher in v1.
+- **Invites (settled):** any Household Member invites to a Household Home; only the Landlord invites to a Landlord Home (Tenant calling the endpoint gets 403). Single-use, 7-day expiry, "Lag ny lenke" keeps earlier links valid, no revoking. A link belongs to the Home, not its creator.
+- **Leave / remove (FR-23):**
+  - Household Members and Tenants can leave themselves. A Landlord can remove a Tenant of their Landlord Home.
+  - A Landlord cannot leave their own Landlord Home (it keeps exactly one Landlord). A Household Member cannot remove anyone.
+  - Any other combination, including a remove target who is not a Tenant of that Home, gets 403 and nothing is deleted.
+  - Afterwards the user has no Membership there: every Home-scoped request for it is rejected, and they are back in the no-Home state (may create a Home or join through a new invite).
+  - When the last Household Member leaves, the Home stays without Members; nothing else is deleted.
+  - Invite links made earlier by someone who left stay valid until used or expired.
+  - Both actions need confirmation, since neither can be undone.
+- **Isolation:** a Member of Home A cannot read or change Home B. Role rules live on the server, never only in the UI.
+- **Local runnability:** `docker compose up` plus one seed command (which also migrates) gives a working app with example users in the README. Tests pass offline with no keys. A story that changes setup or the reviewer's try-it steps updates README / `.env.example` in the same PR (1.8 adds a "try leaving a Home" step).
+- **Must be covered by automated tests:** role rules, cross-Home isolation, the no-mixing invariant (FR-3 check still passes after leave/remove), the one-Home rule, and both new routes in the permission route walk.
+- **Accepted risks (retro):** Postgres row locks are reasoned, not tested (pytest runs on SQLite; no Postgres test job before Epic 2). No rate limit on login/register on the hosted demo.
 - **Copy is Norwegian only.** No i18n library.
 
 ## Technical Decisions
 
-- **Stack:** Python 3.12 with `uv`, FastAPI, SQLModel, Alembic; PostgreSQL locally (Docker) and on Neon. Frontend: React 19, TypeScript, Vite, React Router, TanStack Query v5, client types generated by `openapi-typescript` from FastAPI's OpenAPI schema. Tests: pytest (on SQLite; Postgres covered in CI migration steps) and Vitest.
-- **Layering:** Routes are thin; every mutation goes through a domain service in `backend/app/domain`; permission dependencies in `backend/app/permissions`.
-- **Roles and permissions:** Role lives on `Membership` (User↔Home join, one Role per Home), never on `User`. The JWT carries only `user_id`. Every Home-scoped route takes `home_id` as a path parameter and uses the existing `require_role(*roles)` dependency (built in Story 1.4), which reads `home_id` from the path and loads the caller's Membership row for `(user_id, home_id)` — never a token claim, body or query param. No Membership in that Home means rejection. Story 1.5 reuses it; it does not build a new one.
-- **One-Home rule lives in the domain:** enforced in `domain/homes.add_member` (with a user-row lock), so invite acceptance and the seed follow the same rule.
-- **Entities:** `User`, `Home` (Household or Landlord), `Membership`, `InviteLink` (token, target Role, own validity state, separate from Membership).
-- **Same origin and auth:** All API routes live under `/api`; the frontend calls only relative `/api/...` paths. Access token held only in React memory; refresh token in an httpOnly cookie scoped to `/api/auth/refresh`. No CORS middleware; do not reintroduce it.
-- **Frontend data:** No direct `fetch` in components and no server data in `useState`; all server access goes through TanStack Query hooks on the generated client, refetched on mount and window focus.
+- **Stack:** Python 3.12 with `uv`, FastAPI, SQLModel, Alembic; PostgreSQL locally (Docker) and on Neon. React 19, TypeScript, Vite, React Router, TanStack Query v5, client types generated by `openapi-typescript`. pytest (SQLite) and Vitest.
+- **Layering:** routes are thin; every mutation goes through a domain function in `backend/app/domain` (Membership rows are created and deleted only in `domain/homes`); permission dependencies in `backend/app/permissions`.
+- **Roles and permissions:** Role lives on `Membership`, never on `User`; the JWT carries only `user_id`. Every Home-scoped route takes `home_id` as a path parameter and uses `require_role(*roles)`, which loads the caller's Membership for `(user_id, home_id)`. Wrong Role, no Membership and unknown Home all give the same 403. `backend/tests/test_permissions.py` walks every route and fails if a `{home_id}` route lacks `require_role` (or vice versa), so new routes are covered without a hand-written list.
+- **Current vs past Members (AD-16):** leaving or removal deletes the Membership row only; no migration is needed (no table references `memberships`). Access, notifications, fairness and overviews read only current Memberships. History (completions, Photo Evidence) references the User and shows «Tidligere medlem» when that User has no Membership in the Home; Epics 2–6 inherit this rule.
+- **Story 1.8 routes:** `DELETE /api/homes/{home_id}/members/me` (Household Member, Tenant) and `DELETE /api/homes/{home_id}/members/{user_id}` (Landlord; target must be a Tenant of that Home), each through a domain function in `domain/homes`.
+- **Shared helpers from the retro cleanup (use, don't duplicate):**
+  - Frontend `frontend/src/api/errors.ts`: `ApiError`, `toApiError(response, error, { passThrough, fallback, fields? })`, `fieldsOf`, `GENERIC_ERROR`. New API modules map failures through it rather than defining their own error class.
+  - Backend `backend/app/clock.py`: `utc_now`, `as_utc`, and `UtcDatetime` for every response-model datetime. Build response models normally, never with `model_construct`.
+  - Tests `backend/tests/helpers.py`: `new_user`, `register_via_api`, `sign_up`, `auth_for`, `count`. Fixtures stay in `conftest.py`.
+- **Same origin and auth:** all API routes under `/api`; frontend calls relative `/api/...` only. Access token in React memory; refresh token in an httpOnly cookie scoped to `/api/auth/refresh`. No CORS middleware.
+- **Frontend data:** no direct `fetch` in components and no server data in `useState`; all server access goes through TanStack Query hooks in `api/queries.ts`, refetched on mount and window focus.
 - **Conventions:** Glossary names (`Member` is the Home-scoped actor). UUIDv4 IDs. ISO 8601 UTC on the wire. Errors use `{"detail": ...}` and the standard 422 body. Every schema change is a committed Alembic migration; run `alembic downgrade` only against a throwaway database, never the local `husly` one.
 
 ## UX & Interaction Patterns
 
-- **Members & Invite page:** `/hjem/<id>/medlemmer` ("Medlemmer og invitasjon"), linked from the Home page, since the Task Overview header (Story 2.2) does not exist yet. Holds the invite control (from 1.4) and the members list (1.5).
-- **Navigation:** the EXPERIENCE.md tab bar belongs to Story 2.2; Landlords get a plain "Opprett nytt hjem" link for now.
-- **Tokens:** only `var(--...)` tokens from DESIGN.md, never literal hex, px or radius values; `rem` sizes; pill shape reserved for badges, status tags and primary buttons.
-- **Accessibility floor:** 2px focus ring with 2px offset; tap targets ≥44×44px; `prefers-reduced-motion` honoured; labels describe action and state.
-- **Errors:** inline at the action with retry, never silent.
-- **Tone:** Household copy warm, Landlord copy neutral and information-first, no gamification.
+- **Members & Invite page** (`/hjem/<id>/medlemmer`, linked from the Home page until the Task Overview header exists in Story 2.2): invite control, members list, and from 1.8 «Forlat hjemmet» (Household Members, Tenants) and «Fjern» next to each Tenant (Landlord). Actions a Role may not take are absent from the layout, not disabled.
+- **Leave / remove confirmation:** inline, not a modal. The first tap turns the button into a short explanation plus «Ja, forlat hjemmet» / «Ja, fjern <navn>» and «Avbryt». Leave says «Du mister tilgangen til «X». Oppgavene du har gjort, blir stående.» Danger colour only on the confirming button, always with its text label. Focus moves to the confirm button, and back to the original button on «Avbryt».
+- **Left a Home:** the user lands on the no-Home state (Create Home / invite-only, as for a new user) with «Du har forlatt «X».» announced via `aria-live="polite"`.
+- **Removed while signed in:** the next Home-scoped request answers 403; the app refetches the Homes list and sends the user to `/`. No error page and no retry loop.
+- **Tokens and accessibility:** only `var(--...)` tokens, `rem` sizes; 2px focus ring with 2px offset; tap targets ≥44×44px; `prefers-reduced-motion` honoured. Errors inline at the action with retry, never silent.
+- **Tone:** Household copy warm, Landlord copy neutral and information-first.
 
 ## Cross-Story Dependencies
 
-- **Build order:** 1.1 → 1.7 → 1.2 → 1.6 → 1.3 → 1.4 → 1.5 (all done).
-- **1.4 → 1.5:** 1.5 adds the members list to the existing Members & Invite page and applies the existing `require_role(*roles)` to its routes.
-- **1.5 → Epics 2–6:** `require_role` is the permission path every later Home-scoped route uses.
-- **Seed:** contains Mari and Jonas (Household Home), Kari (Landlord) and Anders (Tenant, joined through an invite link). Story 2.1 later adds recommended tasks to the example Home.
-- **Open deferred checks:** a Postgres-backed test harness for the concurrency locks (`create_home`, `invites.accept`, `add_member`) and a database-level lowercase-email constraint.
+- **Build order:** 1.1 → 1.7 → 1.2 → 1.6 → 1.3 → 1.4 → 1.5 (done) → 1.8 → Story 2.1.
+- **1.8 builds on 1.4/1.5:** it adds actions to the existing Members & Invite page, reuses `require_role` and the route walk, and must keep `join_blocker` / `allowed_types` behaving correctly once a user has left (they can join or create again). It supersedes Story 1.5's "no removing Members" exclusion.
+- **1.8 → Epics 2–6:** the AD-16 rule is already written into Stories 2.4, 3.2, 3.3, 3.4 and 4.3 («Tidligere medlem» attribution; only current Members are notified, counted or broadcast to).
+- **Seed:** Mari and Jonas (Household Home), Kari (Landlord) and Anders (Tenant). 1.8 needs no seed change; Story 2.1 later adds recommended tasks.
+- **Open items from the retro:** issue #14 (Windows manual run of the README) and the Neon preview-branch cleanup check are still open. Low-priority deferrals: invalid-link text for existing Members (R5), register redirect for signed-in users (R6), the seed's own joining rule (R8), a shared route-schemas module (A4) and shared loading/error components (A5). Pick these up when a story touches the code anyway.
