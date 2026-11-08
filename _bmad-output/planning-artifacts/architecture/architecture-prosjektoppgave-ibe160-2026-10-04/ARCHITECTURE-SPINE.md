@@ -145,6 +145,12 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Prevents:** an app that only runs against the team's shared Supabase project and external accounts, so a reviewer (or a new team member on Mac or Windows) cannot run or test it.
 - **Rule:** `docker compose up` starts a local PostgreSQL database; one documented command applies the Alembic migrations and loads seed data. All configuration comes from environment variables, with `.env.example` as the template and no secrets in the repo. Every external service sits behind an adapter with a mock implementation that is selected automatically when its key is missing: the AI service (AD-4, mock when `GEMINI_API_KEY` is unset), the push sender (Trinn 2, mock when the VAPID keys are unset) and Photo Evidence storage (Trinn 2, local filesystem instead of Vercel Blob, selected when `BLOB_READ_WRITE_TOKEN` is unset). The automated test suite always runs against the mock adapters, with no network and no keys. The hosted setup (one Vercel project with Vercel Services, Neon Postgres, Vercel Blob and Vercel Cron) is an optional demo deployment of the same code, never a requirement for running it. `[ADOPTED]` — resolves the teacher's feedback on local runnability.
 
+### AD-16 — Only current Memberships count; history points at the User `[ADDED 2026-11-08 — Sprint Change Proposal 2026-11-08]`
+
+- **Binds:** FR-23, FR-7, FR-11, FR-18/19, FR-20; depends on AD-1, AD-2
+- **Prevents:** a former Member keeping access, receiving a Home's notifications, or being counted in fairness or the Portfolio after leaving; and losing a Home's history when someone leaves.
+- **Rule:** Leaving a Home or being removed deletes that Membership row; nothing else is deleted (no migration: no table references `memberships`). Access (`require_role`), notifications (AD-8, AD-14), fairness (FR-11) and overviews (FR-20) read only current Memberships. History rows — completion attribution (AD-3) and Photo Evidence (AD-5) — reference the User, never the Membership, and the UI shows «Tidligere medlem» when that User has no Membership in the Home. Two Home-scoped routes, both behind `require_role`: `DELETE /api/homes/{home_id}/members/me` (Household Member, Tenant) and `DELETE /api/homes/{home_id}/members/{user_id}` (Landlord; the target must be a Tenant of that Home). Both go through domain functions in `domain/homes` (AD-3 layering).
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -225,6 +231,8 @@ erDiagram
 ```
 
 `TASK_TYPE` is the system-seeded catalog AD-6 presumes — each row carries the `photo_evidence_eligible` flag; `TASK` references one `TASK_TYPE` and never defines eligibility itself. `PHOTO_EVIDENCE` is per-`TASK` (AD-5), not per-`TASK_INSTANCE` — see AD-5 for why. `INVITE_LINK` carries its own validity state (token, target Role, used/expired/revoked) distinct from `MEMBERSHIP` — EXPERIENCE.md's "invalid/expired invite link" and "duplicate registration attempt" states need something to check against before a Membership exists. `[ASSUMPTION: default policy is single-use + 7-day expiry, regenerable by whoever can invite (AD-2); confirm with the team before building, easy to change since it's just two column defaults.]` `[REVISED 2026-11-08]` — policy settled by the team on 2026-11-07 (Story 1.4, decision 1): single-use, valid 7 days; any Household Member or the Landlord can make a link, a Tenant cannot (server rejects with 403); "Lag ny lenke" leaves earlier unused links valid; no revoking in v1. `PUSH_SUBSCRIPTION` holds each browser/device's Web Push endpoint + keys per User (a User may have more than one, one per installed device) — needed for AD-8/AD-12 to know where to send a notification, and to represent EXPERIENCE.md's "no push permission granted" state.
+
+`MEMBERSHIP` rows are deleted when a Member leaves or is removed; history references `USER` (AD-16, added 2026-11-08).
 
 ### Source tree
 

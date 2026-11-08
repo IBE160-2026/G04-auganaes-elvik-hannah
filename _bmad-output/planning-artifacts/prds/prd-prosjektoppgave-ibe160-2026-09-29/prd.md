@@ -119,6 +119,15 @@ Each Member of a Home has exactly one Role: Household Member, Landlord, or Tenan
 - A Home has either (a) only Household Members, or (b) exactly one Landlord plus one or more Tenants — never a mix of Household Member with Landlord/Tenant in the same Home. `[REVISED 2026-11-08]` — "one or more Tenants" reads "zero or more Tenants", matching FR-1: a Landlord Home exists before its first Tenant joins (Story 1.3; `domain/homes.fr3_violations`). Found in the Epic 1 retrospective (S4).
 - Tenant-role write attempts on Landlord-locked fields are rejected at the permission layer, not just hidden in the UI.
 
+#### FR-23: Leave a Home and remove Members `[ADDED 2026-11-08 — Sprint Change Proposal 2026-11-08]`
+A Household Member or Tenant can leave their Home. A Landlord can remove a Tenant from a Landlord Home. A Landlord cannot leave their own Landlord Home, and a Household Member cannot remove another Household Member. Realizes UJ-1, UJ-2.
+
+**Consequences (testable):**
+- After leaving or being removed, the user has no Membership in that Home: every Home-scoped request for it is rejected, and they may create a Home or join another through an invite.
+- When the last Household Member leaves a Household Home, the Home remains without Members; nothing is deleted.
+- Past activity in the Home (completions, Photo Evidence) is kept and shown as «Tidligere medlem»; only current Members count for access, notifications, fairness and overviews.
+- Both actions ask for confirmation, since neither can be undone.
+
 ### 4.2 Task Overview and Must/Should Prioritization
 
 **Description:** Every task carries a Must or Should classification. The app recommends a default; Household Members and Landlords can adjust it, but Tenants inherit whatever their Landlord has set. Must tasks always surface ahead of Should tasks. For shared tasks, the system tracks completion per Member, so reminders can target only the Member who hasn't acted. Realizes UJ-1, UJ-2, UJ-3.
@@ -327,7 +336,7 @@ The MVP is delivered in two stages, so that a complete app exists even if Trinn 
 
 ### Trinn 1 — minimal core flow (finished and stable first)
 
-- Home creation, link-based invites, and Role assignment (Household Member, Landlord, Tenant) — FR-1 to FR-3. The Tenant locks in FR-3, FR-5 and FR-8 are deliberately in Trinn 1: they are the product's differentiator and its most testable rules.
+- Home creation, link-based invites, and Role assignment (Household Member, Landlord, Tenant) — FR-1 to FR-3 — and leaving a Home / removing Tenants (FR-23, added 2026-11-08). The Tenant locks in FR-3, FR-5 and FR-8 are deliberately in Trinn 1: they are the product's differentiator and its most testable rules.
 - Must/Should recommendation, adjustment, Must-first ordering, and per-member completion tracking — FR-4 to FR-7
 - Frequency recommendation, adjustment, and auto-rescheduling — FR-8, FR-9
 - AI assistant: contextual quick-answer — FR-14

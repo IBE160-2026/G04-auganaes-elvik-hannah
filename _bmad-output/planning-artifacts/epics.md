@@ -86,6 +86,7 @@ FR-20: Portfolio-level status dashboard. A Landlord with more than one Home sees
 FR-21: Responsive layout across device classes. The web application renders a usable, complete layout on phone, tablet, and desktop viewport widths.
 
 FR-22: Run locally without external accounts. The application runs on a developer's or reviewer's machine using a local Docker-based database, seed data and mock modes for the external services (AI, and in Trinn 2 push), with no account or key from the team.
+FR-23: Leave a Home and remove Members (added 2026-11-08, Sprint Change Proposal 2026-11-08). A Household Member or Tenant can leave their Home; a Landlord can remove a Tenant from a Landlord Home. A Landlord cannot leave their own Landlord Home, and a Household Member cannot remove another Household Member. History stays and shows «Tidligere medlem»; only current Members count.
 
 ### NonFunctional Requirements
 
@@ -108,6 +109,7 @@ NFR7: Runnable without external accounts. The app, its seed data and its automat
 No starter/greenfield template tool is specified by Architecture — it instead defines a committed source tree (`frontend/`, `backend/`) to scaffold directly; Epic 1 Story 1 should set up this tree rather than running an external project generator.
 
 - **Layering & permissions:** Routes never mutate data or call external services directly — every mutating/permission-sensitive operation flows through a domain-service layer (AD-3). Role lives on the User↔Home Membership join entity, never on the User account (AD-1) — one User can hold different Roles in different Homes. Every Home-scoped route resolves the caller's Role per-request via a `require_role(home_id, allowed_roles)` dependency that loads the Membership row — never from a JWT claim (AD-2). `[REVISED 2026-11-08]` — delivered as `require_role(*roles)` (Story 1.4, reused in Story 1.5): the roles are given when the dependency is built, and `home_id` is read from the path only (`Path()`), never from the query or body. `backend/tests/test_permissions.py` walks every route and fails if a `{home_id}` route lacks `require_role` or `require_role` sits on a route without `{home_id}`.
+- **Current vs past Members (AD-16, added 2026-11-08):** only current Memberships count for access, notifications, fairness and overviews; history (completions, Photo Evidence) references the User and shows «Tidligere medlem» when that User has no Membership in the Home.
 - **Task completion:** One domain function (`complete_task_instance`) is the sole code path marking a Task instance complete, recording attribution, and triggering the FR-9 reschedule; it is idempotent on retried requests (AD-3).
 - **AI service:** One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation); every response is a structured object `{status: "ok" | "low_confidence" | "error", answer, disclaimer}` with the disclaimer always its own field (AD-4). The onboarding guide is generated once per Home at provisioning time and persisted, not regenerated per view (AD-4, FR-16).
 - **Photo Evidence storage:** `PhotoEvidence` is 1:1 with `Task` (not `TaskInstance`); each task's photo is stored under a fixed key (`tasks/{task_id}/evidence.jpg`) in a private Vercel Blob store, overwritten on each new upload — no per-completion history row; the photo is only served through a backend route that runs `require_role` first, never as a permanent Blob URL (AD-5). Task types carry a system-seeded, non-Landlord-editable `photo_evidence_eligible` flag; the endpoint setting FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible (AD-6).
@@ -217,6 +219,7 @@ FR-19: Epic 4 - Auto-approve with Landlord review, auto-replacing storage
 FR-20: Epic 6 - Portfolio-level status dashboard
 FR-21: Epic 1 (foundation: responsive app shell, design tokens, PWA) - Epic 6 (dashboard-specific two-column breakpoint behavior)
 FR-22: Epic 1 (Story 1.6 - local run with Docker, seed data and mock modes; README and `.env.example` from Story 1.1)
+FR-23: Epic 1 (Story 1.8 - leave a Home, Landlord removes a Tenant; added 2026-11-08)
 
 Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22. Trinn 2 = FR-10 to FR-13, FR-15, FR-16, FR-18 to FR-20, FR-21 (dashboard behavior).
 
@@ -224,7 +227,7 @@ Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22. Trinn 
 
 ### Epic 1: Foundation — Accounts, Homes & Roles
 Users can register and log in, create a Home (Household or Landlord), invite others via a scoped link, and have their Role (Household Member, Landlord, Tenant) correctly enforced server-side everywhere. This epic also establishes the responsive, installable app shell (design tokens as CSS custom properties per AD-13, PWA manifest + service worker + install prompt per AD-12, phone/tablet/desktop breakpoints per FR-21/UX-DR44) that every later epic's screens build on, plus the domain-service/permission-dependency layering (AD-1, AD-2, AD-3 scaffold), the same-origin JWT auth split (AD-7) and the optional hosted demo on Vercel (Story 1.7).
-**FRs covered:** FR-1, FR-2, FR-3, FR-22 (+ FR-21 at the shell level)
+**FRs covered:** FR-1, FR-2, FR-3, FR-22, FR-23 (+ FR-21 at the shell level)
 **Stage:** Trinn 1
 
 ### Epic 2: Task Management Core Loop
@@ -466,6 +469,8 @@ So that Tenant-locked actions can never be bypassed.
 **When** inspected
 **Then** it never also contains a Landlord/Tenant row, and vice versa
 
+
+*Note 2026-11-08 (Sprint Change Proposal 2026-11-08):* this story's spec kept removing Members and leaving a Home out of scope ("Never: no removing Members"); that is superseded by Story 1.8 (FR-23).
 ### Story 1.6: Run Locally with Docker, Seed Data and Mock Modes
 
 **Stage:** Trinn 1
@@ -547,6 +552,43 @@ This story builds on Story 1.1. Local running (AD-15) stays the primary path and
 **Given** the repo
 **When** inspected
 **Then** no secret is committed, and the README describes the hosted demo: its URL, that it is optional, that only the project owner sees the Vercel and Neon dashboards, and how to roll back (tag `v0.1-for-vercel-hosting`, Root Directory `frontend`)
+
+### Story 1.8: Leave a Home & Landlord Removes a Tenant
+
+**Stage:** Trinn 1 · **Source:** Epic 1 retrospective (R2) and Sprint Change Proposal 2026-11-08 · **FR:** FR-23 · **AD:** AD-16, AD-2
+
+As a Household Member or Tenant, I want to leave a Home I no longer belong to, and as a Landlord, I want to remove a Tenant who has moved out,
+So that nobody is locked into the wrong Home and a Landlord's Home lists only current Tenants.
+
+**Acceptance Criteria:**
+
+**Given** a Household Member or Tenant on Members & Invite
+**When** they choose «Forlat hjemmet» and confirm
+**Then** their Membership is deleted, they land on the no-Home state with «Du har forlatt «X».», and they may create a Home or join another through an invite
+
+**Given** the last Household Member of a Household Home
+**When** they leave
+**Then** the Home remains without Members and nothing else is deleted
+
+**Given** a Landlord on Members & Invite
+**When** they choose «Fjern» next to a Tenant and confirm
+**Then** that Tenant's Membership is deleted and the list updates; the Landlord sees no leave action
+
+**Given** a Household Member, a Tenant, or a Landlord targeting someone who is not a Tenant of that Home
+**When** they call the remove route directly
+**Then** the server answers 403 and nothing is deleted (AD-2); a Landlord calling the leave route also gets 403
+
+**Given** a user removed while signed in
+**When** their next Home-scoped request for that Home answers 403
+**Then** the app refetches the Homes list and sends them to `/` — no error page and no retry loop
+
+**Given** either action
+**When** the first button is tapped
+**Then** an inline confirmation with «Avbryt» appears; nothing is deleted until confirmed (UX: Leave / remove confirmation)
+
+**Given** invite links created earlier by someone who has left
+**When** they are opened
+**Then** they stay valid until used or expired, as in Story 1.4 (a link belongs to the Home, not to its creator)
 
 ## Epic 2: Task Management Core Loop
 
@@ -741,6 +783,12 @@ So that my housemates immediately see it's done without me needing to tell them.
 **When** a screen-reader user focuses it
 **Then** it announces an accessible label describing the action and task (for example, "Merk 'Vask bad' som fullført") (UX-DR42)
 
+*Added 2026-11-08 (Sprint Change Proposal, AD-16):*
+
+**Given** a completion recorded by a user who has since left the Home
+**When** any Member views it
+**Then** it is attributed to «Tidligere medlem» and the completion itself is kept
+
 ### Story 2.5: Auto-Reschedule on Completion
 
 **Stage:** Trinn 1
@@ -827,6 +875,12 @@ So that I never silently miss a task.
 **When** the due-check endpoint is called by hand or by a script
 **Then** the mock push sender records the notifications it would have sent instead of delivering them, so the due/overdue logic can be run and tested without external accounts (FR-22, AD-15)
 
+*Added 2026-11-08 (Sprint Change Proposal, AD-16):*
+
+**Given** a user who has left a Home
+**When** the due-check runs
+**Then** they receive no notification for that Home
+
 ### Story 3.3: Fairness-Based Targeted Notification
 
 **Stage:** Trinn 2
@@ -848,6 +902,12 @@ So that completion feels fair rather than me nagging my housemates.
 **Given** Martin (UJ-3) receives a fairness-targeted nudge
 **When** he reads it
 **Then** the copy is indistinguishable in tone from a normal due/overdue reminder — no "you're the only one" framing
+
+*Added 2026-11-08 (Sprint Change Proposal, AD-16):*
+
+**Given** a Member who has left
+**When** fairness is computed
+**Then** they are neither counted nor targeted
 
 ### Story 3.4: Landlord Ad-Hoc Broadcast Message
 
@@ -874,6 +934,12 @@ So that I can flag something without waiting for the next scheduled check.
 **Given** the broadcast send fails server-side
 **When** the Landlord sees the result
 **Then** the composer shows an inline error with a retry affordance rather than silently discarding the message
+
+*Added 2026-11-08 (Sprint Change Proposal, AD-16):*
+
+**Given** a removed Tenant
+**When** the Landlord broadcasts
+**Then** the recipient count and recipients include current Tenants only
 
 ### Story 3.5: Landlord-Controlled Notification Cadence
 
@@ -1006,6 +1072,12 @@ So that I can review after the fact without the system becoming a privacy liabil
 **Given** a Tenant's task history and Photo Evidence
 **When** visibility is checked
 **Then** it is visible to that Tenant's own Landlord but never to other Tenants or other Landlords outside that Home (NFR6)
+
+*Added 2026-11-08 (Sprint Change Proposal, AD-16):*
+
+**Given** evidence uploaded by a Tenant who has since been removed
+**When** the Landlord reviews it
+**Then** it shows «Tidligere medlem» as uploader and stays reviewable
 
 ## Epic 5: AI Assistant
 
