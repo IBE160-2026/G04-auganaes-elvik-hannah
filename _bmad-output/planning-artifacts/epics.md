@@ -158,7 +158,7 @@ UX-DR21: Task completed — checkbox filled, title strikethrough, due-date line 
 UX-DR22: Empty task list — "Ingen oppgaver akkurat nå — nyt det! 🎉" (household) or "Ingen aktive oppgaver i dette hjemmet." (landlord Home Admin) — never an illustration with no text.
 UX-DR23: Invalid or expired invite link — "Denne invitasjonslenken er ikke lenger gyldig — be om en ny fra [utleier/husstandsmedlem]." — never a generic 404.
 UX-DR24: Failed login — inline field-level error, not a full-page reload; message never confirms or denies whether an email/username exists.
-UX-DR25: Duplicate registration attempt via invite link — if the invited email already has an account, offer "Logg inn i stedet" rather than a flat error.
+UX-DR25: Duplicate registration attempt via invite link — if the invited email already has an account, offer "Logg inn i stedet" rather than a flat error. `[REVISED 2026-11-08]` The invite link carries no email (Story 1.4, team decision 2). "Logg inn i stedet" is shown when registration through the link hits an email that already has an account (409), and it keeps the invite.
 UX-DR26: Tenant views a locked field — rendered read-only with visible lock affordance + "Satt av utleier" label via `aria-readonly` — never a disabled-looking grayed control with no explanation.
 UX-DR27: AI answer pending — short inline skeleton-line loading state announced via `aria-live="polite"`, not a full-screen spinner.
 UX-DR28: AI cannot answer / low confidence — says so plainly ("Usikker på svaret her — spør gjerne på nytt eller sjekk med noen andre") rather than guessing silently; the FR-14 disclaimer stays visible regardless of confidence.
@@ -352,6 +352,8 @@ So that I can access my Homes securely.
 **When** a user logs in on local running and on the PR preview
 **Then** the refresh cookie is set and `/api/auth/refresh` works; if Safari rejects the `Secure` cookie on `http://localhost`, the `Secure` flag is relaxed by an environment variable for local running only, never in the hosted demo
 
+*Revised 2026-11-08:* as built, `Secure` is off for local running by default and on in the hosted demo (on Vercel, or with `AUTH_COOKIE_SECURE=true`), so Safari works on `http://localhost` without any setting (Story 1.2 spec, finding 9).
+
 ### Story 1.3: Create a Home (Household or Landlord)
 
 **Stage:** Trinn 1
@@ -423,6 +425,8 @@ So that I can bring others in with the right Role.
 **Given** an invite link whose target email already has an account
 **When** that person opens it while logged out
 **Then** they are offered "Logg inn i stedet" rather than a flat error
+
+*Revised 2026-11-08:* The invite link carries no email (Story 1.4, team decision 2). "Logg inn i stedet" is shown when registration through the link hits an email that already has an account (409), and it keeps the invite.
 
 **Given** invite-link generation fails server-side
 **When** the Member sees the result

@@ -116,7 +116,7 @@ Who can generate a Home's invite link depends on Home type: in a Household Home,
 Each Member of a Home has exactly one Role: Household Member, Landlord, or Tenant. Role determines permission tier for Must/Should and Frequency settings (see 4.2, 4.3). Realizes UJ-2, UJ-3.
 
 **Consequences (testable):**
-- A Home has either (a) only Household Members, or (b) exactly one Landlord plus one or more Tenants — never a mix of Household Member with Landlord/Tenant in the same Home.
+- A Home has either (a) only Household Members, or (b) exactly one Landlord plus one or more Tenants — never a mix of Household Member with Landlord/Tenant in the same Home. `[REVISED 2026-11-08]` — "one or more Tenants" reads "zero or more Tenants", matching FR-1: a Landlord Home exists before its first Tenant joins (Story 1.3; `domain/homes.fr3_violations`). Found in the Epic 1 retrospective (S4).
 - Tenant-role write attempts on Landlord-locked fields are rejected at the permission layer, not just hidden in the UI.
 
 ### 4.2 Task Overview and Must/Should Prioritization
@@ -376,7 +376,7 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 
 1. `[PARTLY RESOLVED 2026-10-11]` The four journey-derived additions (portfolio dashboard, photo evidence, targeted notifications, AI onboarding guide) are now placed in Trinn 2 (see §6), so Trinn 1 is a complete app without them. The question that remains is whether Trinn 2 itself will fit before the mid-December deadline; if scope must shrink there, a provisional cut order (lowest-value-first, pending team validation): (1) FR-20 Portfolio Dashboard — nice-to-have oversight, not blocking the core loop for a single Landlord; (2) FR-16 AI onboarding guide — a Landlord can substitute a manual message short-term; (3) FR-11 fairness-based targeting — degrades gracefully to broadcast-only reminders (FR-10/FR-12); FR-18/19 Photo Evidence is deliberately last, since it's the most distinctive Landlord-Tenant trust mechanism named in the brief's differentiation case.
 2. `[RESOLVED 2026-11-01]` FR-10: daily morning batch. Tasks have due dates, not due times, and UJ-1 already describes the notification arriving "earlier in the day". Vercel Cron on the free plan runs at most once a day, with up to 59 minutes' delay; a missed run means no reminders that day, an accepted risk for a course project. FR-12 broadcasts are unaffected (sent immediately, AD-14).
-3. FR-3: can a Landlord also be a Household Member of their own separate personal Home — that is, can one user hold both Roles across different Homes — or is a user's Role fixed account-wide?
+3. `[RESOLVED 2026-11-07]` FR-3: can a Landlord also be a Household Member of their own separate personal Home — that is, can one user hold both Roles across different Homes — or is a user's Role fixed account-wide? **Resolution:** yes. Role lives on the Membership (AD-1), so one user can hold different Roles in different Homes. As built (Stories 1.3–1.4): a Household Member or Tenant belongs to at most one Home; a Landlord may own several Landlord Homes and also join one Household Home through an invite; a Household Member cannot create a Landlord Home (accepted in the Epic 1 retrospective, R1). Recorded 2026-11-08 (Epic 1 retrospective, S3).
 4. FR-11: what threshold defines "rarely or never performed completions" for fairness-based targeting (for example, zero completions in the last N instances)? Needs a concrete rule before implementation.
 
 ## 9. Assumptions Index
