@@ -108,8 +108,9 @@ function ValidTokenInvite({ token }: { token: string }) {
         <p className="invite-page__message">
           Du er allerede med i «{preview.other_home_name}». Du kan bare være med i ett hjem om gangen.
         </p>
+        {/* "/" shows the newest Home, which may not be the one named above (Epic 1 retro, R7). */}
         <Link to="/" className="invite-page__link">
-          Gå til hjemmet ditt
+          Gå til forsiden
         </Link>
       </div>
     );

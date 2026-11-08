@@ -216,6 +216,7 @@ describe('Invite page, signed in', () => {
       await screen.findByText('Du er allerede med i «Kollektivet». Du kan bare være med i ett hjem om gangen.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Invitasjon til «Storgata 12»' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Gå til forsiden' })).toHaveAttribute('href', '/');
     expect(screen.queryByRole('button', { name: /Bli med/ })).not.toBeInTheDocument();
   });
 
