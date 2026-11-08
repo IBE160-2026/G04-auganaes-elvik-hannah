@@ -10,10 +10,11 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same PR cancels the run that is still going.
+# A newer push to the same PR cancels the run that is still going. On main every merge commit
+# gets a finished run, since Vercel builds and migrates production from it (Epic 1 retro, R3).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
