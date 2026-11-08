@@ -12,7 +12,7 @@ Lay the foundation every later epic builds on. Users can register and log in, cr
 - Story 1.2: Account Registration & Login (done)
 - Story 1.3: Create a Home (Household or Landlord) (done)
 - Story 1.4: Invite Members via Scoped Link & Accept Invite (done)
-- Story 1.5: View Home Members List & Enforce Role-Based Permissions
+- Story 1.5: View Home Members List & Enforce Role-Based Permissions (done)
 - Story 1.6: Run Locally with Docker, Seed Data and Mock Modes (done)
 - Story 1.7: Hosted Demo on Vercel (Services + Neon) (done)
 
@@ -51,7 +51,7 @@ Lay the foundation every later epic builds on. Users can register and log in, cr
 
 ## Cross-Story Dependencies
 
-- **Build order:** 1.1 → 1.7 → 1.2 → 1.6 → 1.3 → 1.4 (all done) → 1.5.
+- **Build order:** 1.1 → 1.7 → 1.2 → 1.6 → 1.3 → 1.4 → 1.5 (all done).
 - **1.4 → 1.5:** 1.5 adds the members list to the existing Members & Invite page and applies the existing `require_role(*roles)` to its routes.
 - **1.5 → Epics 2–6:** `require_role` is the permission path every later Home-scoped route uses.
 - **Seed:** contains Mari and Jonas (Household Home), Kari (Landlord) and Anders (Tenant, joined through an invite link). Story 2.1 later adds recommended tasks to the example Home.
