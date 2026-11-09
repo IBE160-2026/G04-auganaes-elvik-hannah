@@ -18,6 +18,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see `sprint-change-proposal-2026-10-11.md`). Every story now carries a **Stage** (Trinn 1 or Trinn 2), a new Story 1.6 makes the app runnable locally (FR-22), and acceptance criteria for README/`.env.example` and mock modes were added to existing stories. Story numbers are unchanged so that traceability is kept. The document now has 23 stories (the earlier "20" was a miscount of the 22 that existed).
 
+> **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
+
 ### Known open points (from the readiness check, 2026-10-11)
 
 These do not block Trinn 1 but must be resolved before the stories they touch are built.
@@ -32,7 +34,7 @@ Trinn 1 is the minimal core flow that must be finished and stable first, so a co
 
 | Stage | Stories |
 |---|---|
-| **Trinn 1** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 5.1 |
+| **Trinn 1** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 5.1 |
 | **Trinn 2** | 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 5.2, 5.3, 6.1 |
 
 Epic 5 is split between the stages: the quick-answer (5.1) is Trinn 1, the chat (5.2) and onboarding guide (5.3) are Trinn 2. The Tenant locks in Stories 1.4, 2.3 and 1.5 are Trinn 1 on purpose: they are the product's differentiator and its most testable rules, even though the household is the primary user for Trinn 1.
@@ -43,7 +45,7 @@ Note on numbering: the PRD, Architecture, and UX documents all use the hyphenate
 
 ### Functional Requirements
 
-FR-1: Create a Home. A user can create a Home. If created as a Household Home, the creator becomes a Household Member with the same standing as any later invitee — no persistent creator privilege. If created as a Landlord Home, the creator becomes its Landlord.
+FR-1: Create a Home (creation rule revised 2026-11-09, Story 1.9). A user can create a Home. If created as a Household Home, the creator becomes a Household Member with the same standing as any later invitee — no persistent creator privilege. If created as a Landlord Home, the creator becomes its Landlord.
 
 FR-2: Invite members via link. Who can generate a Home's invite link depends on Home type: in a Household Home, any Household Member can generate one; in a Landlord Home, only the Landlord can — Tenants cannot invite anyone.
 
@@ -88,6 +90,8 @@ FR-21: Responsive layout across device classes. The web application renders a us
 FR-22: Run locally without external accounts. The application runs on a developer's or reviewer's machine using a local Docker-based database, seed data and mock modes for the external services (AI, and in Trinn 2 push), with no account or key from the team.
 FR-23: Leave a Home and remove Members (added 2026-11-08, Sprint Change Proposal 2026-11-08). A Household Member or Tenant can leave their Home; a Landlord can remove a Tenant from a Landlord Home. A Landlord cannot leave their own Landlord Home, and a Household Member cannot remove another Household Member. History stays and shows «Tidligere medlem»; only current Members count.
 
+FR-24: Add and archive Tasks (added 2026-11-09, Sprint Change Proposal 2026-11-09). After Task Setup, a Household Member or Landlord can add a catalog or custom Task and archive a Task; Tenants cannot. Custom Tasks never require Photo Evidence; archiving keeps history.
+
 ### NonFunctional Requirements
 
 NFR1: Permission enforcement. Role-based restrictions (Tenant cannot alter Landlord-locked Must/Frequency settings; only Household Members/Landlords can adjust classification) must be enforced server-side, not only hidden in the UI (binds FR-3, FR-5, FR-8).
@@ -110,6 +114,7 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 
 - **Layering & permissions:** Routes never mutate data or call external services directly — every mutating/permission-sensitive operation flows through a domain-service layer (AD-3). Role lives on the User↔Home Membership join entity, never on the User account (AD-1) — one User can hold different Roles in different Homes. Every Home-scoped route resolves the caller's Role per-request via a `require_role(home_id, allowed_roles)` dependency that loads the Membership row — never from a JWT claim (AD-2). `[REVISED 2026-11-08]` — delivered as `require_role(*roles)` (Story 1.4, reused in Story 1.5): the roles are given when the dependency is built, and `home_id` is read from the path only (`Path()`), never from the query or body. `backend/tests/test_permissions.py` walks every route and fails if a `{home_id}` route lacks `require_role` or `require_role` sits on a route without `{home_id}`.
 - **Current vs past Members (AD-16, added 2026-11-08):** only current Memberships count for access, notifications, fairness and overviews; history (completions, Photo Evidence) references the User and shows «Tidligere medlem» when that User has no Membership in the Home.
+- **Active vs archived Tasks (FR-24, added 2026-11-09):** an archived Task is never deleted, and every read that drives behaviour — Task Overview, the due-check and fairness (Epic 3), Photo Evidence requirements (Epic 4) and the Portfolio (Epic 6) — reads active Tasks only. History on an archived Task (completions, Photo Evidence) stays reachable where that history is shown. `has_tasks` means Task Setup has run.
 - **Task completion:** One domain function (`complete_task_instance`) is the sole code path marking a Task instance complete, recording attribution, and triggering the FR-9 reschedule; it is idempotent on retried requests (AD-3).
 - **AI service:** One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation); every response is a structured object `{status: "ok" | "low_confidence" | "error", answer, disclaimer}` with the disclaimer always its own field (AD-4). The onboarding guide is generated once per Home at provisioning time and persisted, not regenerated per view (AD-4, FR-16).
 - **Photo Evidence storage:** `PhotoEvidence` is 1:1 with `Task` (not `TaskInstance`); each task's photo is stored under a fixed key (`tasks/{task_id}/evidence.jpg`) in a private Vercel Blob store, overwritten on each new upload — no per-completion history row; the photo is only served through a backend route that runs `require_role` first, never as a permanent Blob URL (AD-5). Task types carry a system-seeded, non-Landlord-editable `photo_evidence_eligible` flag; the endpoint setting FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible (AD-6).
@@ -197,7 +202,7 @@ UX-DR50: Never frame a missed task as a failure or shame the person who didn't d
 
 ### FR Coverage Map
 
-FR-1: Epic 1 - Create a Home (Household or Landlord)
+FR-1: Epic 1 - Create a Home (Household or Landlord) + Story 1.9 (one creation rule, 2026-11-09)
 FR-2: Epic 1 - Invite members via link, scoped by Home type and inviter role
 FR-3: Epic 1 - Assign and enforce Member Roles (server-side)
 FR-4: Epic 2 - Recommend Must/Should classification (incl. at Home-creation Task Setup)
@@ -220,8 +225,9 @@ FR-20: Epic 6 - Portfolio-level status dashboard
 FR-21: Epic 1 (foundation: responsive app shell, design tokens, PWA) - Epic 6 (dashboard-specific two-column breakpoint behavior)
 FR-22: Epic 1 (Story 1.6 - local run with Docker, seed data and mock modes; README and `.env.example` from Story 1.1)
 FR-23: Epic 1 (Story 1.8 - leave a Home, Landlord removes a Tenant; added 2026-11-08)
+FR-24: Epic 2 (Story 2.6 - add and remove Tasks; added 2026-11-09)
 
-Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22. Trinn 2 = FR-10 to FR-13, FR-15, FR-16, FR-18 to FR-20, FR-21 (dashboard behavior).
+Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22, FR-23, FR-24. Trinn 2 = FR-10 to FR-13, FR-15, FR-16, FR-18 to FR-20, FR-21 (dashboard behavior).
 
 ## Epic List
 
@@ -231,8 +237,8 @@ Users can register and log in, create a Home (Household or Landlord), invite oth
 **Stage:** Trinn 1
 
 ### Epic 2: Task Management Core Loop
-Household Members, Tenants, and Landlords can see a Must-first task list for their Home, (for Household Members/Landlords) adjust a task's Must/Should classification and Frequency inline, self-checkoff a task in one tap, see shared completion status update immediately with per-member attribution, and have the next occurrence auto-scheduled from the actual completion date. Includes the Task Setup step at Home creation (reviewing/accepting the app's recommended task list). Implements the single `complete_task_instance` domain function (AD-3) that Epic 4 (Photo Evidence) will later extend.
-**FRs covered:** FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-17
+Household Members, Tenants, and Landlords can see a Must-first task list for their Home, (for Household Members/Landlords) adjust a task's Must/Should classification and Frequency inline, self-checkoff a task in one tap, see shared completion status update immediately with per-member attribution, and have the next occurrence auto-scheduled from the actual completion date. Includes the Task Setup step at Home creation (reviewing/accepting the app's recommended task list). Implements the single `complete_task_instance` domain function (AD-3) that Epic 4 (Photo Evidence) will later extend, and add or remove Tasks after setup (Story 2.6).
+**FRs covered:** FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-17, FR-24
 **Stage:** Trinn 1
 
 ### Epic 3: Notifications
@@ -262,6 +268,8 @@ Users can register and log in, create a Home (Household or Landlord), invite oth
 `[ASSUMPTION carried from PRD Open Question 3 / EXPERIENCE.md's Foundation note, unresolved at the PRD level]`: v1 does not design a Home-switcher UI. A Landlord may own and switch between multiple Homes via the Portfolio Dashboard (Epic 6) — that mechanism is Landlord-specific and already scoped. A Household Member or Tenant is assumed to belong to at most one Home for the main self-service flow (Story 1.3); nothing technically prevents them from also accepting a second invite link (Story 1.4) into another Home, but no UI exists for switching between multiple simultaneous non-Landlord Memberships. If this turns out to matter for the team's actual usage, revisit before Epic 1 is built — it is a scope decision, not an oversight.
 
 *Update 2026-11-07 (team decision 3, Story 1.4):* the assumption is now a rule enforced on the server in `domain/homes.add_member`. A user may be Household Member or Tenant in at most one Home; Landlord Memberships do not count, so a Landlord may also join one such Home. A second invite is refused with "Du er allerede med i «X». Du kan bare være med i ett hjem om gangen."
+
+*Update 2026-11-09 (Sprint Change Proposal, Story 1.9):* creating a Home now follows the same limit: anyone may create Landlord Homes, and a Household Home only without another Household Member or Tenant Membership.
 
 ### Story 1.1: Project Scaffold, Design Tokens & Responsive App Shell
 
@@ -390,6 +398,8 @@ So that I can start organizing tasks for my living situation or property.
 **Given** the seed command from Story 1.6
 **When** this story is delivered
 **Then** the seed data is extended with an example Household Home that the example users belong to (FR-22)
+
+*Revised 2026-11-09 (Sprint Change Proposal, Story 1.9):* the AC "a Household Member/Tenant is not re-prompted to create another Home" and the rule "a Landlord may create more Landlord Homes only" are replaced by one rule: Landlord Homes always, Household Home only without another Household Member or Tenant Membership.
 
 ### Story 1.4: Invite Members via Scoped Link & Accept Invite
 
@@ -590,6 +600,44 @@ So that nobody is locked into the wrong Home and a Landlord's Home lists only cu
 **When** they are opened
 **Then** they stay valid until used or expired, as in Story 1.4 (a link belongs to the Home, not to its creator)
 
+### Story 1.9: One Rule for Creating Homes
+
+**Stage:** Trinn 1 · **Source:** issue #30, Epic 1 retrospective (R1), Sprint Change Proposal 2026-11-09 · **FR:** FR-1, FR-3 · **AD:** AD-1, AD-3
+
+As a user who already belongs to a Home,
+I want to create the other kind of Home when my situation calls for it,
+So that a Landlord can have a private Household Home and a Household Member or Tenant can start renting out a unit, without needing an invite.
+
+**Acceptance Criteria:**
+
+**Given** a Landlord with no Household Member or Tenant Membership
+**When** they open Create Home
+**Then** both Household Home and Landlord Home are offered, and choosing Household Home makes them its Household Member (FR-1)
+
+**Given** a Household Member or Tenant
+**When** they open Create Home
+**Then** only Landlord Home is offered, and creating one makes them its Landlord while their existing Membership is unchanged
+
+**Given** a user who is already a Household Member or Tenant somewhere
+**When** they call `POST /api/homes` with `type: household` directly
+**Then** the server answers 409 with «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», the same as joining (Story 1.4), and nothing is written
+
+**Given** the creation rule and the joining rule
+**When** their source is inspected
+**Then** both read one domain statement of the one-Home limit in `domain/homes` (`allowed_types` and `join_blocker` share it), so they cannot drift apart again (AD-3)
+
+**Given** any user who may still create a Home
+**When** the Home page renders
+**Then** «Opprett nytt hjem» is shown, and after creating, the user goes on to Task Setup (Story 2.1)
+
+**Given** any created Home
+**When** `fr3_violations` runs in the tests and CI
+**Then** it is still empty: a Home never mixes Household Members with a Landlord or Tenants
+
+**Given** the Story 1.3 and 1.4 test matrices
+**When** this story is delivered
+**Then** the row «Landlord creates Household» expects 201, a new row covers a Household Member creating a Landlord Home, and the README describes the rule where it explains creating a Home
+
 ## Epic 2: Task Management Core Loop
 
 Household Members, Tenants, and Landlords can see a Must-first task list, adjust classification/Frequency where permitted, self-checkoff a task in one tap with shared status and attribution, and have the next occurrence auto-scheduled from the actual completion date.
@@ -647,7 +695,7 @@ So that my Home starts with a sensible, personalized task list instead of an emp
 **When** Task Setup is delivered
 **Then** the seed data is extended with an example Household Home that already has the recommended tasks, so a reviewer sees a populated Task Overview straight after seeding (FR-22)
 
-**Note (2026-11-09, Story 2.1 spec, decisions by Eirik):** (1) Until Story 2.2 builds Task Overview, setup lands on `/`, which shows a minimal task list (name, Må/Bør, Frequency, next due date). (2) The catalog is a versioned Python module (`backend/app/domain/task_types.py`), not a table; a Task stores its catalog key and copies the name. (3) The eight starter entries in the table above are agreed as they stand. (4) The first instance is due on the setup date + Frequency; the seed sets both example Homes up as of an earlier date (28 and 40 days ago), so some tasks are due soon or overdue. (5) A task can be unticked in setup; custom tasks are not built now (`deferred-work.md`), but the model allows them later because a Task carries its own name. (6) Frequency is chosen from fixed intervals: 7, 14, 30, 42, 60, 90, 182 and 365 days («Hver uke» … «Hvert år»). Beyond the AC above, the seed also sets up the Landlord Home «Storgata 12», and setup runs once per Home (a second attempt gets 409).
+**Note (2026-11-09, Story 2.1 spec, decisions by Eirik):** (1) Until Story 2.2 builds Task Overview, setup lands on `/`, which shows a minimal task list (name, Må/Bør, Frequency, next due date). (2) The catalog is a versioned Python module (`backend/app/domain/task_types.py`), not a table; a Task stores its catalog key and copies the name. (3) The eight starter entries in the table above are agreed as they stand. (4) The first instance is due on the setup date + Frequency; the seed sets both example Homes up as of an earlier date (28 and 40 days ago), so some tasks are due soon or overdue. (5) A task can be unticked in setup; custom tasks are not built now (`deferred-work.md`), but the model allows them later because a Task carries its own name. (6) Frequency is chosen from fixed intervals: 7, 14, 30, 42, 60, 90, 182 and 365 days («Hver uke» … «Hvert år»). Beyond the AC above, the seed also sets up the Landlord Home «Storgata 12», and setup runs once per Home (a second attempt gets 409). *Sprint Change Proposal 2026-11-09:* custom Tasks (decision 5) are planned in Story 2.6, and `has_tasks` keeps meaning "Task Setup has run" once Tasks can be archived.
 
 ### Story 2.2: Must-First Task Overview
 
@@ -702,6 +750,12 @@ So that I always know what's non-negotiable before what's optional.
 **Given** a signed-in Member with a Home
 **When** any signed-in page renders
 **Then** a tab bar shows Task Overview and Settings/Profile, plus Portfolio for a Landlord who owns two or more Homes (EXPERIENCE.md)
+
+*Added 2026-11-09 (Sprint Change Proposal):*
+
+**Given** a user with more than one Home (for example a Landlord with their own Household Home, Story 1.9)
+**When** they use the app
+**Then** each Home has its own Task Overview at `/hjem/<id>`, a «Dine hjem» list lets them switch between their Homes, and `/` opens the most recently used Home. The Portfolio tab (Landlord with ≥2 Landlord Homes) is unchanged.
 
 > **Note 2026-11-07 (team decision, Story 1.3):** The tab bar was deferred from Stories 1.1 and 1.2 to 1.3, and has now been split out of 1.3 too, since after 1.3 only a placeholder Home page and sign-out exist. It belongs here because Task Overview is its first real content. Until then, Story 1.3 gives Landlords a plain link to create another Home.
 
@@ -816,6 +870,60 @@ So that I never have to remember to set a reminder for an irregular task myself.
 **Given** an already-completed task instance
 **When** `complete_task_instance` is called again on it (for example, a retried request)
 **Then** it returns the existing completion state unchanged rather than re-attributing or re-scheduling
+
+### Story 2.6: Add and Remove Tasks
+
+**Stage:** Trinn 1 · **Source:** issue #31, Sprint Change Proposal 2026-11-09 · **FR:** FR-24, FR-4, FR-8 · **AD:** AD-2, AD-3, AD-6, AD-16 · **Builds on:** 2.2 (Task Overview), 2.3 (Task Detail), 2.4 (completion history)
+
+As a Household Member or Landlord,
+I want to add tasks my Home needs and remove the ones it no longer needs,
+So that the task list keeps matching my Home after the first setup.
+
+**Acceptance Criteria:**
+
+**Given** a Household Member or Landlord on Task Overview
+**When** they choose «Legg til oppgave»
+**Then** Add Task offers the catalog task types the Home has no active Task for, each with its recommended Må/Bør and Frequency to adjust, and a custom Task with name, Må/Bør and Frequency (FR-24)
+
+**Given** a catalog task type or a custom Task is saved
+**When** the user lands back on Task Overview
+**Then** the new Task is listed in Must-first order with its first instance due on today + Frequency, like Task Setup (Story 2.1)
+
+**Given** a custom Task
+**When** it is saved
+**Then** it must have a name of 1–100 characters (trimmed) that no other active Task in the Home has (case-insensitive), a Må/Bør classification and a Frequency from the fixed list, or the server answers 422 with a Norwegian message shown at the field (FR-4, FR-8)
+
+**Given** a custom Task
+**When** a Landlord later tries to require Photo Evidence on it (Story 4.1)
+**Then** the server rejects it, since only catalog types flagged `photo_evidence_eligible` qualify (AD-6)
+
+**Given** a Household Member or Landlord on Task Detail
+**When** they choose «Fjern oppgaven» and confirm inline
+**Then** the Task is archived: it disappears from Task Overview for every Member, its instances and completions stay, and the user lands on Task Overview with «Fjernet «X».» (UX: Remove Task confirmation, Task removed)
+
+**Given** a catalog task type whose Task was archived
+**When** it is added again
+**Then** it becomes a new Task with a new first due date; the archived Task and its history are unchanged
+
+**Given** a repeated archive of the same Task (double tap, second tab)
+**When** the request arrives
+**Then** nothing changes and the user is not shown an error
+
+**Given** a Home whose every Task is archived
+**When** a Member opens Task Overview
+**Then** it shows the No active Tasks state, and Task Setup is not offered again (`has_tasks` means setup has run)
+
+**Given** a Tenant
+**When** they view Task Overview or Task Detail, or call the add or archive routes directly
+**Then** they see neither «Legg til oppgave» nor «Fjern oppgaven», and the server answers 403 (AD-2; the route walk in `test_permissions.py` covers the new routes)
+
+**Given** adding or archiving fails server-side
+**When** the user sees the result
+**Then** an inline error with a retry affordance shows at the action (UX-DR30)
+
+**Given** this story is delivered
+**When** the README is read
+**Then** it describes how to add a custom Task and remove a Task, and `deferred-work.md`'s custom-task entry has its outcome
 
 ## Epic 3: Notifications
 
