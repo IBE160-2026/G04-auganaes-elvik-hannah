@@ -7,16 +7,16 @@ before sign-in; with a Bearer token it also says whether the viewer can join.
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, Path, status
 from pydantic import BaseModel
 
 from app.clock import UtcDatetime
 from app.domain import homes, invites
 from app.models.home import HomeType
-from app.models.membership import Membership, Role
+from app.models.membership import Role
 from app.permissions.current_user import CurrentUser, OptionalUser
-from app.permissions.require_role import require_role
-from app.routes.homes import ErrorOut, HomeOut, SessionDep, home_out
+from app.routes.deps import ErrorOut, Inviter, SessionDep
+from app.routes.homes import HomeOut, home_out_for
 
 router = APIRouter(tags=["invites"])
 
@@ -28,7 +28,6 @@ _ASK_WHOM: dict[HomeType | None, str] = {
 }
 
 Token = Annotated[str, Path(min_length=1, max_length=invites.TOKEN_MAX_LENGTH)]
-Inviter = Annotated[Membership, Depends(require_role(*sorted(homes.INVITER_ROLES)))]
 
 
 def invalid_message(home_type: HomeType | None) -> str:
@@ -124,4 +123,4 @@ def accept_invite(token: Token, user: CurrentUser, session: SessionDep) -> HomeO
     except homes.InOtherHome as exc:
         detail = in_other_home_message(exc.home.name)
         raise HTTPException(status.HTTP_409_CONFLICT, detail=detail) from None
-    return home_out(joined)
+    return home_out_for(session, joined)

@@ -1,20 +1,28 @@
 """Story 1.6 (FR-22, AD-15): the seed command. Steps run on SQLite; run() gets fakes.
 
 Story 1.4: plus the Landlord Kari's Home and the Tenant Anders, who joins it by invite link.
+
+Story 2.1 (FR-4, FR-8, decisions 4 and 7): plus eight Tasks in each example Home, set up as of
+an earlier date so some are due soon or overdue; a Home the homes step skipped gets none.
 """
+
+from datetime import timedelta
 
 import pytest
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, select
 
 from app import seed
-from app.domain import homes
+from app.clock import utc_now
+from app.domain import homes, task_types, tasks
 from app.domain.accounts import authenticate, register
 from app.models.home import Home
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
+from app.models.task import Task, TaskInstance
 from app.models.user import User
 from app.seed.homes import EXAMPLE_HOME_NAME, LANDLORD_HOME_NAME, seed_homes
+from app.seed.tasks import seed_tasks
 from app.seed.users import EXAMPLE_PASSWORD, EXAMPLE_USERS, seed_users
 from tests.helpers import count
 
@@ -31,12 +39,25 @@ def by_email(session: Session, email: str) -> User:
 
 MARI, JONAS, KARI, ANDERS = (user.email for user in EXAMPLE_USERS[:4])
 
-# What a full seed gives: users, Homes, Memberships, invite links.
-FULL = (4, 2, 4, 1)
+# What a full seed gives: users, Homes, Memberships, invite links, Tasks, TaskInstances.
+FULL = (4, 2, 4, 1, 16, 16)
+MODELS = (User, Home, Membership, InviteLink, Task, TaskInstance)
+# The same without the tasks step.
+HOMES_ONLY = FULL[:4]
 
 
 def counts(session: Session) -> tuple[int, ...]:
-    return tuple(count(session, model) for model in (User, Home, Membership, InviteLink))
+    return tuple(count(session, model) for model in MODELS)
+
+
+def task_count(session: Session, home: Home) -> int:
+    return len(tasks.tasks_of(session, home.id))
+
+
+def own_home(session: Session, email: str, name: str) -> Home:
+    return next(
+        h.home for h in homes.homes_for(session, by_email(session, email)) if h.home.name == name
+    )
 
 
 class Calls:
@@ -54,8 +75,8 @@ class Calls:
         return self.session
 
 
-def test_steps_are_users_then_homes() -> None:
-    assert seed.STEPS == (seed_users, seed_homes)
+def test_steps_are_users_then_homes_then_tasks() -> None:
+    assert seed.STEPS == (seed_users, seed_homes, seed_tasks)
 
 
 def test_example_emails_are_normalised() -> None:
@@ -84,6 +105,31 @@ def test_fresh_db_migrates_and_creates_users(
     assert f"Opprettet hjemmet «{EXAMPLE_HOME_NAME}»" in out
     assert f"Opprettet hjemmet «{LANDLORD_HOME_NAME}»" in out
     assert f"La til {ANDERS}" in out
+    assert f"Satte opp 8 oppgaver i «{EXAMPLE_HOME_NAME}»" in out
+    assert f"Satte opp 8 oppgaver i «{LANDLORD_HOME_NAME}»" in out
+
+
+@pytest.mark.parametrize(("email", "name"), [(MARI, EXAMPLE_HOME_NAME), (KARI, LANDLORD_HOME_NAME)])
+def test_fresh_db_gives_both_homes_every_catalog_task_some_due_soon_or_overdue(
+    session: Session, email: str, name: str
+) -> None:
+    for step in seed.STEPS:
+        step(session)
+
+    listed = tasks.tasks_of(session, own_home(session, email, name).id)
+    assert sorted(row.task.task_type for row in listed) == sorted(
+        t.key for t in task_types.TASK_TYPES
+    )
+    for row in listed:
+        entry = task_types.task_type(row.task.task_type)
+        assert entry is not None
+        assert (row.task.classification, row.task.frequency_days) == (
+            entry.classification,
+            entry.frequency_days,
+        )
+    today = utc_now().date()
+    assert any(row.due_on < today for row in listed), "nothing overdue"
+    assert any(today <= row.due_on <= today + timedelta(days=7) for row in listed), "nothing soon"
 
 
 def test_fresh_db_gives_mari_and_jonas_one_household_home(session: Session) -> None:
@@ -129,6 +175,10 @@ def test_rerun_is_idempotent(session: Session, capsys: pytest.CaptureFixture[str
     assert out.count("finnes allerede") == 6
     assert f"{JONAS} er allerede med" in out
     assert f"{ANDERS} er allerede med" in out
+    # Story 2.1: both Homes' Tasks are left as they are.
+    assert f"Oppgavene i «{EXAMPLE_HOME_NAME}» er allerede satt opp" in out
+    assert f"Oppgavene i «{LANDLORD_HOME_NAME}» er allerede satt opp" in out
+    assert "Satte opp" not in out
 
 
 def test_partial_skips_existing_user_with_other_casing(
@@ -188,10 +238,16 @@ def test_mari_in_another_home_is_skipped_and_nothing_is_written(
     capsys.readouterr()
 
     seed_homes(session)
+    seed_tasks(session)
 
     # Mari's own Home, then Kari's with Kari and Anders.
     assert count(session, Home) == 2 and count(session, Membership) == 3
-    assert f"Hoppet over «{EXAMPLE_HOME_NAME}»" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert f"Hoppet over «{EXAMPLE_HOME_NAME}»" in out
+    # Story 2.1: Mari's other Home gets no Tasks; Kari's still does.
+    assert task_count(session, own_home(session, MARI, "Maris")) == 0
+    assert task_count(session, own_home(session, KARI, LANDLORD_HOME_NAME)) == 8
+    assert f"Hoppet over oppgavene i «{EXAMPLE_HOME_NAME}»" in out
 
 
 def test_partial_run_adds_anders_to_karis_existing_home_with_one_link(
@@ -206,7 +262,7 @@ def test_partial_run_adds_anders_to_karis_existing_home_with_one_link(
     seed_homes(session)
 
     assert [h.home.id for h in homes.homes_for(session, by_email(session, ANDERS))] == [home.id]
-    assert counts(session) == FULL
+    assert counts(session)[:4] == HOMES_ONLY
     out = capsys.readouterr().out
     assert f"Hjemmet «{LANDLORD_HOME_NAME}» finnes allerede" in out and f"La til {ANDERS}" in out
 
@@ -234,10 +290,37 @@ def test_kari_in_a_household_home_is_skipped_with_a_reason(
     capsys.readouterr()
 
     seed_homes(session)
+    seed_tasks(session)
 
     assert count(session, InviteLink) == 0
     assert not homes.homes_for(session, by_email(session, ANDERS))
-    assert f"Hoppet over «{LANDLORD_HOME_NAME}»" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert f"Hoppet over «{LANDLORD_HOME_NAME}»" in out
+    # Story 2.1: Kari's Household Home gets no Tasks; Mari's still does.
+    assert task_count(session, own_home(session, KARI, "Karis")) == 0
+    assert task_count(session, own_home(session, MARI, EXAMPLE_HOME_NAME)) == 8
+    assert f"Hoppet over oppgavene i «{LANDLORD_HOME_NAME}»" in out
+
+
+def test_a_home_set_up_by_hand_is_left_as_it_is(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    seed_homes(session)
+    home = own_home(session, MARI, EXAMPLE_HOME_NAME)
+    mari = by_email(session, MARI)
+    membership = session.exec(
+        select(Membership).where(Membership.home_id == home.id, Membership.user_id == mari.id)
+    ).one()
+    tasks.set_up_tasks(session, membership, [tasks.TaskChoice("gulv", "must", 7)])
+    capsys.readouterr()
+
+    seed_tasks(session)
+
+    assert [
+        (r.task.task_type, r.task.classification) for r in tasks.tasks_of(session, home.id)
+    ] == [("gulv", "must")]
+    assert f"Oppgavene i «{EXAMPLE_HOME_NAME}» er allerede satt opp" in capsys.readouterr().out
 
 
 def _db_down() -> None:

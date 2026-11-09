@@ -647,6 +647,8 @@ So that my Home starts with a sensible, personalized task list instead of an emp
 **When** Task Setup is delivered
 **Then** the seed data is extended with an example Household Home that already has the recommended tasks, so a reviewer sees a populated Task Overview straight after seeding (FR-22)
 
+**Note (2026-11-09, Story 2.1 spec, decisions by Eirik):** (1) Until Story 2.2 builds Task Overview, setup lands on `/`, which shows a minimal task list (name, Må/Bør, Frequency, next due date). (2) The catalog is a versioned Python module (`backend/app/domain/task_types.py`), not a table; a Task stores its catalog key and copies the name. (3) The eight starter entries in the table above are agreed as they stand. (4) The first instance is due on the setup date + Frequency; the seed sets both example Homes up as of an earlier date (28 and 40 days ago), so some tasks are due soon or overdue. (5) A task can be unticked in setup; custom tasks are not built now (`deferred-work.md`), but the model allows them later because a Task carries its own name. (6) Frequency is chosen from fixed intervals: 7, 14, 30, 42, 60, 90, 182 and 365 days («Hver uke» … «Hvert år»). Beyond the AC above, the seed also sets up the Landlord Home «Storgata 12», and setup runs once per Home (a second attempt gets 409).
+
 ### Story 2.2: Must-First Task Overview
 
 **Stage:** Trinn 1

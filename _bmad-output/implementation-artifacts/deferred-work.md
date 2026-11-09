@@ -52,3 +52,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-5-view-home-members-list-enforce-role-based-permissions.md`
   summary: Add a frontend test that a session change to another user without sign-out never shows the previous user's cached Homes, invite preview or members list (the user id in `homesKey`, `inviteKey` and `membersKey`).
   evidence: Verification-gap review of Story 1.5. Dropping the user id from `membersKey` passes every test, because each test has one user and a fresh `QueryClient`, and sign-out clears the cache. The same holds for `homesKey` and `inviteKey`, so one shared test fits better than one per story.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
+  summary: Let a Household Member or Landlord add custom tasks (own name, classification and Frequency) beside the catalog's, in setup or later.
+  evidence: Story 2.1, decision 5 (Eirik, 2026-11-09): setup only ticks and adjusts catalog entries. The model is ready for it: a Task copies its name from the catalog, so a custom task needs only a nullable `tasks.task_type` (and `photo_evidence_eligible` false), plus a rule for the unique `(home_id, task_type)`. No story owns it yet.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
+  summary: Test on Postgres that the Home-row lock in `domain/tasks.set_up_tasks` stops two concurrent setups with disjoint choices from both committing.
+  evidence: The tests run on SQLite, which ignores FOR UPDATE; the overlapping-race tests prove only the unique `(home_id, task_type)` backstop. Same gap as the Epic 1 lock tests (Story 1.3/1.4 entries); needs a concurrent Postgres harness in CI.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
+  summary: Story 2.4 must change `domain/tasks.tasks_of` from the earliest instance to the earliest open (not completed) instance.
+  evidence: `tasks_of` uses `min(TaskInstance.due_on)`; once 2.4 stores completions, a completed past instance stays the earliest and the list would show an old date as «Neste gang». The architecture revision note now says so.

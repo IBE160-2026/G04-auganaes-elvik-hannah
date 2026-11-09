@@ -83,7 +83,8 @@ jobs:
       - run: uv run python -m app.seed
       # Story 1.3: plus the example Home with Mari and Jonas as its two Members.
       # Story 1.4: plus Kari's Landlord Home, which Anders joined through one invite link.
-      - name: Seed er idempotent (fire brukere, to hjem, fire medlemskap, én lenke)
+      # Story 2.1: plus eight Tasks in each Home, each with one TaskInstance.
+      - name: Seed er idempotent (fire brukere, to hjem, fire medlemskap, én lenke, 16 oppgaver)
         run: |
           uv run python - <<'EOF'
           from sqlalchemy import create_engine, text
@@ -94,8 +95,11 @@ jobs:
               homes = c.execute(text("SELECT count(*) FROM homes")).scalar_one()
               members = c.execute(text("SELECT count(*) FROM memberships")).scalar_one()
               links = c.execute(text("SELECT count(*) FROM invite_links")).scalar_one()
+              tasks = c.execute(text("SELECT count(*) FROM tasks")).scalar_one()
+              instances = c.execute(text("SELECT count(*) FROM task_instances")).scalar_one()
           assert n == len(EXAMPLE_USERS) == 4, n
           assert (homes, members, links) == (2, 4, 1), (homes, members, links)
+          assert (tasks, instances) == (16, 16), (tasks, instances)
           EOF
       # Story 1.5 (FR-3, decision 2): the same "never mixed" check as the tests, on Postgres.
       - name: Ingen hjem blander roller (FR-3)
@@ -128,6 +132,13 @@ jobs:
                "created_at, expires_at) "
                "SELECT :h, m.home_id, 'landlord', 'x', m.user_id, now(), now() "
                "FROM memberships m LIMIT 1"),
+              # Story 2.1: every Task is Must or Should and has a positive Frequency.
+              ("ck_tasks_classification",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "created_at) SELECT :h, h.id, 'x', 'x', 'maybe', 7, now() FROM homes h LIMIT 1"),
+              ("ck_tasks_frequency_days",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "created_at) SELECT :h, h.id, 'x', 'x', 'must', 0, now() FROM homes h LIMIT 1"),
           ]
           with create_engine(get_database_url()).connect() as c:
               for name, sql in cases:

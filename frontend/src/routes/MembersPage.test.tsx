@@ -371,6 +371,29 @@ describe('Leave and remove', () => {
     expect(screen.getByRole('heading', { name: 'Storgata 12' })).toBeInTheDocument();
   });
 
+  it('shows the notice on Task Setup when her remaining Landlord Home has no Tasks (Story 2.1)', async () => {
+    const user = userEvent.setup();
+    const rental: Home = { ...RENTAL, has_tasks: false };
+    let left = false;
+    fakeApi({
+      ...signedInWith([OLAS_HOME, rental], ['landlord']),
+      'GET /api/homes': () =>
+        json(200, homesResponse(left ? [rental] : [OLAS_HOME, rental], ['landlord'])),
+      [`DELETE ${leavePath(OLAS_HOME)}`]: () => {
+        left = true;
+        return noContent();
+      },
+    });
+    renderAt(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    await user.click(await screen.findByRole('button', { name: 'Forlat hjemmet' }));
+    await user.click(screen.getByRole('button', { name: 'Ja, forlat hjemmet' }));
+
+    expect(await screen.findByText('Du har forlatt «Kollektivet».')).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${rental.id}/oppgaveoppsett`);
+    expect(screen.getByRole('heading', { name: 'Sett opp oppgaver' })).toBeInTheDocument();
+  });
+
   it('shows a failed leave inline with «Prøv igjen», keeps focus, and retries', async () => {
     const user = userEvent.setup();
     let fail = true;

@@ -54,7 +54,7 @@ uv run python -m app.seed
 uv run fastapi dev
 ```
 
-`uv run python -m app.seed` er én kommando for både migreringer og eksempeldata (Story 1.6): den kjører `alembic upgrade head` og lager eksempelbrukerne under og eksempelhjemmene de bor i (Story 1.3 og 1.4). Den kan kjøres så mange ganger du vil, og sletter eller overskriver aldri noe; finnes en bruker fra før, skriver den «finnes allerede». Kjøres den før databasen er startet, avslutter den med en melding om å kjøre `docker compose up -d --wait`. Kjør den fra `backend/`.
+`uv run python -m app.seed` er én kommando for både migreringer og eksempeldata (Story 1.6): den kjører `alembic upgrade head` og lager eksempelbrukerne under, eksempelhjemmene de bor i (Story 1.3 og 1.4) og åtte oppgaver i hvert av hjemmene (Story 2.1). Oppgavene settes opp som om det skjedde for noen uker siden, så noen er forfalt og noen forfaller snart. Den kan kjøres så mange ganger du vil, og sletter eller overskriver aldri noe; finnes en bruker fra før, skriver den «finnes allerede». Kjøres den før databasen er startet, avslutter den med en melding om å kjøre `docker compose up -d --wait`. Kjør den fra `backend/`.
 
 API-et kjører på <http://localhost:8000>. Sjekk at det svarer: <http://localhost:8000/api/health> skal gi `{"status":"ok"}`, og <http://localhost:8000/api/health/db> skal gi `{"database":"ok"}` når databasen kjører. API-dokumentasjon ligger på <http://localhost:8000/docs>.
 
@@ -84,9 +84,9 @@ Seed-kommandoen lager disse eksempelbrukerne:
 | Anders Johnsen | `anders@example.com` | `husly-demo` | «Storgata 12», utleiebolig (leietaker, kom inn via en invitasjonslenke) |
 
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
-2. Logg inn som Mari. Du havner på hjemsiden for «Mari og Jonas sitt hjem», med type og rolle. Last siden på nytt; du er fortsatt logget inn.
+2. Logg inn som Mari. Du havner på hjemsiden for «Mari og Jonas sitt hjem», med type, rolle og de åtte oppgavene under **Oppgaver** (Må-oppgavene først, hver med intervall og «Neste gang»). Last siden på nytt; du er fortsatt logget inn.
 3. **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
-4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Med en husstand blir du husstandsmedlem og får ikke tilbud om å lage flere hjem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier, ser listen over hjemmene dine og kan lage flere med **Opprett nytt hjem**.
+4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se under). Med en husstand blir du husstandsmedlem og får ikke tilbud om å lage flere hjem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier, ser listen over hjemmene dine og kan lage flere med **Opprett nytt hjem**.
 5. **Logg ut** sender deg tilbake til innloggingen.
 
 **Prøv invitasjon (Story 1.4):**
@@ -108,6 +108,14 @@ Seed-kommandoen lager disse eksempelbrukerne:
 2. Logg inn som Mari og åpne **Medlemmer og invitasjon**. Under **Medlemmer** står bare hun. Hun har ingen **Fjern**-knapp: et husstandsmedlem kan bare forlate selv.
 3. Logg inn som Anders i én nettleser og åpne **Medlemmer og invitasjon** for «Storgata 12». Logg inn som Kari i en annen nettleser (eller et privat vindu), åpne samme side og trykk **Fjern** ved Anders og så **Ja, fjern Anders Johnsen**. Kari ser «Anders Johnsen er fjernet.». Bytt så til en annen fane i Anders sin nettleser (eller minimer vinduet) og tilbake, uten å laste siden på nytt: han blir sendt til **Opprett hjemmet ditt**, uten feilside. Det holder ikke å klikke mellom to vinduer som står side om side; appen henter data på nytt når fanen blir synlig igjen, ikke når vinduet får fokus. Kari har ingen **Forlat hjemmet**-knapp: en utleier kan ikke forlate sin egen utleiebolig.
 4. Angre ved å kjøre `uv run python -m app.seed` fra `backend/` igjen. Den legger Jonas tilbake i «Mari og Jonas sitt hjem» og Anders tilbake i «Storgata 12» (med en ny invitasjonslenke), og sletter ingenting. Har Jonas eller Anders laget eller blitt med i et annet hjem i mellomtiden, hopper seed-en over dem.
+
+**Prøv oppgaveoppsett (Story 2.1):**
+
+1. Lag en ny bruker og opprett et hjem (punkt 3 og 4 over). Du havner på **Sett opp oppgaver** med åtte anbefalte oppgaver, hver med **Ta med**, **Må**/**Bør** og **Hvor ofte**.
+2. Gjør «Vask stekeovnen» til **Må** og velg **Hver 2. måned**, og fjern haken ved «Rens sluket». Trykk **Lagre oppgavene**. Du havner på hjemsiden, der **Oppgaver** viser sju oppgaver med «Vask stekeovnen» blant Må-oppgavene og uten «Rens sluket». Tilbake-knappen i nettleseren tar deg ikke til skjemaet igjen.
+3. Fjerner du alle hakene og trykker **Lagre oppgavene**, står det «Velg minst én oppgave.», og ingenting blir sendt.
+4. Oppsettet kjøres én gang per hjem. Åpner du `/hjem/<id>/oppgaveoppsett` igjen etterpå, blir du sendt til hjemsiden. Lagrer du i to faner, svarer serveren 409 på den andre, og den fanen går også til hjemsiden.
+5. Logg inn som Anders (leietaker). Han ser oppgavene Kari har satt opp for «Storgata 12», men kan ikke sette opp oppgaver selv; serveren svarer 403 på `POST /api/homes/{home_id}/tasks/setup` (prøv i <http://localhost:8000/docs> som i invitasjonseksempelet). En utleier som oppretter en ny utleiebolig, setter opp oppgavene med en gang, før noen leietaker er med; har et eldre hjem ingen oppgaver, står **Sett opp oppgaver** ved det under **Dine hjem**.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 
@@ -141,7 +149,7 @@ npm run build && npm run preview
 
 ### Tester og lint
 
-Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig fire brukere, to hjem, fire medlemskap og én invitasjonslenke, og at ingen hjem blander roller: et husstandshjem har bare husstandsmedlemmer, en utleiebolig nøyaktig én utleier og ellers bare leietakere) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
+Testene trenger verken Docker, nettverk eller nøkler; de stopper enhver nettverkstilkobling som ikke går til maskinen selv, og sjekker at `.env.example` lister nøyaktig de variablene appen leser. De samme sjekkene kjører automatisk på hver PR og på `main` i GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)), sammen med seed-kommandoen (to ganger, med sjekk av at det blir nøyaktig fire brukere, to hjem, fire medlemskap, én invitasjonslenke og 16 oppgaver, og at ingen hjem blander roller: et husstandshjem har bare husstandsmedlemmer, en utleiebolig nøyaktig én utleier og ellers bare leietakere) og migreringene opp og ned mot Postgres 18, en sjekk av at den genererte API-klienten er oppdatert, og `npm run build`.
 
 ```bash
 cd backend
@@ -176,7 +184,7 @@ backend/             FastAPI + SQLModel + Alembic (Python 3.12, uv)
     main.py          app-oppsett og ruter under /api (samme origin, ingen CORS)
     config.py        leser miljøvariablene (DATABASE_URL, JWT_SECRET, AUTH_COOKIE_SECURE)
     db.py            databasemotor, én per URL
-    routes/          tynt HTTP-lag (/api/health, /api/auth/*, /api/homes)
+    routes/          tynt HTTP-lag (/api/health, /api/auth/*, /api/homes, /api/task-types)
     domain/          domenetjenester, eneste vei for endringer (AD-3)
     permissions/     innlogget bruker og rolle-sjekker (AD-2)
     models/          SQLModel-entiteter
@@ -187,8 +195,8 @@ frontend/            React 19 + TypeScript + Vite
   public/            manifest.json og app-ikoner (AD-12)
   src/
     styles/          designtokens fra DESIGN.md og globale stiler (AD-13)
-    components/      AppShell, PrimaryButton, TextField, InstallPrompt
-    routes/          sider: logg inn, registrer, opprett hjem, hjemside
+    components/      AppShell, PrimaryButton, TextField, InstallPrompt, Badge
+    routes/          sider: logg inn, registrer, opprett hjem, oppgaveoppsett, hjemside
     api/             generert API-klient, økt i minnet og TanStack Query-hooks
   openapi.json       API-skjemaet klienten genereres fra (npm run gen:api)
     service-worker.ts

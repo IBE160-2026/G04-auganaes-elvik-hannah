@@ -23,6 +23,7 @@ import {
 } from './homes';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
+import { fetchTasks, fetchTaskTypes, setUpTasks, type Task, type TaskChoice } from './tasks';
 
 export function createQueryClient(): QueryClient {
   /**
@@ -30,12 +31,14 @@ export function createQueryClient(): QueryClient {
    * left in another tab), or a remove target is already gone. Refetch the Homes and members
    * lists, by prefix since there is no user id here, and let the pages' guards route from the
    * server's answer. The query that failed is left out, so it is never fetched again in a loop.
+   * Story 2.1: the tasks lists too.
    */
   function onForbidden(error: Error, failed?: Query<unknown, unknown, unknown>) {
     if (!(error instanceof ApiError && error.status === 403)) return;
     const others = (query: Query) => query !== failed;
     void client.invalidateQueries({ queryKey: ['homes'], predicate: others });
     void client.invalidateQueries({ queryKey: ['members'], predicate: others });
+    void client.invalidateQueries({ queryKey: ['tasks'], predicate: others });
   }
 
   const client = new QueryClient({
@@ -103,6 +106,59 @@ export function useMembers(homeId: string) {
     queryKey: membersKey(homeId, session?.user.id),
     queryFn: () => fetchMembers(homeId),
     enabled: session !== null,
+  });
+}
+
+// Story 2.1: the catalog is the same for everyone and changes only with a deploy.
+export function useTaskTypes() {
+  const session = useSession();
+  return useQuery({
+    queryKey: ['task-types'],
+    queryFn: fetchTaskTypes,
+    enabled: session !== null,
+    staleTime: Infinity,
+  });
+}
+
+// Story 2.1: keyed on the Home and the user, like the members list.
+export function tasksKey(homeId: string, userId: string | undefined) {
+  return ['tasks', homeId, userId] as const;
+}
+
+export function useTasks(homeId: string) {
+  const session = useSession();
+  return useQuery({
+    queryKey: tasksKey(homeId, session?.user.id),
+    queryFn: () => fetchTasks(homeId),
+    enabled: session !== null,
+  });
+}
+
+/**
+ * Story 2.1: on success the answer goes into the tasks cache and the Home is marked has_tasks
+ * before the caller navigates, so "/" shows the list at once and never sends the user back to
+ * setup. A 409 (set up meanwhile, e.g. in another tab) waits for the server's Homes and tasks;
+ * the setup page's guard then routes to "/" (as useLeaveHome). A 403 is the global handler's.
+ */
+export function useSetUpTasks(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const userId = session?.user.id;
+  return useMutation({
+    mutationFn: (tasks: TaskChoice[]) => setUpTasks(homeId, tasks),
+    onSuccess: (tasks: Task[]) => {
+      queryClient.setQueryData(tasksKey(homeId, userId), tasks);
+      queryClient.setQueryData<Homes>(homesKey(userId), (old) =>
+        old && { ...old, homes: old.homes.map((h) => (h.id === homeId ? { ...h, has_tasks: true } : h)) },
+      );
+    },
+    onError: async (error) => {
+      if (!(error instanceof ApiError && error.status === 409)) return;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: tasksKey(homeId, userId) }),
+        queryClient.refetchQueries({ queryKey: homesKey(userId) }),
+      ]);
+    },
   });
 }
 
