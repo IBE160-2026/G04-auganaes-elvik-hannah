@@ -4,11 +4,11 @@ type: architecture-spine
 purpose: build-substrate
 altitude: initiative
 paradigm: 'Layered client-server: SPA client + REST API service'
-scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 9 PRD features / FR-1 through FR-22'
+scope: 'Whole-system architecture for Husly (AI-driven household task app) — governs all 9 PRD features / FR-1 through FR-24'
 status: final
 created: '2026-10-04'
-updated: '2026-11-01'
-binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22]
+updated: '2026-11-09'
+binds: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/brief.md
   - _bmad-output/planning-artifacts/prds/prd-prosjektoppgave-ibe160-2026-09-29/prd.md
@@ -85,7 +85,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Binds:** FR-18, PRD Privacy Constraints
 - **Stage:** Trinn 2
 - **Prevents:** a direct API call letting a Landlord require Photo Evidence on a privacy-sensitive task type, bypassing a UI-only restriction.
-- **Rule:** Task types carry a system-seeded `photo_evidence_eligible` flag, not Landlord-editable. The endpoint that sets FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible.
+- **Rule:** Task types carry a system-seeded `photo_evidence_eligible` flag, not Landlord-editable. The endpoint that sets FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible. A custom Task (no catalog key, FR-24) is never eligible. Eligibility is read from the catalog by key, so a Task without a key has none. `[ADDED 2026-11-09]`
 
 ### AD-7 — Auth: in-memory access token + httpOnly refresh cookie, same origin
 
@@ -222,7 +222,7 @@ erDiagram
   HOME ||--o{ INVITE_LINK : issues
   INVITE_LINK }o--|| ROLE : "grants"
   HOME ||--o{ TASK : has
-  TASK_TYPE ||--o{ TASK : categorizes
+  TASK_TYPE |o--o{ TASK : categorizes
   TASK ||--o| PHOTO_EVIDENCE : "may require (current only)"
   TASK ||--o{ TASK_INSTANCE : generates
   TASK_INSTANCE }o--o{ MEMBER_COMPLETION : "attributed to"
@@ -235,6 +235,8 @@ erDiagram
 `MEMBERSHIP` rows are deleted when a Member leaves or is removed; history references `USER` (AD-16, added 2026-11-08).
 
 `[REVISED 2026-11-09]` — `TASK_TYPE` is a code catalog, not a table (Story 2.1, decision 2): the versioned module `backend/app/domain/task_types.py` (`TASK_TYPES`, `CATALOG_VERSION`) holds each entry's key, name, default classification, recommended Frequency and `photo_evidence_eligible`. A `TASK` stores the catalog key (`task_type`) and copies the name, classification and Frequency at creation, so a new catalog version never rewrites existing Tasks, and a later custom task needs only a nullable `task_type`. Eligibility is still read from the catalog by key, never from the Task (AD-6). Frequencies are picked from fixed intervals (7, 14, 30, 42, 60, 90, 182, 365 days). A `TASK_INSTANCE` has a `due_on` date (UTC calendar date) and a unique `(task_id, due_on)`; a Task's next due date is its earliest instance until Story 2.4 adds completion, after which it is the earliest open instance.
+
+`[REVISED 2026-11-09 — Sprint Change Proposal 2026-11-09]` — FR-24 (Story 2.6): a `TASK` gains a nullable `archived_at` (UTC). `task_type` becomes nullable: a custom Task has no catalog key and keeps its own name, classification and Frequency. The unique `(home_id, task_type)` and a new unique `(home_id, lower(name))` apply to active Tasks only, as partial unique indexes `WHERE archived_at IS NULL`, so a catalog task type or a name can be added again after archiving. Archiving never deletes: an archived Task and its instances, completions and Photo Evidence stay, as AD-16 keeps history. Every read that drives behaviour — Task Overview, the due-check (AD-8), fairness (AD-9), Photo Evidence requirements (AD-6) and the Portfolio (FR-20) — reads active Tasks only. `HomeOut.has_tasks` keeps meaning "Task Setup has run" (any Task, archived or not), so archiving every Task does not reopen setup.
 
 ### Source tree
 
@@ -268,9 +270,9 @@ erDiagram
 
 | Capability / Area | Stage | Lives in | Governed by |
 | --- | --- | --- | --- |
-| Homes & Membership (FR-1–3) | Trinn 1 | `backend/app/domain`, `models` | AD-1, AD-2 |
+| Homes & Membership (FR-1–3, FR-23) | Trinn 1 | `backend/app/domain`, `models` | AD-1, AD-2, AD-16 |
 | Task Overview & Must/Should (FR-4–7) | Trinn 1 | `backend/app/domain`, `frontend/src/components` | AD-3, AD-11 |
-| Frequency & Scheduling (FR-8–9) | Trinn 1 | `backend/app/domain` | AD-3 |
+| Frequency & Scheduling (FR-8–9), add/archive Tasks (FR-24) | Trinn 1 | `backend/app/domain` | AD-3, AD-2, AD-6 |
 | Notifications (FR-10–13) | Trinn 2 | `backend/app/notifications` | AD-8, AD-9, AD-14, AD-15 |
 | AI Assistant: quick-answer (FR-14) | Trinn 1 | `backend/app/ai` | AD-4, AD-15 |
 | AI Assistant: chat, onboarding guide (FR-15–16) | Trinn 2 | `backend/app/ai` | AD-4, AD-15 |
