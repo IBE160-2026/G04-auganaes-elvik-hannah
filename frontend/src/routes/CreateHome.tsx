@@ -1,5 +1,6 @@
 // Story 1.3 (FR-1, FR-3): create a Household Home or a Landlord Home. The types offered come
 // from the server's allowed_types, so the creation rule lives only in the backend domain.
+// Story 1.8: the no-Home state after leaving shows «Du har forlatt «X».»
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate } from 'react-router';
@@ -12,6 +13,7 @@ import {
   type HomeType,
 } from '../api/homes';
 import { useCreateHome, useHomes } from '../api/queries';
+import { PendingNotice } from '../components/PendingNotice';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TextField } from '../components/TextField';
 import { HomesLoadError } from './HomesLoadError';
@@ -83,6 +85,7 @@ export function CreateHome() {
 
   return (
     <div className="auth-page">
+      <PendingNotice className="create-home__notice" />
       <h1 className="auth-page__title">
         {isFirstHome ? 'Opprett hjemmet ditt' : 'Opprett ny utleiebolig'}
       </h1>

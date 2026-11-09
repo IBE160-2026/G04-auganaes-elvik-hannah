@@ -113,7 +113,13 @@ def preview(
         return Preview("invalid", None)
     home = session.exec(select(Home).where(Home.id == link.home_id)).one()
     home_type: HomeType = home.type
-    used_by_viewer = viewer is not None and link.used_by_user_id == viewer.id
+    # Story 1.8: a link the viewer used counts as theirs only while they are still a Member;
+    # after leaving, it is used like any other (invalid), and a new link is needed to rejoin.
+    used_by_viewer = (
+        viewer is not None
+        and link.used_by_user_id == viewer.id
+        and homes.is_member(session, home.id, viewer.id)
+    )
     if not used_by_viewer and not _usable(link, now):
         return Preview("invalid", home_type)
     result = Preview("valid", home_type, home, link.role)
@@ -134,7 +140,8 @@ def accept(
 ) -> homes.MemberHome:
     """Join the link's Home and mark the link used, in one commit.
 
-    Raises InviteInvalid (unknown, expired, or used by someone else), or homes.AlreadyMember /
+    Raises InviteInvalid (unknown, expired, used by someone else, or used by this user before
+    they left the Home, Story 1.8), or homes.AlreadyMember /
     homes.InOtherHome. A refused join leaves the link unused.
     """
     now = now or utc_now()
@@ -144,7 +151,7 @@ def accept(
         session.rollback()
         raise InviteInvalid(None)
     home = session.exec(select(Home).where(Home.id == link.home_id)).one()
-    if link.used_by_user_id == user.id:
+    if link.used_by_user_id == user.id and homes.is_member(session, home.id, user.id):
         session.rollback()
         raise homes.AlreadyMember(home)
     if not _usable(link, now):

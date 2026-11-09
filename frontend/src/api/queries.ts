@@ -1,18 +1,53 @@
 // Story 1.2: TanStack Query hooks, the only way components reach the API (AD-7).
-import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type Query,
+} from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { fetchMe, register, signIn, signOut } from './auth';
-import { createHome, fetchHomes, fetchMembers, type Home, type Homes } from './homes';
+import { ApiError } from './errors';
+import {
+  createHome,
+  fetchHomes,
+  fetchMembers,
+  leaveHome,
+  MEMBER_MESSAGES,
+  removeMember,
+  type Home,
+  type Homes,
+} from './homes';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 
 export function createQueryClient(): QueryClient {
-  return new QueryClient({
+  /**
+   * Story 1.8: a 403 from any Home-scoped request means the caller lost access (removed, or
+   * left in another tab), or a remove target is already gone. Refetch the Homes and members
+   * lists, by prefix since there is no user id here, and let the pages' guards route from the
+   * server's answer. The query that failed is left out, so it is never fetched again in a loop.
+   */
+  function onForbidden(error: Error, failed?: Query<unknown, unknown, unknown>) {
+    if (!(error instanceof ApiError && error.status === 403)) return;
+    const others = (query: Query) => query !== failed;
+    void client.invalidateQueries({ queryKey: ['homes'], predicate: others });
+    void client.invalidateQueries({ queryKey: ['members'], predicate: others });
+  }
+
+  const client = new QueryClient({
+    queryCache: new QueryCache({ onError: (error, query) => onForbidden(error, query) }),
+    mutationCache: new MutationCache({ onError: (error) => onForbidden(error) }),
     defaultOptions: {
       // A 401 is already refreshed and retried once by the client middleware.
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
+  return client;
 }
 
 export const meKey = ['auth', 'me'] as const;
@@ -129,5 +164,62 @@ export function useAcceptInvite(token: string) {
       void queryClient.invalidateQueries({ queryKey: key });
       void queryClient.invalidateQueries({ queryKey: ['invite', token] });
     },
+  });
+}
+
+// Story 1.8: a one-time message for the next page, kept in the query cache (not router state)
+// so it survives the guards' redirects ("/hjem/<id>/medlemmer" → "/" → "/nytt-hjem") but not
+// a reload.
+export function noticeKey(userId: string | undefined) {
+  return ['notice', userId] as const;
+}
+
+/**
+ * The pending notice, taken once. Read in a task after mount, so the persistent aria-live region
+ * is in the DOM (empty) before the text arrives and is announced; then removed from the cache,
+ * so it is shown only once. StrictMode's first, cleaned-up effect never takes it.
+ */
+export function useNotice(): string | null {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const userId = session?.user.id;
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const key = noticeKey(userId);
+    const timer = window.setTimeout(() => {
+      const pending = queryClient.getQueryData<string>(key);
+      if (!pending) return;
+      setNotice(pending);
+      queryClient.removeQueries({ queryKey: key, exact: true });
+    });
+    return () => window.clearTimeout(timer);
+  }, [queryClient, userId]);
+  return notice;
+}
+
+/**
+ * Leaves the Home, stores «Du har forlatt «X».» for the next page, then waits for the Homes
+ * refetch. No navigation and no placeholder: the guards route from the server's answer (to "/",
+ * then to Create Home with the server's allowed_types when no Homes remain).
+ */
+export function useLeaveHome(home: Home) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  return useMutation({
+    mutationFn: () => leaveHome(home.id),
+    onSuccess: async () => {
+      queryClient.setQueryData(noticeKey(session?.user.id), MEMBER_MESSAGES.leftNotice(home.name));
+      await queryClient.refetchQueries({ queryKey: homesKey(session?.user.id) });
+    },
+  });
+}
+
+/** Removes a Tenant, then waits for the members list to refetch without them. */
+export function useRemoveMember(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  return useMutation({
+    mutationFn: (userId: string) => removeMember(homeId, userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: membersKey(homeId, session?.user.id) }),
   });
 }

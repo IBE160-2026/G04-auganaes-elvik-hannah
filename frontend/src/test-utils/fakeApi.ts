@@ -1,4 +1,5 @@
 // Story 1.2 test helper: stubs globalThis.fetch with handlers per "METHOD /path".
+// Story 1.8: Homes carry can_leave and Members can_remove, as the server sends them.
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
 
@@ -47,6 +48,7 @@ export const OLAS_HOME: Home = {
   role: 'household_member',
   created_at: '2026-11-07T12:00:00Z',
   can_invite: true,
+  can_leave: true,
 };
 
 export function homesResponse(homes: readonly Home[] = [OLAS_HOME], allowed_types: HomeType[] = []) {
@@ -55,7 +57,7 @@ export function homesResponse(homes: readonly Home[] = [OLAS_HOME], allowed_type
 
 // Story 1.5: Ola's own row, as GET /api/homes/<id>/members returns it.
 export function olaAs(role: Member['role']): Member {
-  return { user_id: OLA.id, name: OLA.name, role, is_you: true };
+  return { user_id: OLA.id, name: OLA.name, role, is_you: true, can_remove: false };
 }
 
 export const membersPath = (home: Pick<Home, 'id'>) => `/api/homes/${home.id}/members`;

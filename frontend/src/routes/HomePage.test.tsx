@@ -6,7 +6,7 @@ import { App } from '../App';
 import { HOME_MESSAGES, type Home } from '../api/homes';
 import { OLAS_HOME, fakeApi, homesResponse, json, resetApi, signedInWith } from '../test-utils/fakeApi';
 
-const RENTAL_1: Home = { ...OLAS_HOME, id: '00000000-0000-4000-8000-0000000000b1', name: 'Storgata 1', type: 'landlord', role: 'landlord' };
+const RENTAL_1: Home = { ...OLAS_HOME, id: '00000000-0000-4000-8000-0000000000b1', name: 'Storgata 1', type: 'landlord', role: 'landlord', can_leave: false };
 const RENTAL_2: Home = { ...RENTAL_1, id: '00000000-0000-4000-8000-0000000000b2', name: 'Storgata 2' };
 
 function renderAt(path: string) {

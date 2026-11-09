@@ -37,4 +37,6 @@
 - [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Ni tiltak fra retrospektiven for Epic 1 (`action_items` i `sprint-status.yaml`), blant annet correct-course for «forlat hjem / utleier fjerner medlem» og Windows-test med Steffen
 - [x] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Tiltak 8: `bmad-correct-course` for «forlat hjem / utleier fjerner medlem» før Story 2.1 (branch `change/leave-home-remove-member`) (løst 2026-11-08: Sprint Change Proposal 2026-11-08, Story 1.8 planlagt)
 - [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Tiltak 5: sjekke Neon-konsollet for preview-branchene til PR #11–#22
-- [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Bygge Story 1.8 (forlat hjem / utleier fjerner leietaker) med `bmad-build` før Story 2.1
+- [x] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Bygge Story 1.8 (forlat hjem / utleier fjerner leietaker) med `bmad-build` før Story 2.1 (bygget 2026-11-09, PR #26 venter på walkthrough og merge)
+- [ ] 2026-11-09 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Fullføre `bmad-walkthrough` og merge PR #26 (Story 1.8), deretter statuscommit (1-8 og Epic 1 til done)
+- [ ] 2026-11-09 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — «Opprett hjem» mangler utloggingsknapp (funnet i røyktest for 1.8)

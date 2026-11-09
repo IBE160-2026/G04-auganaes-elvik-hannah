@@ -1,0 +1,51 @@
+/* Story 1.8: inline leave / remove confirmation. Danger colour only on the confirm button. */
+.confirm-action,
+.confirm-action__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.confirm-action__buttons {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.confirm-action__explanation {
+  color: var(--color-ink-primary);
+}
+
+.confirm-action__error {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-bold);
+}
+
+.confirm-action__trigger,
+.confirm-action__confirm,
+.confirm-action__cancel {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.confirm-action__trigger,
+.confirm-action__cancel {
+  border: 1px solid var(--color-ink-secondary);
+  background: var(--color-surface-raised);
+  color: var(--color-ink-primary);
+}
+
+.confirm-action__confirm {
+  border: 1px solid var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-on-primary);
+}
+
+.confirm-action__confirm[aria-busy='true'] {
+  cursor: progress;
+}

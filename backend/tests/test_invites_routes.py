@@ -316,6 +316,23 @@ def test_used_by_this_viewer_is_already_member(
     )
 
 
+def test_leaver_reopening_their_own_used_link_gets_invalid_and_410(
+    client: TestClient, engine: Engine, household: tuple[dict[str, str], str]
+) -> None:
+    # Story 1.8: once Jonas has left, the link he joined with is used like any other.
+    token = token_for(client, *household)
+    jonas = sign_up(client, "Jonas")
+    accept(client, jonas, token)
+    assert client.delete(f"/api/homes/{household[1]}/members/me", headers=jonas).status_code == 204
+
+    body = client.get(f"/api/invites/{token}", headers=jonas).json()
+    assert (body["status"], body["viewer"]) == ("invalid", None)
+    response = accept(client, jonas, token)
+    assert response.status_code == 410
+    assert response.json() == {"detail": INVALID_HOUSEHOLD}
+    assert membership_count(engine) == 1
+
+
 @pytest.mark.parametrize("fixture", ["household", "rental"])
 def test_link_used_by_someone_else_is_410_even_for_a_member_elsewhere(
     client: TestClient, request: pytest.FixtureRequest, fixture: str
