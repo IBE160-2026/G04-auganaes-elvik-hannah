@@ -653,6 +653,168 @@
           }
         }
       }
+    },
+    "/api/task-types": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "List Task Types",
+        "operationId": "list_task_types_api_task_types_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskTypesOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/homes/{home_id}/tasks/setup": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Set Up Tasks",
+        "operationId": "set_up_tasks_api_homes__home_id__tasks_setup_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUpTasksRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasksOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a Household Member or the Landlord of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Home's Tasks are already set up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/homes/{home_id}/tasks": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "List Tasks",
+        "operationId": "list_tasks_api_homes__home_id__tasks_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasksOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a Member of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -770,6 +932,14 @@
           "can_leave": {
             "type": "boolean",
             "title": "Can Leave"
+          },
+          "can_set_up_tasks": {
+            "type": "boolean",
+            "title": "Can Set Up Tasks"
+          },
+          "has_tasks": {
+            "type": "boolean",
+            "title": "Has Tasks"
           }
         },
         "type": "object",
@@ -780,7 +950,9 @@
           "role",
           "created_at",
           "can_invite",
-          "can_leave"
+          "can_leave",
+          "can_set_up_tasks",
+          "has_tasks"
         ],
         "title": "HomeOut"
       },
@@ -1078,6 +1250,217 @@
           "user"
         ],
         "title": "RegisterResponse"
+      },
+      "SetUpTasksRequest": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskChoiceIn"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks"
+        ],
+        "title": "SetUpTasksRequest"
+      },
+      "TaskChoiceIn": {
+        "properties": {
+          "task_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Task Type"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "must",
+              "should"
+            ],
+            "title": "Classification"
+          },
+          "frequency_days": {
+            "type": "integer",
+            "enum": [
+              7,
+              14,
+              30,
+              42,
+              60,
+              90,
+              182,
+              365
+            ],
+            "title": "Frequency Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_type",
+          "classification",
+          "frequency_days"
+        ],
+        "title": "TaskChoiceIn"
+      },
+      "TaskOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "task_type": {
+            "type": "string",
+            "title": "Task Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "must",
+              "should"
+            ],
+            "title": "Classification"
+          },
+          "frequency_days": {
+            "type": "integer",
+            "enum": [
+              7,
+              14,
+              30,
+              42,
+              60,
+              90,
+              182,
+              365
+            ],
+            "title": "Frequency Days"
+          },
+          "due_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Due On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "task_type",
+          "name",
+          "classification",
+          "frequency_days",
+          "due_on"
+        ],
+        "title": "TaskOut"
+      },
+      "TaskTypeOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "must",
+              "should"
+            ],
+            "title": "Classification"
+          },
+          "frequency_days": {
+            "type": "integer",
+            "enum": [
+              7,
+              14,
+              30,
+              42,
+              60,
+              90,
+              182,
+              365
+            ],
+            "title": "Frequency Days"
+          },
+          "photo_evidence_eligible": {
+            "type": "boolean",
+            "title": "Photo Evidence Eligible"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "classification",
+          "frequency_days",
+          "photo_evidence_eligible"
+        ],
+        "title": "TaskTypeOut"
+      },
+      "TaskTypesOut": {
+        "properties": {
+          "catalog_version": {
+            "type": "integer",
+            "title": "Catalog Version"
+          },
+          "task_types": {
+            "items": {
+              "$ref": "#/components/schemas/TaskTypeOut"
+            },
+            "type": "array",
+            "title": "Task Types"
+          },
+          "frequencies": {
+            "items": {
+              "type": "integer",
+              "enum": [
+                7,
+                14,
+                30,
+                42,
+                60,
+                90,
+                182,
+                365
+              ]
+            },
+            "type": "array",
+            "title": "Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "catalog_version",
+          "task_types",
+          "frequencies"
+        ],
+        "title": "TaskTypesOut"
+      },
+      "TasksOut": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks"
+        ],
+        "title": "TasksOut"
       },
       "UserOut": {
         "properties": {

@@ -1,4 +1,5 @@
 // Story 1.3 (FR-1, FR-3): the Create Home form, its inline errors and the landing after create.
+// Story 2.1: a created Home goes on to Task Setup, and Back cannot reach the form again.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
@@ -6,6 +7,8 @@ import { HOME_MESSAGES, type Home } from '../api/homes';
 import { OLAS_HOME, fakeApi, homesResponse, json, resetApi, signedInWith } from '../test-utils/fakeApi';
 
 const RENTAL: Home = { ...OLAS_HOME, name: 'Storgata 1', type: 'landlord', role: 'landlord', can_leave: false };
+// As POST /api/homes returns it: a new Home has no Tasks yet.
+const NEW_HOME: Home = { ...OLAS_HOME, has_tasks: false };
 
 function renderAt(path: string) {
   window.history.pushState({}, '', path);
@@ -23,7 +26,7 @@ function submit() {
 afterEach(resetApi);
 
 describe('Create Home', () => {
-  it('creates a Household Home and lands on it without bouncing back', async () => {
+  it('creates a Household Home and goes on to Task Setup without bouncing back', async () => {
     let created = false;
     const server = fakeApi({
       ...signedInWith([], ['household', 'landlord']),
@@ -32,17 +35,20 @@ describe('Create Home', () => {
         created ? new Promise<Response>(() => {}) : json(200, homesResponse([], ['household', 'landlord'])),
       'POST /api/homes': () => {
         created = true;
-        return json(201, OLAS_HOME);
+        return json(201, NEW_HOME);
       },
     });
     renderAt('/');
 
     await userEvent.click(await screen.findByRole('radio', { name: /Husstand/ }));
     await fillName('  Kollektivet ');
+    const entries = window.history.length;
     await submit();
 
-    expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(await screen.findByRole('heading', { name: 'Sett opp oppgaver' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${NEW_HOME.id}/oppgaveoppsett`);
+    // replace: Create Home is not left behind in the history, so Back cannot make a second Home.
+    expect(window.history.length).toBe(entries);
     const [request] = server.calls('POST', '/api/homes');
     expect(await request.json()).toEqual({ name: 'Kollektivet', type: 'household' });
   });
@@ -131,7 +137,7 @@ describe('Create Home', () => {
   });
 
   it('gives a Landlord with Homes only the name field and creates a Landlord Home', async () => {
-    const second = { ...RENTAL, id: '00000000-0000-4000-8000-0000000000b2', name: 'Storgata 2' };
+    const second = { ...RENTAL, id: '00000000-0000-4000-8000-0000000000b2', name: 'Storgata 2', has_tasks: false };
     let created = false;
     const server = fakeApi({
       ...signedInWith([RENTAL], ['landlord']),
@@ -148,8 +154,9 @@ describe('Create Home', () => {
     await fillName('Storgata 2');
     await submit();
 
-    expect(await screen.findByRole('heading', { name: 'Storgata 2' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    // Story 2.1: a Landlord Home without Tenants is set up too.
+    expect(await screen.findByRole('heading', { name: 'Sett opp oppgaver' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${second.id}/oppgaveoppsett`);
     const [request] = server.calls('POST', '/api/homes');
     expect(await request.json()).toEqual({ name: 'Storgata 2', type: 'landlord' });
   });

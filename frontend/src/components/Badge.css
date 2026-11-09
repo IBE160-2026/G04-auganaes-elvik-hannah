@@ -1,0 +1,22 @@
+/* Story 2.1: the Must/Should badge (DESIGN.md: badges are pills). */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-badge);
+  font-weight: var(--font-weight-badge);
+  line-height: var(--line-height-badge);
+  letter-spacing: var(--letter-spacing-badge);
+  text-transform: uppercase;
+}
+
+.badge--must {
+  background: var(--color-must-badge);
+  color: var(--color-must-badge-ink);
+}
+
+.badge--should {
+  background: var(--color-should-badge);
+  color: var(--color-should-badge-ink);
+}

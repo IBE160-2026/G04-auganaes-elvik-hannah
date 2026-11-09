@@ -7,22 +7,24 @@ through require_role, like every route with {home_id} (AD-2, tests/test_permissi
 Story 1.8 (FR-23, AD-16): DELETE /homes/{home_id}/members/me (leave) and
 DELETE /homes/{home_id}/members/{user_id} (a Landlord removes a Tenant), both through require_role
 and domain/homes. Every refusal is the same 403 as require_role's.
+
+Story 2.1: HomeOut says whether the caller may set up Tasks and whether the Home has any.
 """
 
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
 from app.clock import UtcDatetime
-from app.db import get_session
-from app.domain import homes
+from app.domain import homes, tasks
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
-from app.models.membership import ROLES, Membership, Role
+from app.models.membership import Role
 from app.permissions.current_user import CurrentUser
-from app.permissions.require_role import FORBIDDEN, require_role
+from app.permissions.require_role import FORBIDDEN
+from app.routes.deps import AnyMember, ErrorOut, Landlord, Leaver, SessionDep
 
 router = APIRouter(prefix="/homes", tags=["homes"])
 
@@ -33,7 +35,6 @@ LANDLORD_ONLY = (
 # Story 1.4 (decision 3): one Home at a time, also by invite.
 ALREADY_IN_HOME = "Du er allerede med i et hjem, og du kan bare være med i ett hjem om gangen."
 
-SessionDep = Annotated[Session, Depends(get_session)]
 HomeName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=HOME_NAME_MAX_LENGTH)
 ]
@@ -42,10 +43,6 @@ HomeName = Annotated[
 class CreateHomeRequest(BaseModel):
     name: HomeName
     type: HomeType
-
-
-class ErrorOut(BaseModel):
-    detail: str
 
 
 class HomeOut(BaseModel):
@@ -60,6 +57,9 @@ class HomeOut(BaseModel):
     can_invite: bool
     # Story 1.8: whether the caller may leave this Home (not a Landlord in their own Home).
     can_leave: bool
+    # Story 2.1: whether the caller may set up this Home's Tasks, and whether it has any.
+    can_set_up_tasks: bool
+    has_tasks: bool
 
 
 class HomesOut(BaseModel):
@@ -69,7 +69,7 @@ class HomesOut(BaseModel):
     allowed_types: list[HomeType]
 
 
-def home_out(member_home: homes.MemberHome) -> HomeOut:
+def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
     home = member_home.home
     return HomeOut(
         id=home.id,
@@ -79,13 +79,22 @@ def home_out(member_home: homes.MemberHome) -> HomeOut:
         created_at=home.created_at,
         can_invite=homes.can_invite(member_home.role),
         can_leave=homes.can_leave(member_home.role),
+        can_set_up_tasks=tasks.can_set_up_tasks(member_home.role),
+        has_tasks=has_tasks,
     )
+
+
+def home_out_for(session: Session, member_home: homes.MemberHome) -> HomeOut:
+    """home_out for one Home, looking up whether it has Tasks."""
+    return home_out(member_home, has_tasks=tasks.has_tasks(session, member_home.home.id))
 
 
 @router.get("")
 def list_homes(user: CurrentUser, session: SessionDep) -> HomesOut:
+    member_homes = homes.homes_for(session, user)
+    with_tasks = tasks.home_ids_with_tasks(session, (h.home.id for h in member_homes))
     return HomesOut(
-        homes=[home_out(h) for h in homes.homes_for(session, user)],
+        homes=[home_out(h, has_tasks=h.home.id in with_tasks) for h in member_homes],
         allowed_types=homes.allowed_types(session, user),
     )
 
@@ -106,11 +115,8 @@ def create_home(body: CreateHomeRequest, user: CurrentUser, session: SessionDep)
     except homes.HomeCreationNotAllowed as exc:
         detail = LANDLORD_ONLY if exc.allowed else ALREADY_IN_HOME
         raise HTTPException(status.HTTP_409_CONFLICT, detail=detail) from None
-    return home_out(created)
-
-
-# Story 1.5: any Member of the Home, whatever their Role.
-AnyMember = Annotated[Membership, Depends(require_role(*ROLES))]
+    # A new Home has no Tasks yet; Task Setup follows (Story 2.1).
+    return home_out(created, has_tasks=False)
 
 
 class MemberOut(BaseModel):
@@ -153,11 +159,6 @@ def list_members(member: AnyMember, session: SessionDep) -> MembersOut:
             for m in homes.members_of(session, member.home_id)
         ]
     )
-
-
-# Story 1.8 (decisions 1 and 2): who may leave, and who may remove.
-Leaver = Annotated[Membership, Depends(require_role(*sorted(homes.LEAVER_ROLES)))]
-Landlord = Annotated[Membership, Depends(require_role("landlord"))]
 
 
 # Registered before /members/{user_id}, so "me" is never read as a user id.

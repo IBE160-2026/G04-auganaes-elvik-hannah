@@ -2,9 +2,10 @@
 title: 'Story 2.1: Task Setup at Home Creation'
 type: 'feature'
 created: '2026-11-09'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: '34bfa6481615dea825bff8dbff7ac012b503de22'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
 ---
@@ -80,29 +81,53 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `sprint-status.yaml` -- `epic-2` and `2-1-…` to `in-progress`; `review` when the PR opens.
-- [ ] `backend/app/routes/deps.py` (new) -- move `SessionDep`, `ErrorOut` and the role aliases (`AnyMember` etc.) there; `homes.py`, `invites.py` import them -- the retro's deferred shared module, before a third route module copies the pattern.
-- [ ] `backend/app/domain/task_types.py` -- `TaskType` (frozen), `TASK_TYPES`, `CATALOG_VERSION = 1`, `FREQUENCY_DAYS`, lookup by key.
-- [ ] `backend/app/models/task.py` + migration -- `tasks` (FK home, CHECK classification, CHECK frequency > 0, unique `(home_id, task_type)`, `created_at`), `task_instances` (FK task, `due_on` date, `created_at`, unique `(task_id, due_on)`); export both in `models/__init__.py`.
-- [ ] `backend/app/domain/tasks.py` -- `can_set_up_tasks`, `set_up_tasks(session, membership, choices, today=None)`, `tasks_of(session, home_id)` (with next instance), `TasksAlreadySetUp`.
-- [ ] `backend/app/routes/tasks.py` -- `GET /api/task-types` (signed in; catalog + Frequency list), `POST /api/homes/{home_id}/tasks/setup` (201, 403/409/422 declared), `GET /api/homes/{home_id}/tasks` (any Member; Must first, then `due_on`); `HomeOut.can_set_up_tasks`.
-- [ ] `backend/app/seed/tasks.py` + `seed/__init__` -- set up both Homes with catalog values, Mari's as of 28 days ago and Storgata 12 as of 40 days ago, so some instances are due soon or overdue. Find each Home by the creator's Membership and name (as `_own_home`); skip if missing or already set up, with its own message.
-- [ ] `backend/tests/test_task_types.py`, `test_tasks.py`, `test_tasks_routes.py`, `test_clock.py`, `test_seed.py` -- every backend matrix row (incl. an overlapping race → 409, seed skip cases, updated counts and messages); catalog invariants (≥8, both classes, ≥2 photo, unique keys, Frequency in list); 409 on a second setup; `fr3_violations` unchanged.
-- [ ] `.github/workflows/ci.yml` -- seed step also asserts 16 tasks and 16 instances; CHECK step gets `ck_tasks_classification` and `ck_tasks_frequency_days`.
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate.
-- [ ] `frontend/src/api/tasks.ts`, `api/queries.ts` -- fetch/setup functions, messages, `FREQUENCY_LABELS: Record<Frequency, string>`, `formatDueOn`, `tasksKey`, `useTaskTypes`, `useTasks`, `useSetUpTasks` (per Always: cache writes, `replace`, 409 refetch).
-- [ ] `frontend/src/routes/TaskSetup.tsx` + `.css`, `App.tsx` -- route `/hjem/:homeId/oppgaveoppsett`: one row per catalog entry with «Ta med» checkbox, Må/Bør radio pair, interval `<select>`; «Lagre oppgavene»; inline error with retry; guards per Always; «Medlemmer og invitasjon» link and «Logg ut» at the bottom (decision 8).
-- [ ] `frontend/src/routes/CreateHome.tsx`, `HomePage.tsx` + `.css` -- after create go to setup (`replace`); Home page task list section «Oppgaver», redirect or Tenant text when empty; «Sett opp oppgaver» in «Dine hjem» for Homes with `can_set_up_tasks && !has_tasks` (decision 8).
-- [ ] `frontend/src/**/*.test.tsx`, `test-utils/fakeApi.ts` -- default `GET …/tasks` handler and `can_set_up_tasks`/`has_tasks` in fixtures; every frontend matrix row; no bounce after setup success or 409; Back after setup does not reach Create Home; badge text; focus on error; date shown correctly in a negative UTC offset.
-- [ ] `ARCHITECTURE-SPINE.md` -- `[REVISED 2026-11-09]` note under Core entities: TASK_TYPE is a code catalog; `epics.md` Story 2.1 note with decisions 2–6.
-- [ ] `deferred-work.md` -- custom tasks (decision 5).
-- [ ] `README.md` -- seed now gives tasks; "Prøv oppgaveoppsett" steps.
-- [ ] `docs/ki-logg/korrigeringer.md` -- corrections found in review.
+- [x] `sprint-status.yaml` -- `epic-2` and `2-1-…` to `in-progress`; `review` when the PR opens.
+- [x] `backend/app/routes/deps.py` (new) -- move `SessionDep`, `ErrorOut` and the role aliases (`AnyMember` etc.) there; `homes.py`, `invites.py` import them -- the retro's deferred shared module, before a third route module copies the pattern.
+- [x] `backend/app/domain/task_types.py` -- `TaskType` (frozen), `TASK_TYPES`, `CATALOG_VERSION = 1`, `FREQUENCY_DAYS`, lookup by key.
+- [x] `backend/app/models/task.py` + migration -- `tasks` (FK home, CHECK classification, CHECK frequency > 0, unique `(home_id, task_type)`, `created_at`), `task_instances` (FK task, `due_on` date, `created_at`, unique `(task_id, due_on)`); export both in `models/__init__.py`.
+- [x] `backend/app/domain/tasks.py` -- `can_set_up_tasks`, `set_up_tasks(session, membership, choices, today=None)`, `tasks_of(session, home_id)` (with next instance), `TasksAlreadySetUp`.
+- [x] `backend/app/routes/tasks.py` -- `GET /api/task-types` (signed in; catalog + Frequency list), `POST /api/homes/{home_id}/tasks/setup` (201, 403/409/422 declared), `GET /api/homes/{home_id}/tasks` (any Member; Must first, then `due_on`); `HomeOut.can_set_up_tasks`.
+- [x] `backend/app/seed/tasks.py` + `seed/__init__` -- set up both Homes with catalog values, Mari's as of 28 days ago and Storgata 12 as of 40 days ago, so some instances are due soon or overdue. Find each Home by the creator's Membership and name (as `_own_home`); skip if missing or already set up, with its own message.
+- [x] `backend/tests/test_task_types.py`, `test_tasks.py`, `test_tasks_routes.py`, `test_clock.py`, `test_seed.py` -- every backend matrix row (incl. an overlapping race → 409, seed skip cases, updated counts and messages); catalog invariants (≥8, both classes, ≥2 photo, unique keys, Frequency in list); 409 on a second setup; `fr3_violations` unchanged.
+- [x] `.github/workflows/ci.yml` -- seed step also asserts 16 tasks and 16 instances; CHECK step gets `ck_tasks_classification` and `ck_tasks_frequency_days`.
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate.
+- [x] `frontend/src/api/tasks.ts`, `api/queries.ts` -- fetch/setup functions, messages, `FREQUENCY_LABELS: Record<Frequency, string>`, `formatDueOn`, `tasksKey`, `useTaskTypes`, `useTasks`, `useSetUpTasks` (per Always: cache writes, `replace`, 409 refetch).
+- [x] `frontend/src/routes/TaskSetup.tsx` + `.css`, `App.tsx` -- route `/hjem/:homeId/oppgaveoppsett`: one row per catalog entry with «Ta med» checkbox, Må/Bør radio pair, interval `<select>`; «Lagre oppgavene»; inline error with retry; guards per Always; «Medlemmer og invitasjon» link and «Logg ut» at the bottom (decision 8).
+- [x] `frontend/src/routes/CreateHome.tsx`, `HomePage.tsx` + `.css` -- after create go to setup (`replace`); Home page task list section «Oppgaver», redirect or Tenant text when empty; «Sett opp oppgaver» in «Dine hjem» for Homes with `can_set_up_tasks && !has_tasks` (decision 8).
+- [x] `frontend/src/**/*.test.tsx`, `test-utils/fakeApi.ts` -- default `GET …/tasks` handler and `can_set_up_tasks`/`has_tasks` in fixtures; every frontend matrix row; no bounce after setup success or 409; Back after setup does not reach Create Home; badge text; focus on error; date shown correctly in a negative UTC offset.
+- [x] `ARCHITECTURE-SPINE.md` -- `[REVISED 2026-11-09]` note under Core entities: TASK_TYPE is a code catalog; `epics.md` Story 2.1 note with decisions 2–6.
+- [x] `deferred-work.md` -- custom tasks (decision 5).
+- [x] `README.md` -- seed now gives tasks; "Prøv oppgaveoppsett" steps.
+- [x] `docs/ki-logg/korrigeringer.md` -- corrections found in review.
 
 **Acceptance Criteria:**
 - Given a user who just created a Home, when they confirm Task Setup with one adjusted and one unticked task, then they land on `/` and see the Tasks with the adjusted values and without the unticked one.
 - Given the seed, when Mari signs in, then `/` lists eight tasks and at least one is due within a week or overdue.
 - Given the route walk in `test_permissions.py`, when the suite runs, then the new `{home_id}` routes pass without editing that file.
+
+Code review 2026-11-09 (Blind Hunter, Edge Case Hunter, Verification Gap; 20 findings, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| 409 followed by a failed Homes refetch leaves the form silent; retries give silent 409s (E, B) | medium | patch: show the server's 409 message inline; test with a failing refetch |
+| Story 1.8 notice on the setup page has no test (V) | medium | patch: MembersPage test where the Landlord Home has no Tasks |
+| PRD FR-8 not updated for fixed intervals and once-per-Home setup (B) | medium | patch: `[REVISED 2026-11-09]` note under FR-8 |
+| `ARCHITECTURE-SPINE.md` text above the note still calls TASK_TYPE rows; "earliest instance" will be wrong after 2.4 (B) | low | patch: inline pointer to the revision note; note says "earliest open instance" after 2.4 |
+| Setup request list has no upper bound (E) | low | patch: `max_length` = catalog size; test |
+| `home_ids_with_tasks` reads one row per Task (B) | low | patch: `.distinct()` |
+| Postgres Home-row lock untested (V, B) | medium, unverified on Postgres | defer: spec's accepted risk; `deferred-work.md` |
+| `tasks_of` "earliest instance" wrong once 2.4 adds completion (B) | medium | defer to Story 2.4: `deferred-work.md` |
+| A Member who leaves between `require_role` and the lock can still set up (E) | low | rejected: needs a leave committed within the same request's milliseconds; fix adds a guard |
+| Any `IntegrityError` becomes 409 (E) | false | the Home row exists (locked), Task rows are flushed before instances, and every CHECK value is validated first; only the unique constraints can fire |
+| No way to skip setup; Landlord cannot reach other Homes while the newest has no Tasks; a joiner into an empty Home is sent to setup (B) | false | decisions 7a and 8 (Eirik): setup is not skippable; option (b) «Gjør det senere» was declined; a new Home goes straight to setup, so only pre-2.1 Homes can be in that state |
+| CHECK allows any positive Frequency, while the response type is the fixed list (B) | low | rejected: only a manual database edit can store another value; every write path validates against the list |
+| `has_tasks` vs the inner join; an empty list renders nothing (B) | false | `set_up_tasks` creates every Task and its instance in one transaction, so a Task without an instance cannot exist |
+| Seed backdates `due_on` but not `created_at` (B) | low | rejected: nothing reads `Task.created_at`; a later story that does can backdate it then |
+| `set_up_tasks` rolls back the caller's session (B) | false | same convention as `create_home`/`add_member`; the route session and the seed hold no uncommitted work at that point |
+| No confirmation after setting up an older Home from «Dine hjem» (B) | low | rejected: only pre-2.1 Landlord Homes reach this; the link disappearing and the Home's list on Members show the result; a notice would be a new UX decision |
+| Tie-break on `name` collates differently on SQLite and Postgres (B) | low | rejected: the tied seed names differ in their first differing ASCII letter, and `id` breaks any remaining tie; order is deterministic per database |
+| Tests compare with `utc_now().date()` separately and can fail across UTC midnight (B) | low | rejected: the window is the milliseconds between two calls at 00:00 UTC |
+| Verification gap: everything else traced is covered (V) | false | not a defect |
 
 ## Design Notes
 
@@ -118,6 +143,14 @@ context:
 - `alembic upgrade head` / `downgrade -1` against a throwaway database `husly_verify`, never `husly` -- expected: clean round trip
 
 ## Implementation Notes
+
+- `routes/deps.py` holds `SessionDep`, `ErrorOut` and every Role alias (`AnyMember`, `Inviter`, `Leaver`, `Landlord`, new `TaskSetter`); `homes.py` and `invites.py` import from it. `home_out(member_home, *, has_tasks)` takes the flag; `GET /api/homes` looks it up for all Homes in one query (`tasks.home_ids_with_tasks`), the invite accept uses `home_out_for(session, …)`, and `POST /api/homes` passes `False`.
+- `domain/tasks.set_up_tasks` validates before touching the database, then locks the Home row, then flushes the Tasks before adding their instances (the models have no `relationship()`, so insert order is not inferred). Domain 422 messages: «Velg minst én oppgave.», «Ukjent oppgave: «x».», «Oppgaven «x» er valgt mer enn én gang.» (the last two are not reachable from the form).
+- `GET /api/task-types` returns `{catalog_version, task_types, frequencies}`; the frontend caches it under `['task-types']` (not per user: it is the same for everyone) with `staleTime: Infinity`.
+- The Må/Bør badge is a small `components/Badge.tsx`: `tokens.test.ts` allows `--radius-full` only in `Badge*.css`/`PrimaryButton.css`. The setup page's Må/Bør choices use `--radius-sm`.
+- `/` decides the redirect from `HomeOut.has_tasks`/`can_set_up_tasks`, so it never waits for the tasks request; the list is fetched only for a Home with Tasks. `formatDueOn` adds the year when the date is not in the current year.
+- The seed reuses `seed/homes._own_home` and `_user` and prints «Satte opp 8 oppgaver i «X»», «Oppgavene i «X» er allerede satt opp» or «Hoppet over oppgavene i «X»: hjemmet finnes ikke for <e-post>».
+- `docs/ki-logg/korrigeringer.md` is left for the review step (no review has run yet).
 
 ## Spec Change Log
 

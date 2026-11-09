@@ -1,6 +1,7 @@
 // Story 1.3 (FR-1, FR-3): create a Household Home or a Landlord Home. The types offered come
 // from the server's allowed_types, so the creation rule lives only in the backend domain.
 // Story 1.8: the no-Home state after leaving shows «Du har forlatt «X».»
+// Story 2.1: a created Home goes on to Task Setup.
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate } from 'react-router';
@@ -66,7 +67,9 @@ export function CreateHome() {
     createHome.mutate(
       { name, type: chosen },
       {
-        onSuccess: () => navigate('/', { replace: true }),
+        // Story 2.1: on to Task Setup. replace, so Back cannot reach this form and make a
+        // second Home.
+        onSuccess: (home) => navigate(`/hjem/${home.id}/oppgaveoppsett`, { replace: true }),
         onError: (error) => {
           if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
             showErrors(fieldsOf<HomeFieldErrors>(error));

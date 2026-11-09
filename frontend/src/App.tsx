@@ -12,6 +12,7 @@ import { MembersPage } from './routes/MembersPage';
 import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
 import { SignIn } from './routes/SignIn';
+import { TaskSetup } from './routes/TaskSetup';
 
 /**
  * Restores the session from the refresh cookie once, before any route renders, so a reload
@@ -60,6 +61,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <MembersPage />
+          </RequireAuth>
+        }
+      />
+      {/* Story 2.1 */}
+      <Route
+        path="/hjem/:homeId/oppgaveoppsett"
+        element={
+          <RequireAuth>
+            <TaskSetup />
           </RequireAuth>
         }
       />

@@ -1,10 +1,22 @@
 // Story 1.3 (FR-1, FR-3): when "/" shows the Home page and when it sends a user to Create Home.
+// Story 2.1 (FR-4, FR-8, decisions 1, 7 and 8): the minimal task list, the redirect to Task Setup
+// for a Home without Tasks, the Tenant's waiting text and «Sett opp oppgaver» in «Dine hjem».
 import { focusManager } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { HOME_MESSAGES, type Home } from '../api/homes';
-import { OLAS_HOME, fakeApi, homesResponse, json, resetApi, signedInWith } from '../test-utils/fakeApi';
+import { TASK_MESSAGES } from '../api/tasks';
+import {
+  OLAS_HOME,
+  OLAS_TASKS,
+  fakeApi,
+  homesResponse,
+  json,
+  resetApi,
+  signedInWith,
+  tasksPath,
+} from '../test-utils/fakeApi';
 
 const RENTAL_1: Home = { ...OLAS_HOME, id: '00000000-0000-4000-8000-0000000000b1', name: 'Storgata 1', type: 'landlord', role: 'landlord', can_leave: false };
 const RENTAL_2: Home = { ...RENTAL_1, id: '00000000-0000-4000-8000-0000000000b2', name: 'Storgata 2' };
@@ -100,12 +112,100 @@ describe('Home page', () => {
 
     expect(await screen.findByRole('heading', { name: 'Storgata 2' })).toBeInTheDocument();
     expect(screen.getByText('Utleiebolig')).toBeInTheDocument();
-    const list = screen.getByRole('list');
+    const list = within(screen.getByRole('region', { name: 'Dine hjem' })).getByRole('list');
     expect(list).toHaveTextContent('Storgata 2');
     expect(list).toHaveTextContent('Storgata 1');
 
     await userEvent.click(screen.getByRole('link', { name: 'Opprett nytt hjem' }));
     expect(await screen.findByRole('heading', { name: 'Opprett ny utleiebolig' })).toBeInTheDocument();
     await waitFor(() => expect(window.location.pathname).toBe('/nytt-hjem'));
+  });
+});
+
+describe('Home page tasks (Story 2.1)', () => {
+  const NO_TASKS: Home = { ...OLAS_HOME, has_tasks: false };
+  const TENANCY: Home = {
+    ...OLAS_HOME,
+    name: 'Storgata 12',
+    type: 'landlord',
+    role: 'tenant',
+    can_invite: false,
+    can_set_up_tasks: false,
+    has_tasks: false,
+  };
+
+  it('lists each task with its name, Må/Bør badge, interval and next date', async () => {
+    fakeApi(signedInWith());
+    renderAt('/');
+
+    const section = await screen.findByRole('region', { name: 'Oppgaver' });
+    const rows = await within(section).findAllByRole('listitem');
+    expect(rows).toHaveLength(OLAS_TASKS.length);
+    expect(rows[0]).toHaveTextContent('Rens sluket');
+    expect(within(rows[0]).getByText('Må')).toBeInTheDocument();
+    expect(rows[0]).toHaveTextContent('Hver måned');
+    expect(rows[0]).toHaveTextContent(/Neste gang: 9\. desember/);
+    expect(within(rows[1]).getByText('Bør')).toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent('Hver 2. uke');
+    expect(rows[1]).toHaveTextContent(/Neste gang: 23\. november/);
+  });
+
+  it('sends a Household Member whose Home has no Tasks to Task Setup', async () => {
+    fakeApi(signedInWith([NO_TASKS]));
+    renderAt('/');
+
+    expect(await screen.findByRole('heading', { name: 'Sett opp oppgaver' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${NO_TASKS.id}/oppgaveoppsett`);
+  });
+
+  it('sends a Landlord whose newest Home has no Tasks to Task Setup', async () => {
+    const rental: Home = { ...RENTAL_1, has_tasks: false };
+    fakeApi(signedInWith([rental], ['landlord']));
+    renderAt('/');
+
+    expect(await screen.findByRole('heading', { name: 'Sett opp oppgaver' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${rental.id}/oppgaveoppsett`);
+  });
+
+  it('tells a Tenant the Landlord has not set up tasks yet, and stays', async () => {
+    const server = fakeApi(signedInWith([TENANCY]));
+    renderAt('/');
+
+    expect(await screen.findByText(TASK_MESSAGES.tenantWaiting)).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+    // Nothing to list, so nothing is fetched.
+    expect(server.calls('GET', tasksPath(TENANCY))).toHaveLength(0);
+  });
+
+  it('offers «Sett opp oppgaver» for a Landlord\'s older Home without Tasks, and opens its setup', async () => {
+    const older: Home = { ...RENTAL_1, has_tasks: false };
+    fakeApi(signedInWith([RENTAL_2, older], ['landlord']));
+    renderAt('/');
+
+    const homesList = await screen.findByRole('region', { name: 'Dine hjem' });
+    expect(within(homesList).getAllByRole('link', { name: /^Sett opp oppgaver/ })).toHaveLength(1);
+    await userEvent.click(within(homesList).getByRole('link', { name: 'Sett opp oppgaver for Storgata 1' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sett opp oppgaver' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${older.id}/oppgaveoppsett`);
+    expect(screen.getByText(/Storgata 1»/)).toBeInTheDocument();
+  });
+
+  it('shows a failed tasks load in the task section with a retry, and keeps the rest of the page', async () => {
+    let fail = true;
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: () => (fail ? json(500, { detail: 'x' }) : json(200, { tasks: OLAS_TASKS })),
+    });
+    renderAt('/');
+
+    const section = await screen.findByRole('region', { name: 'Oppgaver' });
+    expect(await within(section).findByRole('alert')).toHaveTextContent(TASK_MESSAGES.loadFailed);
+    expect(screen.getByRole('link', { name: 'Medlemmer og invitasjon' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Logg ut' })).toBeInTheDocument();
+
+    fail = false;
+    await userEvent.click(within(section).getByRole('button', { name: 'Prøv å hente oppgavene igjen' }));
+    expect(await within(section).findByText('Rens sluket')).toBeInTheDocument();
   });
 });

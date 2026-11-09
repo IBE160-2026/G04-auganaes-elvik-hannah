@@ -249,6 +249,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/task-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Task Types */
+        get: operations["list_task_types_api_task_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/homes/{home_id}/tasks/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Up Tasks */
+        post: operations["set_up_tasks_api_homes__home_id__tasks_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/homes/{home_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tasks */
+        get: operations["list_tasks_api_homes__home_id__tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -313,6 +364,10 @@ export interface components {
             can_invite: boolean;
             /** Can Leave */
             can_leave: boolean;
+            /** Can Set Up Tasks */
+            can_set_up_tasks: boolean;
+            /** Has Tasks */
+            has_tasks: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -412,6 +467,86 @@ export interface components {
             user: components["schemas"]["UserOut"];
             /** Joined Home Id */
             joined_home_id?: string | null;
+        };
+        /** SetUpTasksRequest */
+        SetUpTasksRequest: {
+            /** Tasks */
+            tasks: components["schemas"]["TaskChoiceIn"][];
+        };
+        /** TaskChoiceIn */
+        TaskChoiceIn: {
+            /** Task Type */
+            task_type: string;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "must" | "should";
+            /**
+             * Frequency Days
+             * @enum {integer}
+             */
+            frequency_days: 7 | 14 | 30 | 42 | 60 | 90 | 182 | 365;
+        };
+        /** TaskOut */
+        TaskOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Task Type */
+            task_type: string;
+            /** Name */
+            name: string;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "must" | "should";
+            /**
+             * Frequency Days
+             * @enum {integer}
+             */
+            frequency_days: 7 | 14 | 30 | 42 | 60 | 90 | 182 | 365;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+        };
+        /** TaskTypeOut */
+        TaskTypeOut: {
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "must" | "should";
+            /**
+             * Frequency Days
+             * @enum {integer}
+             */
+            frequency_days: 7 | 14 | 30 | 42 | 60 | 90 | 182 | 365;
+            /** Photo Evidence Eligible */
+            photo_evidence_eligible: boolean;
+        };
+        /** TaskTypesOut */
+        TaskTypesOut: {
+            /** Catalog Version */
+            catalog_version: number;
+            /** Task Types */
+            task_types: components["schemas"]["TaskTypeOut"][];
+            /** Frequencies */
+            frequencies: (7 | 14 | 30 | 42 | 60 | 90 | 182 | 365)[];
+        };
+        /** TasksOut */
+        TasksOut: {
+            /** Tasks */
+            tasks: components["schemas"]["TaskOut"][];
         };
         /** UserOut */
         UserOut: {
@@ -921,6 +1056,119 @@ export interface operations {
             };
             /** @description Unknown, expired, or used by someone else */
             410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_task_types_api_task_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskTypesOut"];
+                };
+            };
+        };
+    };
+    set_up_tasks_api_homes__home_id__tasks_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUpTasksRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TasksOut"];
+                };
+            };
+            /** @description Not a Household Member or the Landlord of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description The Home's Tasks are already set up */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tasks_api_homes__home_id__tasks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TasksOut"];
+                };
+            };
+            /** @description Not a Member of this Home, or no such Home */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

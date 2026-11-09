@@ -176,6 +176,8 @@ The app proposes a recurrence Frequency for irregular tasks. Household Members a
 - Every recurring task has a Frequency value at creation — app-recommended or explicitly overridden.
 - A Tenant's attempt to change Frequency on a Landlord Home's task is rejected.
 
+`[REVISED 2026-11-09]` Story 2.1 (decisions by Eirik): a Frequency is chosen from fixed intervals (7, 14, 30, 42, 60, 90, 182 and 365 days, «Hver uke» … «Hvert år»), because a free number of days is hard to read and type on a phone; the server stores days, so the list can grow later. The recommended tasks are reviewed once per Home in Task Setup (a second setup gets 409); later changes to classification and Frequency are Story 2.3. See `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`.
+
 #### FR-9: Auto-reschedule on completion
 Marking a task instance complete automatically calculates and schedules the next due date based on its Frequency. Realizes UJ-1.
 
