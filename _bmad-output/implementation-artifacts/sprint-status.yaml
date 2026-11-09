@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-08-2026 20:15
+last_updated: 11-09-2026 12:00
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -41,7 +41,7 @@ story_location: _bmad-output/implementation-artifacts
 #   1-7 kommer før 1-2 slik at innlogging kan testes på PR-previews (correct-course 2026-11-01).
 #   1-8 (forlat hjem / fjern leietaker) kommer før 2-1 (correct-course 2026-11-08, retrospektiv R2).
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-project-scaffold-design-tokens-responsive-app-shell: done
   1-2-account-registration-login: done
   1-3-create-a-home-household-or-landlord: done
@@ -49,7 +49,7 @@ development_status:
   1-5-view-home-members-list-enforce-role-based-permissions: done
   1-6-run-locally-with-docker-seed-data-and-mock-modes: done
   1-7-hosted-demo-on-vercel-services-neon: done
-  1-8-leave-a-home-landlord-removes-a-tenant: review
+  1-8-leave-a-home-landlord-removes-a-tenant: done
   epic-1-retrospective: done
 
   epic-2: backlog
