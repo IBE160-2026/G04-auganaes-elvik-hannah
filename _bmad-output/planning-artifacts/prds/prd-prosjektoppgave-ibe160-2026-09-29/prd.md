@@ -2,12 +2,14 @@
 title: "PRD: AI-Driven Household Task App"
 status: final
 created: 2026-09-29
-updated: 2026-11-01
+updated: 2026-11-09
 ---
 
 > **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see the brief's `tilbakemelding-product-brief.md` and `sprint-change-proposal-2026-10-11.md`): MVP scope is split into Trinn 1 and Trinn 2, a new FR-22 makes the app runnable without external accounts, success metrics are replaced by testable criteria, and the household is the primary user for Trinn 1.
 
 > **Revision 2026-11-01:** The course offers Vercel as its only supported hosting (teacher's message of 2026-11-01; see `sprint-change-proposal-2026-11-01.md`). Open Question 2 is resolved as a daily morning batch, since Vercel Cron on the free plan runs at most once a day; FR-10 and FR-13 are tightened to match.
+
+> **Revision 2026-11-09:** Two team requests found during Story 2.1 (issues #30, #31; see `sprint-change-proposal-2026-11-09.md`): one rule for creating Homes replaces the Story 1.3 rule (FR-1, Open Question 3), and a new FR-24 lets Household Members and Landlords add and archive Tasks after Task Setup.
 
 # PRD: AI-Driven Household Task App
 
@@ -103,6 +105,7 @@ A user can create a Home. If created as a Household Home, the creator becomes a 
 - A newly created Landlord Home has exactly one Landlord and zero or more Tenants.
 - Creating a Home does not require prior membership in any other Home.
 - A Landlord-created Home supports full configuration (Must tasks, Frequency) with zero Tenants present.
+- `[REVISED 2026-11-09]` A user may create any number of Landlord Homes, and a Household Home only while they are not a Household Member or Tenant of another Home — the same one-Home limit as joining through an invite (Story 1.4). A Landlord can therefore create their own Household Home, and a Household Member or Tenant can create a Landlord Home.
 
 #### FR-2: Invite members via link
 Who can generate a Home's invite link depends on Home type: in a Household Home, any Household Member can generate one; in a Landlord Home, only the Landlord can — Tenants cannot invite anyone. A user following the link can register and is linked to that Home. Realizes UJ-1, UJ-2.
@@ -177,6 +180,15 @@ The app proposes a recurrence Frequency for irregular tasks. Household Members a
 - A Tenant's attempt to change Frequency on a Landlord Home's task is rejected.
 
 `[REVISED 2026-11-09]` Story 2.1 (decisions by Eirik): a Frequency is chosen from fixed intervals (7, 14, 30, 42, 60, 90, 182 and 365 days, «Hver uke» … «Hvert år»), because a free number of days is hard to read and type on a phone; the server stores days, so the list can grow later. The recommended tasks are reviewed once per Home in Task Setup (a second setup gets 409); later changes to classification and Frequency are Story 2.3. See `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`.
+
+#### FR-24: Add and archive Tasks `[ADDED 2026-11-09 — Sprint Change Proposal 2026-11-09]`
+After Task Setup, a Household Member or Landlord can add a Task — a catalog task type the Home does not currently have, or a custom Task with its own name — and archive a Task the Home no longer needs. Tenants cannot. Realizes UJ-1, UJ-2, UJ-4.
+
+**Consequences (testable):**
+- A custom Task has a name (unique among the Home's active Tasks), a Must/Should classification and a Frequency chosen by the user (FR-4, FR-8). It can never require Photo Evidence (FR-18, Privacy Constraints).
+- An archived Task disappears from Task Overview, notifications, fairness and the Portfolio. Its history (completions, Photo Evidence) is kept. A catalog task type can be added again as a new Task.
+- Archiving asks for confirmation first. Archiving every Task does not reopen Task Setup, which still runs once per Home.
+- A Tenant's attempt to add or archive a Task is rejected server-side.
 
 #### FR-9: Auto-reschedule on completion
 Marking a task instance complete automatically calculates and schedules the next due date based on its Frequency. Realizes UJ-1.
@@ -340,7 +352,7 @@ The MVP is delivered in two stages, so that a complete app exists even if Trinn 
 
 - Home creation, link-based invites, and Role assignment (Household Member, Landlord, Tenant) — FR-1 to FR-3 — and leaving a Home / removing Tenants (FR-23, added 2026-11-08). The Tenant locks in FR-3, FR-5 and FR-8 are deliberately in Trinn 1: they are the product's differentiator and its most testable rules.
 - Must/Should recommendation, adjustment, Must-first ordering, and per-member completion tracking — FR-4 to FR-7
-- Frequency recommendation, adjustment, and auto-rescheduling — FR-8, FR-9
+- Frequency recommendation, adjustment, and auto-rescheduling — FR-8, FR-9, and adding/archiving Tasks — FR-24 (added 2026-11-09)
 - AI assistant: contextual quick-answer — FR-14
 - Self-checkoff completion — FR-17
 - Responsive web layout across phone, tablet, desktop — FR-21
@@ -360,7 +372,7 @@ The MVP is delivered in two stages, so that a complete app exists even if Trinn 
 The primary metrics are the testable criteria from the brief's §Success Criteria, each traced to the requirements it validates. Each can become an automated test.
 
 **Primary (Trinn 1)**
-- **SM-1**: A Tenant cannot change a Must/Should classification or Frequency set by a Landlord; the server rejects the request (403). Validates FR-3, FR-5, FR-8.
+- **SM-1**: A Tenant cannot change a Must/Should classification or Frequency set by a Landlord; the server rejects the request (403). A Tenant also cannot add or archive Tasks (FR-24). Validates FR-3, FR-5, FR-8, FR-24.
 - **SM-2**: Completing a task with Frequency N days schedules the next instance N days after the actual completion date, also when completed late. Validates FR-9.
 - **SM-3**: Every new task gets an app-recommended Must or Should classification, the task list always shows Must tasks before Should tasks, and the core flows are usable at phone, tablet and desktop widths. Validates FR-4, FR-6, FR-21.
 - **SM-4**: When one Member completes a shared task, every Member of that Home sees it as complete, and the completion records who did it. Validates FR-7, FR-17.
@@ -387,7 +399,7 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 
 1. `[PARTLY RESOLVED 2026-10-11]` The four journey-derived additions (portfolio dashboard, photo evidence, targeted notifications, AI onboarding guide) are now placed in Trinn 2 (see §6), so Trinn 1 is a complete app without them. The question that remains is whether Trinn 2 itself will fit before the mid-December deadline; if scope must shrink there, a provisional cut order (lowest-value-first, pending team validation): (1) FR-20 Portfolio Dashboard — nice-to-have oversight, not blocking the core loop for a single Landlord; (2) FR-16 AI onboarding guide — a Landlord can substitute a manual message short-term; (3) FR-11 fairness-based targeting — degrades gracefully to broadcast-only reminders (FR-10/FR-12); FR-18/19 Photo Evidence is deliberately last, since it's the most distinctive Landlord-Tenant trust mechanism named in the brief's differentiation case.
 2. `[RESOLVED 2026-11-01]` FR-10: daily morning batch. Tasks have due dates, not due times, and UJ-1 already describes the notification arriving "earlier in the day". Vercel Cron on the free plan runs at most once a day, with up to 59 minutes' delay; a missed run means no reminders that day, an accepted risk for a course project. FR-12 broadcasts are unaffected (sent immediately, AD-14).
-3. `[RESOLVED 2026-11-07]` FR-3: can a Landlord also be a Household Member of their own separate personal Home — that is, can one user hold both Roles across different Homes — or is a user's Role fixed account-wide? **Resolution:** yes. Role lives on the Membership (AD-1), so one user can hold different Roles in different Homes. As built (Stories 1.3–1.4): a Household Member or Tenant belongs to at most one Home; a Landlord may own several Landlord Homes and also join one Household Home through an invite; a Household Member cannot create a Landlord Home (accepted in the Epic 1 retrospective, R1). Recorded 2026-11-08 (Epic 1 retrospective, S3).
+3. `[RESOLVED 2026-11-07]` FR-3: can a Landlord also be a Household Member of their own separate personal Home — that is, can one user hold both Roles across different Homes — or is a user's Role fixed account-wide? **Resolution:** yes. Role lives on the Membership (AD-1), so one user can hold different Roles in different Homes. As built (Stories 1.3–1.4): a Household Member or Tenant belongs to at most one Home; a Landlord may own several Landlord Homes and also join one Household Home through an invite; a Household Member cannot create a Landlord Home (accepted in the Epic 1 retrospective, R1). Recorded 2026-11-08 (Epic 1 retrospective, S3). `[REVISED 2026-11-09]` The creation rule now matches the joining rule (FR-1): anyone may create Landlord Homes, and a Household Home only without another Household Member or Tenant Membership. This closes R1 (issue #30, Story 1.9).
 4. FR-11: what threshold defines "rarely or never performed completions" for fairness-based targeting (for example, zero completions in the last N instances)? Needs a concrete rule before implementation.
 
 ## 9. Assumptions Index
