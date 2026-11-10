@@ -2,6 +2,7 @@
 // Story 1.8: Homes carry can_leave and Members can_remove, as the server sends them.
 // Story 2.1: Homes carry can_set_up_tasks and has_tasks; every Home's tasks list and the
 // catalog answer by default.
+// Story 2.2: tasks carry due_status and days_until_due; OLAS_TASKS has one of each due state.
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
 import type { Task, TaskTypes } from '../api/tasks';
@@ -84,6 +85,8 @@ export const OLAS_TASKS: Task[] = [
     classification: 'must',
     frequency_days: 30,
     due_on: '2026-12-09',
+    due_status: 'later',
+    days_until_due: 29,
   },
   {
     id: '00000000-0000-4000-8000-0000000000c2',
@@ -91,7 +94,19 @@ export const OLAS_TASKS: Task[] = [
     name: 'Støvsug og vask gulvene',
     classification: 'should',
     frequency_days: 14,
-    due_on: '2026-11-23',
+    due_on: '2026-11-08',
+    due_status: 'overdue',
+    days_until_due: -2,
+  },
+  {
+    id: '00000000-0000-4000-8000-0000000000c3',
+    task_type: 'stekeovn',
+    name: 'Vask stekeovnen',
+    classification: 'should',
+    frequency_days: 90,
+    due_on: '2026-11-11',
+    due_status: 'due_soon',
+    days_until_due: 1,
   },
 ];
 

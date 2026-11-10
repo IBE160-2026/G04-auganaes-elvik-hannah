@@ -6,6 +6,7 @@
 // Story 1.8 (FR-23): «Forlat hjemmet» when the server's can_leave says so, and «Fjern» on each
 // row whose can_remove is true (a Landlord, on a Tenant). Both confirm inline. A 403 shows no
 // inline error: the global handler in createQueryClient refetches and the guards route.
+// Story 2.2: «Tilbake til hjemmet» goes to this Home's Task Overview.
 import { useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
@@ -47,7 +48,7 @@ export function MembersPage() {
         <p className="members-page__note">Det er utleieren som inviterer nye leietakere.</p>
       )}
       {home.can_leave && <LeaveControl key={home.id} home={home} />}
-      <Link to="/" className="members-page__link">
+      <Link to={`/hjem/${home.id}`} className="members-page__link">
         Tilbake til hjemmet
       </Link>
     </div>

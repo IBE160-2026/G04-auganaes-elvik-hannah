@@ -1,9 +1,11 @@
 // Story 1.2 (FR-1): routes, forms and the session restored on load. Story 1.3: the landing page
-// is the Home page, or Create Home for a user without a Home.
+// is the Home page, or Create Home for a user without a Home. Story 2.2: "/" opens the Home's
+// Task Overview, and «Logg ut» is on Settings (and on Create Home).
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { MESSAGES } from './api/auth';
+import { lastHomeKey } from './api/lastHome';
 import { OLA, OLAS_HOME, authResponse, fakeApi, homesResponse, json, resetApi } from './test-utils/fakeApi';
 
 const signedOut = { 'POST /api/auth/refresh': () => json(401, { detail: 'Økten er utløpt.' }) };
@@ -50,9 +52,12 @@ describe('App routes', () => {
     await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
     await userEvent.click(screen.getByRole('button', { name: 'Logg inn' }));
 
-    expect(await screen.findByText(/Velkommen hjem, Ola!/)).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
-    expect(localStorage.length + sessionStorage.length).toBe(0);
+    expect(await screen.findByRole('heading', { level: 1, name: OLAS_HOME.name })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
+    // AD-7: no token in storage. The only key is the most recently used Home (Story 2.2).
+    await waitFor(() => expect(localStorage.getItem(lastHomeKey(OLA.id))).toBe(OLAS_HOME.id));
+    expect(Object.keys(localStorage)).toEqual([lastHomeKey(OLA.id)]);
+    expect(sessionStorage.length).toBe(0);
   });
 
   it('shows a wrong password inline, on the field, with focus there and no refresh', async () => {
@@ -147,14 +152,14 @@ describe('App routes', () => {
     expect(window.location.pathname).toBe('/nytt-hjem');
   });
 
-  it('signs out and returns to /logg-inn', async () => {
+  it('signs out from Settings and returns to /logg-inn', async () => {
     const server = fakeApi({
       'POST /api/auth/refresh': () => json(200, authResponse('a1')),
       'GET /api/auth/me': () => json(200, OLA),
       ...withHome,
       'POST /api/auth/logout': () => new Response(null, { status: 204 }),
     });
-    renderAt('/');
+    renderAt('/innstillinger');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Logg ut' }));
 
@@ -169,7 +174,7 @@ describe('App routes', () => {
       ...withHome,
       'POST /api/auth/logout': () => json(500, { detail: 'x' }),
     });
-    renderAt('/');
+    renderAt('/innstillinger');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Logg ut' }));
 

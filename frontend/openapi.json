@@ -1360,6 +1360,19 @@
             "type": "string",
             "format": "date",
             "title": "Due On"
+          },
+          "due_status": {
+            "type": "string",
+            "enum": [
+              "overdue",
+              "due_soon",
+              "later"
+            ],
+            "title": "Due Status"
+          },
+          "days_until_due": {
+            "type": "integer",
+            "title": "Days Until Due"
           }
         },
         "type": "object",
@@ -1369,7 +1382,9 @@
           "name",
           "classification",
           "frequency_days",
-          "due_on"
+          "due_on",
+          "due_status",
+          "days_until_due"
         ],
         "title": "TaskOut"
       },

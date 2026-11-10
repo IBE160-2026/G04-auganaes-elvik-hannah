@@ -516,6 +516,13 @@ export interface components {
              * Format: date
              */
             due_on: string;
+            /**
+             * Due Status
+             * @enum {string}
+             */
+            due_status: "overdue" | "due_soon" | "later";
+            /** Days Until Due */
+            days_until_due: number;
         };
         /** TaskTypeOut */
         TaskTypeOut: {

@@ -9,8 +9,6 @@ Story 1.9 (issue #30): a Landlord Home may always be created, and a Landlord els
 create a Household Home.
 """
 
-from datetime import timedelta
-
 import pytest
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, select
@@ -131,8 +129,9 @@ def test_fresh_db_gives_both_homes_every_catalog_task_some_due_soon_or_overdue(
             entry.frequency_days,
         )
     today = utc_now().date()
-    assert any(row.due_on < today for row in listed), "nothing overdue"
-    assert any(today <= row.due_on <= today + timedelta(days=7) for row in listed), "nothing soon"
+    statuses = {tasks.due_status(row.due_on, today) for row in listed}
+    assert "overdue" in statuses, "nothing overdue"
+    assert "due_soon" in statuses, "nothing due soon"
 
 
 def test_fresh_db_gives_mari_and_jonas_one_household_home(session: Session) -> None:

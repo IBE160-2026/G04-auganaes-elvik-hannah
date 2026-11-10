@@ -4,6 +4,7 @@
 // Story 2.1: a created Home goes on to Task Setup.
 // Story 1.9 (issue #30, decision 2): the title follows what is offered, and a user who lives in
 // a Home (lived_in_home_id) is told their Membership there is unchanged.
+// Story 2.2 (decision 7): «Logg ut» here, so a user without a Home can sign out.
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate } from 'react-router';
@@ -15,7 +16,7 @@ import {
   type HomeFieldErrors,
   type HomeType,
 } from '../api/homes';
-import { useCreateHome, useHomes } from '../api/queries';
+import { useCreateHome, useHomes, useSignOut } from '../api/queries';
 import { PendingNotice } from '../components/PendingNotice';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TextField } from '../components/TextField';
@@ -32,6 +33,7 @@ const TYPE_DESCRIPTIONS: Record<HomeType, string> = {
 export function CreateHome() {
   const homes = useHomes();
   const createHome = useCreateHome();
+  const signOut = useSignOut();
   const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
   const typeErrorId = useId();
@@ -154,6 +156,17 @@ export function CreateHome() {
           Opprett hjem
         </PrimaryButton>
       </form>
+      <button
+        type="button"
+        className="create-home__secondary"
+        aria-busy={signOut.isPending || undefined}
+        onClick={() => {
+          // A double tap sends one logout request.
+          if (!signOut.isPending) signOut.mutate();
+        }}
+      >
+        Logg ut
+      </button>
     </div>
   );
 }

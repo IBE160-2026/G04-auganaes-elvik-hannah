@@ -109,7 +109,7 @@ function ValidTokenInvite({ token }: { token: string }) {
         <p className="invite-page__message">
           Du er allerede med i «{preview.other_home_name}». Du kan bare være med i ett hjem om gangen.
         </p>
-        {/* "/" shows the newest Home, which may not be the one named above (Epic 1 retro, R7). */}
+        {/* "/" opens the most recently used Home, which may not be the one named above (R7). */}
         <Link to="/" className="invite-page__link">
           Gå til forsiden
         </Link>
@@ -119,7 +119,8 @@ function ValidTokenInvite({ token }: { token: string }) {
 
   function join() {
     accept.mutate(undefined, {
-      onSuccess: () => navigate('/', { replace: true }),
+      // Story 2.2 (decision 12): straight to the joined Home, which then becomes the last used.
+      onSuccess: (home) => navigate(`/hjem/${home.id}`, { replace: true }),
       // The link or the user changed meanwhile: show the server's reason, then the new state.
       onError: () => void invite.refetch(),
     });

@@ -84,24 +84,24 @@ Seed-kommandoen lager disse eksempelbrukerne:
 | Anders Johnsen | `anders@example.com` | `husly-demo` | «Storgata 12», utleiebolig (leietaker, kom inn via en invitasjonslenke) |
 
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
-2. Logg inn som Mari. Du havner på hjemsiden for «Mari og Jonas sitt hjem», med type, rolle og de åtte oppgavene under **Oppgaver** (Må-oppgavene først, hver med intervall og «Neste gang»). Last siden på nytt; du er fortsatt logget inn.
-3. **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
-4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se under). Med en husstand blir du husstandsmedlem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier og ser listen over hjemmene dine. Regelen for å opprette flere hjem med **Opprett nytt hjem** er den samme som for å bli med (Story 1.9): en utleiebolig kan alle opprette, når som helst. En husstand kan du bare opprette når du ikke allerede er husstandsmedlem eller leietaker et annet sted. Prøver du likevel, svarer serveren «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
-5. **Logg ut** sender deg tilbake til innloggingen.
+2. Logg inn som Mari. Du havner på oppgaveoversikten for «Mari og Jonas sitt hjem» (`/hjem/<id>`), med de åtte oppgavene (Må-oppgavene først) og fanelinja **Oppgaver** / **Innstillinger** nederst. Last siden på nytt; du er fortsatt logget inn.
+3. Gå til **Innstillinger** og trykk **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
+4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se under). Med en husstand blir du husstandsmedlem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier. Hjemmene dine står under **Dine hjem** på **Innstillinger**. Regelen for å opprette flere hjem med **Opprett nytt hjem** er den samme som for å bli med (Story 1.9): en utleiebolig kan alle opprette, når som helst. En husstand kan du bare opprette når du ikke allerede er husstandsmedlem eller leietaker et annet sted. Prøver du likevel, svarer serveren «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
+5. **Logg ut** (på **Innstillinger**, eller på **Opprett hjemmet ditt** for en bruker uten hjem) sender deg tilbake til innloggingen.
 
 **Prøv regelen for å opprette hjem (Story 1.9):** Stegene forutsetter en nyseedet database (`uv run python -m app.seed` fra `backend/` på en tom database), siden de lager nye hjem.
 
-1. Logg inn som Kari og trykk **Opprett nytt hjem**. Hun er bare utleier, så hun får velge både **Husstand** og **Utleiebolig**. Velg **Husstand**, gi hjemmet et navn og trykk **Opprett hjem**. Hun blir husstandsmedlem i det nye hjemmet og kommer til **Sett opp oppgaver**.
-2. Logg inn som Jonas og trykk **Opprett nytt hjem**. Siden heter **Opprett ny utleiebolig**, tilbyr bare utleiebolig og sier at medlemskapet hans i «Mari og Jonas sitt hjem» ikke endres. Etter at han har opprettet den, er han både husstandsmedlem der og utleier i den nye.
+1. Logg inn som Kari, gå til **Innstillinger** og trykk **Opprett nytt hjem**. Hun er bare utleier, så hun får velge både **Husstand** og **Utleiebolig**. Velg **Husstand**, gi hjemmet et navn og trykk **Opprett hjem**. Hun blir husstandsmedlem i det nye hjemmet og kommer til **Sett opp oppgaver**.
+2. Logg inn som Jonas, gå til **Innstillinger** og trykk **Opprett nytt hjem**. Siden heter **Opprett ny utleiebolig**, tilbyr bare utleiebolig og sier at medlemskapet hans i «Mari og Jonas sitt hjem» ikke endres. Etter at han har opprettet den, er han både husstandsmedlem der og utleier i den nye.
 3. Serveren håndhever regelen selv om noen prøver direkte i <http://localhost:8000/docs>:
    1. Kjør `POST /api/auth/login` med `jonas@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
    2. Trykk **Authorize** øverst og lim inn tokenet.
    3. Kjør `POST /api/homes` med `{"name": "Hytta", "type": "household"}`. Svaret er 409 med «Du er allerede med i «Mari og Jonas sitt hjem». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
-4. Inntil Story 2.2 viser `/` det nyeste hjemmet, så Jonas og Kari ser det nye hjemmet sitt (og blir sendt til **Sett opp oppgaver** til det har oppgaver). Bytte mellom hjem kommer i Story 2.2.
+4. Jonas og Kari har nå to hjem hver, og bytter mellom dem under **Dine hjem** (se «Prøv oppgaveoversikten» under).
 
 **Prøv invitasjon (Story 1.4):**
 
-1. Logg inn som Mari og velg **Medlemmer og invitasjon** på hjemsiden. Under **Medlemmer** ser hun seg selv («(deg)») og Jonas som husstandsmedlemmer. Trykk **Lag invitasjonslenke**. Lenken kan brukes én gang og gjelder i 7 dager; **Lag ny lenke** lager en til, og de gamle virker fortsatt.
+1. Logg inn som Mari og velg **Medlemmer og invitasjon** øverst på oppgaveoversikten. Under **Medlemmer** ser hun seg selv («(deg)») og Jonas som husstandsmedlemmer. Trykk **Lag invitasjonslenke**. Lenken kan brukes én gang og gjelder i 7 dager; **Lag ny lenke** lager en til, og de gamle virker fortsatt.
 2. Åpne lenken i et privat vindu. Du ser hjemmet og rollen. Velg **Opprett konto og bli med** og lag en ny bruker. Du er da med i «Mari og Jonas sitt hjem» som husstandsmedlem.
 3. Logg ut (private vinduer i samme nettleser deler innlogging), eller bruk en annen nettleser, og åpne den samme lenken igjen. Nå står det at lenken ikke lenger er gyldig.
 4. Logg inn som Anders (leietaker) og åpne **Medlemmer og invitasjon** for «Storgata 12». Under **Medlemmer** ser han Kari Hansen (Utleier) og seg selv (Leietaker, «(deg)»), men ingen knapp for å invitere (Story 1.5). Serveren nekter også, hvis han prøver direkte i <http://localhost:8000/docs>:
@@ -122,10 +122,17 @@ Seed-kommandoen lager disse eksempelbrukerne:
 **Prøv oppgaveoppsett (Story 2.1):**
 
 1. Lag en ny bruker og opprett et hjem (punkt 3 og 4 over). Du havner på **Sett opp oppgaver** med åtte anbefalte oppgaver, hver med **Ta med**, **Må**/**Bør** og **Hvor ofte**.
-2. Gjør «Vask stekeovnen» til **Må** og velg **Hver 2. måned**, og fjern haken ved «Rens sluket». Trykk **Lagre oppgavene**. Du havner på hjemsiden, der **Oppgaver** viser sju oppgaver med «Vask stekeovnen» blant Må-oppgavene og uten «Rens sluket». Tilbake-knappen i nettleseren tar deg ikke til skjemaet igjen.
+2. Gjør «Vask stekeovnen» til **Må** og velg **Hver 2. måned**, og fjern haken ved «Rens sluket». Trykk **Lagre oppgavene**. Du havner på oppgaveoversikten for hjemmet, som viser sju oppgaver med «Vask stekeovnen» blant Må-oppgavene og uten «Rens sluket». Tilbake-knappen i nettleseren tar deg ikke til skjemaet igjen.
 3. Fjerner du alle hakene og trykker **Lagre oppgavene**, står det «Velg minst én oppgave.», og ingenting blir sendt.
-4. Oppsettet kjøres én gang per hjem. Åpner du `/hjem/<id>/oppgaveoppsett` igjen etterpå, blir du sendt til hjemsiden. Lagrer du i to faner, svarer serveren 409 på den andre, og den fanen går også til hjemsiden.
-5. Logg inn som Anders (leietaker). Han ser oppgavene Kari har satt opp for «Storgata 12», men kan ikke sette opp oppgaver selv; serveren svarer 403 på `POST /api/homes/{home_id}/tasks/setup` (prøv i <http://localhost:8000/docs> som i invitasjonseksempelet). En utleier som oppretter en ny utleiebolig, setter opp oppgavene med en gang, før noen leietaker er med; har et eldre hjem ingen oppgaver, står **Sett opp oppgaver** ved det under **Dine hjem**.
+4. Oppsettet kjøres én gang per hjem. Åpner du `/hjem/<id>/oppgaveoppsett` igjen etterpå, blir du sendt til oppgaveoversikten for hjemmet. Lagrer du i to faner, svarer serveren 409 på den andre, og den fanen går også dit.
+5. Logg inn som Anders (leietaker). Han ser oppgavene Kari har satt opp for «Storgata 12», men kan ikke sette opp oppgaver selv; serveren svarer 403 på `POST /api/homes/{home_id}/tasks/setup` (prøv i <http://localhost:8000/docs> som i invitasjonseksempelet). En utleier som oppretter en ny utleiebolig, setter opp oppgavene med en gang, før noen leietaker er med; har et eldre hjem ingen oppgaver, står **Sett opp oppgaver** ved det under **Dine hjem** på **Innstillinger**.
+
+**Prøv oppgaveoversikten (Story 2.2):** Steg 3 og 4 forutsetter en nyseedet database, siden de lager et nytt hjem.
+
+1. Logg inn som Mari. `/` åpner oppgaveoversikten for hjemmet hennes. Alle **Må**-oppgaver står over alle **Bør**-oppgaver, også når en Bør-oppgave er forfalt. Mens seed-dataene er ferske, står «Rens sluket» (Må) med «Snart forfall» i gult og fet skrift, og «Støvsug og vask gulvene» (Bør) med «Forfalt — frist var …» i rødt. Antall dager («i dag», «i morgen», «om N dager») og hvilke oppgaver som er forfalt, flytter seg med datoen, siden oppgavene er satt opp relativt til dagen seed-en ble kjørt. «Snart forfall» betyr innen 3 dager, og det er serveren som avgjør det (`due_status` i `GET /api/homes/{home_id}/tasks`).
+2. Trykk på en oppgave for å se detaljene (bare lesing; redigering kommer i Story 2.3). Trykk **Oppdater** øverst (eller dra lista ned på mobil) for å hente oppgavene på nytt; skjermleseren sier «Oppdatert». Bruk Tab: fokus går fra overskriften via **Medlemmer og invitasjon** og **Oppdater** gjennom oppgavene ovenfra og ned, og til slutt fanelinja. **Husly** øverst er en lenke til `/`.
+3. Logg inn som Kari, gå til **Innstillinger**, trykk **Opprett nytt hjem**, velg **Husstand** og sett opp oppgavene. Hun har nå to hjem, og oppgaveoversikten viser **Bytt hjem**.
+4. Trykk **Bytt hjem** og velg «Storgata 12» under **Dine hjem**. Last siden på nytt og gå til `/` (eller trykk **Husly**): appen åpner «Storgata 12», fordi det er sist brukte hjem. Dette huskes i nettleseren (`localStorage`), per bruker og per enhet, ikke på serveren.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 

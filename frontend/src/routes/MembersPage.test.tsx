@@ -2,11 +2,15 @@
 // server's can_invite; a Tenant never sees it.
 // Story 1.5 (FR-3, SM-6): the members list on the same page, for every Role.
 // Story 1.8 (FR-23): «Forlat hjemmet», «Fjern», their inline confirmation and the 403 redirect.
+// Story 2.2: linked from the Task Overview header and Settings; «Tilbake til hjemmet» goes to
+// /hjem/<id>, and leaving the last used Home lands on the fallback Home's overview.
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { HOME_MESSAGES, MEMBER_MESSAGES, type Home, type Member } from '../api/homes';
+import { lastHomeKey } from '../api/lastHome';
 import {
+  OLA,
   OLAS_HOME,
   fakeApi,
   homesResponse,
@@ -38,7 +42,7 @@ function renderAt(path: string) {
 afterEach(resetApi);
 
 describe('Members & Invite page', () => {
-  it('is linked from the Home page for the shown Home', async () => {
+  it('is linked from the Task Overview for the shown Home, and links back to it', async () => {
     fakeApi(signedInWith());
     renderAt('/');
 
@@ -46,12 +50,16 @@ describe('Members & Invite page', () => {
 
     expect(await screen.findByRole('heading', { name: 'Medlemmer og invitasjon' })).toBeInTheDocument();
     expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}/medlemmer`);
+
+    await userEvent.click(screen.getByRole('link', { name: 'Tilbake til hjemmet' }));
+    expect(await screen.findByRole('heading', { level: 1, name: OLAS_HOME.name })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
   });
 
-  it('links each of a Landlord\'s Homes to its own page', async () => {
+  it('links each of a Landlord\'s Homes to its own page from Settings', async () => {
     const second = { ...RENTAL, id: '00000000-0000-4000-8000-0000000000b2', name: 'Storgata 14' };
     fakeApi(signedInWith([second, RENTAL], ['landlord']));
-    renderAt('/');
+    renderAt('/innstillinger');
 
     expect(await screen.findByRole('link', { name: 'Medlemmer og invitasjon for Storgata 12' })).toHaveAttribute(
       'href',
@@ -150,7 +158,7 @@ describe('Members & Invite page', () => {
     renderAt('/hjem/00000000-0000-4000-8000-0000000000ff/medlemmer');
 
     expect(await screen.findByRole('heading', { name: OLAS_HOME.name })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
   });
 });
 
@@ -349,8 +357,9 @@ describe('Leave and remove', () => {
     expect(server.calls('DELETE', leavePath(OLAS_HOME))).toHaveLength(1);
   });
 
-  it('sends a Landlord who leaves a Household to "/" with the notice, keeping her Landlord Home', async () => {
+  it('sends a Landlord who leaves her last used Household to her Landlord Home\'s overview with the notice', async () => {
     const user = userEvent.setup();
+    localStorage.setItem(lastHomeKey(OLA.id), OLAS_HOME.id);
     let left = false;
     fakeApi({
       ...signedInWith([OLAS_HOME, RENTAL], ['landlord']),
@@ -367,8 +376,11 @@ describe('Leave and remove', () => {
     await user.click(screen.getByRole('button', { name: 'Ja, forlat hjemmet' }));
 
     expect(await screen.findByText('Du har forlatt «Kollektivet».')).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
-    expect(screen.getByRole('heading', { name: 'Storgata 12' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${RENTAL.id}`);
+    expect(screen.getByRole('heading', { level: 1, name: 'Storgata 12' })).toBeInTheDocument();
+    // Announced once: the notice region is a polite live region.
+    expect(screen.getByText('Du har forlatt «Kollektivet».')).toHaveAttribute('aria-live', 'polite');
+    await waitFor(() => expect(localStorage.getItem(lastHomeKey(OLA.id))).toBe(RENTAL.id));
   });
 
   it('shows the notice on Task Setup when her remaining Landlord Home has no Tasks (Story 2.1)', async () => {

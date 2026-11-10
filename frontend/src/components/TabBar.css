@@ -1,0 +1,45 @@
+/* Story 2.2: the tab bar. Sticks to the bottom of the viewport at every width, after main in the
+   DOM, so Tab reaches it after the page content. */
+.tab-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+  border-top: 1px solid var(--color-surface-base);
+}
+
+.tab-bar__list {
+  display: flex;
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+  list-style: none;
+}
+
+.tab-bar__item {
+  flex: 1;
+  display: flex;
+}
+
+.tab-bar__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: var(--space-2);
+  color: var(--color-ink-secondary);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+/* The current tab: colour, weight and an underline, never colour alone. */
+.tab-bar__tab[aria-current='page'] {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+  text-decoration-thickness: var(--focus-width);
+  text-underline-offset: var(--space-1);
+}

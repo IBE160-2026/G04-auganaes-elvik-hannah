@@ -43,7 +43,11 @@
 }
 
 .app-shell__brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
   color: var(--color-primary);
+  text-decoration: none;
   font-size: var(--font-size-title);
   font-weight: var(--font-weight-title);
   line-height: var(--line-height-title);

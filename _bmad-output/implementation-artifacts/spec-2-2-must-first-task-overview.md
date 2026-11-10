@@ -2,8 +2,9 @@
 title: 'Story 2.2: Must-first Task Overview, tab bar and Home switching'
 type: 'feature'
 created: '2026-11-10'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
+baseline_commit: '789db4448e7e0973a1a13884dee748c4efc86c6a'
 review_loop_iteration: 0
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
@@ -90,21 +91,21 @@ Settled after the spec review (orchestrator, shown to the team at Checkpoint 1):
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `sprint-status.yaml` -- `2-2-…` to `in-progress`; `review` when the PR opens.
-- [ ] `backend/app/domain/tasks.py`, `routes/tasks.py` -- due status, day count, fields.
-- [ ] `backend/tests/test_tasks.py`, `test_tasks_routes.py`, `test_seed.py` -- boundaries −1/0/3/4 days, Must-first with an overdue Should, fields in GET and setup POST, seed has a due-soon row.
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate.
-- [ ] `frontend/src/api/tasks.ts` -- due text from status + day count («Forfalt — frist var 26. september», «Snart forfall — i dag / i morgen / om N dager», «Neste gang: 9. desember»).
-- [ ] `frontend/src/api/lastHome.ts` (new) -- decisions 3, 12: per-user read/write in try/catch, `pickHome`.
-- [ ] `frontend/src/routes/TaskOverview.tsx` + `.css` (new) -- `/hjem/:homeId`: guards, `PendingNotice`, header (decision 11), skeleton (3–4 rows), empty text (2, 10), rows as links, error/retry, pull-to-refresh + «Oppdater» (9), focus (14), records last used (12).
-- [ ] `frontend/src/routes/TaskDetail.tsx` + `.css` (new) -- decision 6, matrix row "Task Detail".
-- [ ] `frontend/src/routes/HomePage.tsx` -- `/` only redirects (`replace`) to `/hjem/<pickHome>` or `/nytt-hjem`.
-- [ ] `frontend/src/components/TabBar.tsx` + `.css` (new), `AppShell.tsx/.css` -- decision 13; wordmark link.
-- [ ] `frontend/src/routes/Settings.tsx` + `.css` (new), `App.tsx` -- decision 4 (`id="dine-hjem"`); routes `/hjem/:homeId`, `/hjem/:homeId/oppgaver/:taskId`, `/innstillinger`.
-- [ ] `frontend/src/routes/MembersPage.tsx`, `TaskSetup.tsx`, `InvitePage.tsx`, `CreateHome.tsx`, `api/queries.ts` -- `/hjem/<id>` targets (decision 12); «Logg ut» on Create Home (7).
-- [ ] `frontend/src/**/*.test.tsx`, `test-utils/fakeApi.ts` -- every matrix row and AC; `pickHome` (stored gone, `lived_in_home_id` null, throwing storage); due text −1/0/1/3; pull via touch events; `aria-current` per path.
-- [ ] `_bmad-output/planning-artifacts/epics.md` -- Story 2.2 note (Må/Bør, 3 days, moved ACs); checkbox AC added to Story 2.4, Portfolio tab to Story 6.1.
-- [ ] `README.md` -- "Prøv oppgaveoversikten": Mari (overdue/due soon), Kari creates a Household Home and switches.
+- [x] `sprint-status.yaml` -- `2-2-…` to `in-progress`; `review` when the PR opens.
+- [x] `backend/app/domain/tasks.py`, `routes/tasks.py` -- due status, day count, fields.
+- [x] `backend/tests/test_tasks.py`, `test_tasks_routes.py`, `test_seed.py` -- boundaries −1/0/3/4 days, Must-first with an overdue Should, fields in GET and setup POST, seed has a due-soon row.
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate.
+- [x] `frontend/src/api/tasks.ts` -- due text from status + day count («Forfalt — frist var 26. september», «Snart forfall — i dag / i morgen / om N dager», «Neste gang: 9. desember»).
+- [x] `frontend/src/api/lastHome.ts` (new) -- decisions 3, 12: per-user read/write in try/catch, `pickHome`.
+- [x] `frontend/src/routes/TaskOverview.tsx` + `.css` (new) -- `/hjem/:homeId`: guards, `PendingNotice`, header (decision 11), skeleton (3–4 rows), empty text (2, 10), rows as links, error/retry, pull-to-refresh + «Oppdater» (9), focus (14), records last used (12).
+- [x] `frontend/src/routes/TaskDetail.tsx` + `.css` (new) -- decision 6, matrix row "Task Detail".
+- [x] `frontend/src/routes/HomePage.tsx` -- `/` only redirects (`replace`) to `/hjem/<pickHome>` or `/nytt-hjem`.
+- [x] `frontend/src/components/TabBar.tsx` + `.css` (new), `AppShell.tsx/.css` -- decision 13; wordmark link.
+- [x] `frontend/src/routes/Settings.tsx` + `.css` (new), `App.tsx` -- decision 4 (`id="dine-hjem"`); routes `/hjem/:homeId`, `/hjem/:homeId/oppgaver/:taskId`, `/innstillinger`.
+- [x] `frontend/src/routes/MembersPage.tsx`, `TaskSetup.tsx`, `InvitePage.tsx`, `CreateHome.tsx`, `api/queries.ts` -- `/hjem/<id>` targets (decision 12); «Logg ut» on Create Home (7).
+- [x] `frontend/src/**/*.test.tsx`, `test-utils/fakeApi.ts` -- every matrix row and AC; `pickHome` (stored gone, `lived_in_home_id` null, throwing storage); due text −1/0/1/3; pull via touch events; `aria-current` per path.
+- [x] `_bmad-output/planning-artifacts/epics.md` -- Story 2.2 note (Må/Bør, 3 days, moved ACs); checkbox AC added to Story 2.4, Portfolio tab to Story 6.1.
+- [x] `README.md` -- "Prøv oppgaveoversikten": Mari (overdue/due soon), Kari creates a Household Home and switches.
 
 **Acceptance Criteria** (with the matrix; together they cover every epics.md 2.2 AC except the two moved by decisions 5 and 6):
 - Given the seed, when Mari signs in, then `/` opens `/hjem/<her Home>` with every Må row above every Bør row, badges reading «Må»/«Bør», and at least one «Forfalt» (danger colour) and one «Snart forfall» (warning colour, bold) row.
@@ -132,6 +133,14 @@ Settled after the spec review (orchestrator, shown to the team at Checkpoint 1):
 
 ## Implementation Notes
 
+- `TabBar` reads the Homes through `useLoadedHomes()` (`enabled: false`): an observer that fetched would mount before the page's own and load the list twice. Consequence: on a cold `/invitasjon/<token>` (which loads no Homes) there is no tab bar until the list is cached (decision 13).
+- A Tenant opening Task Setup goes to `/hjem/<id>`, not `/` (the spec named only the `has_tasks` case).
+- A failed «Oppdater»/pull announces «Vi fikk ikke oppdatert oppgavene.» and keeps the list.
+- The overview header is a `<div>`, so the page keeps one banner landmark.
+- `overscroll-behavior-y: contain` is set on `document.documentElement` while the task list is mounted (review fix), not on the list.
+- `test-setup.ts` clears `localStorage` after each test; due-text tests freeze `Date` at 2026-11-10.
+- Chrome smoke on a throwaway DB `husly_smoke22` (backend :8001, Vite :5174, removed afterwards): Mari's overview, due states, tab bar, Settings. Not done by hand: 320px width (window would not resize), Kari's second Home, invite accept, leaving the last used Home (covered by tests).
+
 ## Spec Change Log
 
 ## Review Triage Log
@@ -158,3 +167,30 @@ Spec review 2026-11-10 (one adversarial reviewer; 18 findings, all verified agai
 | 16 | Wordmark drops invite token for signed-out user | low | accepted, noted in matrix |
 | 17 | `lastHome` record/clear rules incomplete | low | decision 12; `pickHome` tests |
 | 18 | Manual checks miss invite and leave flows | low | Verification updated |
+
+Code review 2026-11-10 (Blind Hunter, Edge Case Hunter, Verification Gap; 31 findings incl. duplicates, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| `overscroll-behavior-y: contain` on a non-scrolling section; native pull-to-reload can fire too; CSS comment claims otherwise (B, E×2) | medium | patch: set on `document.documentElement` while the list is mounted |
+| Deleted "background Homes refetch fails keeps page" test not replaced on the overview (V) | medium | patch: test on `/hjem/<id>` |
+| Due-text tests assert year-less dates from 2026 fixtures; break when the browser year differs (B) | medium | patch: freeze Date in those test files |
+| Moved ACs still unmarked in Story 2.2 in `epics.md` (B) | medium | patch: mark in place as moved |
+| `atTop` rule of pull-to-refresh untested (V) | low | patch: test with stubbed scrollTop |
+| Seed comment still says "due within a week" (V, B) | low | patch |
+| Kiritimati test name over-claims (B) | low | patch: narrow name |
+| Route test hardcodes the threshold; `== 3` repeated per case (B) | low | patch |
+| README step 1 «om 2 dager» only true on seed day (E) | low | patch: wording |
+| Double tap on Create Home «Logg ut» sends two requests (E) | low | patch: ignore while pending |
+| Route test compares its own `utc_now()` with the server's; midnight race (B) | low | rejected: milliseconds at 00:00 UTC, same as accepted in 2.1 |
+| «Logg ut» on Create Home shows also for users with Homes (B) | low | rejected: harmless duplicate of Settings; decision 7 only requires it for users without a Home |
+| «Dine hjem» does not mark the current Home (B) | low | rejected: a new UX element; the overview h1 names the Home |
+| Tenant waiting view has no «Oppdater» (B) | low | rejected: refetch on focus covers it; adding a refresh path is new scope |
+| Settings profile empty while `/me` loads or fails (B, E) | false | `useMe` has `initialData: session.user`, so name and e-mail are there from the first render |
+| Emoji in the household empty text is read aloud (B) | low | rejected: team-approved UX copy (EXPERIENCE.md) |
+| Negative assertions after fixed 20 ms waits (B) | low | rejected: the absence is checked after the observable pending state; rewriting the waits is more than a direct fix |
+| `aria-current="page"` on «Oppgaver» on Members/Setup (B) | low | rejected: decision 13 sets it on every `/hjem/:id/…` path |
+| «Oppgaver» marked current for an unknown Home id (E) | false | the page redirects to `/` on the same render cycle; the state is never stable |
+| Clicking «Innstillinger» on `/innstillinger#dine-hjem` does not move focus (E) | low | rejected: rare; focus stays where the user is |
+| `dueText` with an unknown `due_status` (E) | false | the type is the generated union and frontend and API deploy together; TS enforces exhaustiveness |
+| Tab bar on a cold `/invitasjon/<token>` depends on cache (E) | low | rejected: decision 13 shows it only with a loaded Homes list; the invite page loads none |

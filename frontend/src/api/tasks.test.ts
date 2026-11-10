@@ -43,3 +43,27 @@ describe('labels', () => {
     expect(FREQUENCY_LABELS[182]).toBe('Hvert halvår');
   });
 });
+
+// Story 2.2 (decision 8): the due text follows the server's status and day count.
+describe('dueText', () => {
+  const thisYear = new Date(2026, 10, 10);
+
+  it.each([
+    [-1, 'overdue', '2026-11-09', 'Forfalt — frist var 9. november'],
+    [0, 'due_soon', '2026-11-10', 'Snart forfall — i dag'],
+    [1, 'due_soon', '2026-11-11', 'Snart forfall — i morgen'],
+    [3, 'due_soon', '2026-11-13', 'Snart forfall — om 3 dager'],
+    [4, 'later', '2026-11-14', 'Neste gang: 14. november'],
+  ] as const)('%i days: %s', async (days, status, dueOn, text) => {
+    const { dueText } = await loadIn('Europe/Oslo');
+    expect(dueText({ due_on: dueOn, due_status: status, days_until_due: days }, thisYear)).toBe(text);
+  });
+
+  it('takes the day word from days_until_due, not from the browser date', async () => {
+    const { dueText } = await loadIn('Pacific/Kiritimati');
+    // The browser may already be on the 11th; the word follows the server's day count.
+    expect(dueText({ due_on: '2026-11-10', due_status: 'due_soon', days_until_due: 0 }, thisYear)).toBe(
+      'Snart forfall — i dag',
+    );
+  });
+});
