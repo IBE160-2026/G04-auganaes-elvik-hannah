@@ -47,6 +47,10 @@
 - [ ] 2026-11-09 [story-2-1-oppgaveoppsett](989-2026-11-09-20-51-00-story-2-1-oppgaveoppsett.md) — Postgres-test av låsen på hjemmeraden i `set_up_tasks` (deferred-work)
 - [ ] 2026-11-09 [story-2-1-oppgaveoppsett](989-2026-11-09-20-51-00-story-2-1-oppgaveoppsett.md) — Lokal database har testhjemmet «Røyktest 2.1» (Kari) fra røyktesten; fjern det selv ved behov
 - [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Merge PR #33 (correct-course for #30 og #31) (løst 2026-11-09: merget `48ce2fe`)
-- [ ] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 1.9 (én regel for å opprette hjem) med `bmad-build`, issue #30, før Story 2.2
+- [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 1.9 (én regel for å opprette hjem) med `bmad-build`, issue #30, før Story 2.2 (løst 2026-11-10)
 - [ ] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.2 må ta med ny AC om bytte mellom hjem («Dine hjem», `/hjem/<id>`)
 - [ ] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.6 (legge til og fjerne oppgaver, issue #31) etter Story 2.5
+- [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Story 2.2 må ta med AC-et om at Husly-logoen lenker til `/`
+- [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Hytte / flere husstandshjem per bruker (issue #34): mulig senere versjon, planlegges med correct-course
+- [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Seed: `_seed_household` bør bruke `join_blocker` for Jonas (deferred-work)
+- [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Sjekke i Neon at preview-branchen for PR #35 er slettet

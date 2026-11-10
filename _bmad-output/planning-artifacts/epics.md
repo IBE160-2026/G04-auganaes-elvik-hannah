@@ -757,6 +757,14 @@ So that I always know what's non-negotiable before what's optional.
 **When** they use the app
 **Then** each Home has its own Task Overview at `/hjem/<id>`, a «Dine hjem» list lets them switch between their Homes, and `/` opens the most recently used Home. The Portfolio tab (Landlord with ≥2 Landlord Homes) is unchanged.
 
+*Added 2026-11-10 (team decision, Eirik, during the Story 1.9 walkthrough):*
+
+**Given** any page inside the app shell
+**When** the user activates the «Husly» wordmark in the header
+**Then** it is a link to `/`: a signed-in user lands on their Home (the same Home `/` opens, see the AC above), and a signed-out user is sent to sign-in by the existing route guard. It is a real link (keyboard-focusable, visible focus ring), not a click handler on text.
+
+> **Note 2026-11-10:** Today «Husly» in `AppShell` is plain text, so pages such as Create Home, Members & Invite and Task Setup have no quick way back. Placed in Story 2.2 rather than a separate fix because 2.2 decides what `/` opens for a user with several Homes, which is where the link should go.
+
 > **Note 2026-11-07 (team decision, Story 1.3):** The tab bar was deferred from Stories 1.1 and 1.2 to 1.3, and has now been split out of 1.3 too, since after 1.3 only a placeholder Home page and sign-out exist. It belongs here because Task Overview is its first real content. Until then, Story 1.3 gives Landlords a plain link to create another Home.
 
 ### Story 2.3: Adjust Task Classification & Frequency
