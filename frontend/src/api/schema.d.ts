@@ -375,6 +375,8 @@ export interface components {
             homes: components["schemas"]["HomeOut"][];
             /** Allowed Types */
             allowed_types: ("household" | "landlord")[];
+            /** Lived In Home Id */
+            lived_in_home_id: string | null;
         };
         /** InviteOut */
         InviteOut: {
@@ -810,7 +812,7 @@ export interface operations {
                     "application/json": components["schemas"]["HomeOut"];
                 };
             };
-            /** @description The caller may not create a Home of this type */
+            /** @description Household Home refused: the caller already lives in another Home */
             409: {
                 headers: {
                     [name: string]: unknown;

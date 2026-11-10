@@ -17,6 +17,7 @@ from app.models.membership import Role
 from app.permissions.current_user import CurrentUser, OptionalUser
 from app.routes.deps import ErrorOut, Inviter, SessionDep
 from app.routes.homes import HomeOut, home_out_for
+from app.routes.messages import already_member_message, in_other_home_message
 
 router = APIRouter(tags=["invites"])
 
@@ -32,14 +33,6 @@ Token = Annotated[str, Path(min_length=1, max_length=invites.TOKEN_MAX_LENGTH)]
 
 def invalid_message(home_type: HomeType | None) -> str:
     return f"{_INVALID} {_ASK_WHOM[home_type]}."
-
-
-def already_member_message(home_name: str) -> str:
-    return f"Du er allerede med i «{home_name}»."
-
-
-def in_other_home_message(home_name: str) -> str:
-    return f"Du er allerede med i «{home_name}». Du kan bare være med i ett hjem om gangen."
 
 
 class InviteOut(BaseModel):

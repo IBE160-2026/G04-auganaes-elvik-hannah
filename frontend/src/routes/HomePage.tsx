@@ -1,5 +1,6 @@
 // Story 1.3: the post-creation landing page. Shows the newest Home, the user's Role in it and
-// "Logg ut"; Landlords also see their Homes and "Opprett nytt hjem". Task Overview replaces this
+// "Logg ut"; Landlords also see their Homes. "Opprett nytt hjem" shows whenever the server's
+// allowed_types offers something (Story 1.9: a Landlord Home always). Task Overview replaces this
 // page in Stories 2.1–2.2, and the tab bar comes with Story 2.2. Story 1.4: links to
 // "Medlemmer og invitasjon" for the shown Home, and for each of a Landlord's Homes.
 // Story 1.8: shows «Du har forlatt «X».» when a Landlord who also lived in a Household left it.

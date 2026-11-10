@@ -86,8 +86,18 @@ Seed-kommandoen lager disse eksempelbrukerne:
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
 2. Logg inn som Mari. Du havner på hjemsiden for «Mari og Jonas sitt hjem», med type, rolle og de åtte oppgavene under **Oppgaver** (Må-oppgavene først, hver med intervall og «Neste gang»). Last siden på nytt; du er fortsatt logget inn.
 3. **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
-4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se under). Med en husstand blir du husstandsmedlem og får ikke tilbud om å lage flere hjem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier, ser listen over hjemmene dine og kan lage flere med **Opprett nytt hjem**.
+4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se under). Med en husstand blir du husstandsmedlem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier og ser listen over hjemmene dine. Regelen for å opprette flere hjem med **Opprett nytt hjem** er den samme som for å bli med (Story 1.9): en utleiebolig kan alle opprette, når som helst. En husstand kan du bare opprette når du ikke allerede er husstandsmedlem eller leietaker et annet sted. Prøver du likevel, svarer serveren «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
 5. **Logg ut** sender deg tilbake til innloggingen.
+
+**Prøv regelen for å opprette hjem (Story 1.9):** Stegene forutsetter en nyseedet database (`uv run python -m app.seed` fra `backend/` på en tom database), siden de lager nye hjem.
+
+1. Logg inn som Kari og trykk **Opprett nytt hjem**. Hun er bare utleier, så hun får velge både **Husstand** og **Utleiebolig**. Velg **Husstand**, gi hjemmet et navn og trykk **Opprett hjem**. Hun blir husstandsmedlem i det nye hjemmet og kommer til **Sett opp oppgaver**.
+2. Logg inn som Jonas og trykk **Opprett nytt hjem**. Siden heter **Opprett ny utleiebolig**, tilbyr bare utleiebolig og sier at medlemskapet hans i «Mari og Jonas sitt hjem» ikke endres. Etter at han har opprettet den, er han både husstandsmedlem der og utleier i den nye.
+3. Serveren håndhever regelen selv om noen prøver direkte i <http://localhost:8000/docs>:
+   1. Kjør `POST /api/auth/login` med `jonas@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
+   2. Trykk **Authorize** øverst og lim inn tokenet.
+   3. Kjør `POST /api/homes` med `{"name": "Hytta", "type": "household"}`. Svaret er 409 med «Du er allerede med i «Mari og Jonas sitt hjem». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
+4. Inntil Story 2.2 viser `/` det nyeste hjemmet, så Jonas og Kari ser det nye hjemmet sitt (og blir sendt til **Sett opp oppgaver** til det har oppgaver). Bytte mellom hjem kommer i Story 2.2.
 
 **Prøv invitasjon (Story 1.4):**
 
@@ -100,7 +110,7 @@ Seed-kommandoen lager disse eksempelbrukerne:
    3. Kjør `GET /api/homes` og kopier `id` til «Storgata 12».
    4. Kjør `POST /api/homes/{home_id}/invites` med den `id`-en. Svaret er 403.
    5. Logg inn som Mari på samme måte og kjør `GET /api/homes/{home_id}/members` med `id`-en til «Storgata 12». Svaret er 403, fordi hun ikke er medlem der (Story 1.5).
-5. Er du allerede husstandsmedlem eller leietaker i ett hjem, kan du ikke bli med i et annet; invitasjonssiden sier fra om det. En utleier kan i tillegg bli med i ett slikt hjem.
+5. Er du allerede husstandsmedlem eller leietaker i ett hjem, kan du ikke bli med i et annet; invitasjonssiden sier fra om det. Utleierroller teller ikke, så en utleier kan i tillegg bli med i ett slikt hjem. Det er den samme regelen som avgjør om du kan opprette en husstand (Story 1.9).
 
 **Prøv å forlate et hjem (Story 1.8):**
 

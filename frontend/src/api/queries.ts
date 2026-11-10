@@ -164,7 +164,8 @@ export function useSetUpTasks(homeId: string) {
 
 /**
  * Writes the new Home into the cache before the caller navigates, so "/" never sees the stale
- * empty list and bounces back to Create Home. A refetch then brings the server's allowed_types.
+ * empty list and bounces back to Create Home. A refetch then brings the server's allowed_types
+ * and lived_in_home_id; until then the old ones stay, since the rule lives only on the server.
  */
 export function useCreateHome() {
   const queryClient = useQueryClient();
@@ -175,8 +176,9 @@ export function useCreateHome() {
       const key = homesKey(session?.user.id);
       queryClient.setQueryData<Homes>(key, (old) => ({
         homes: [home, ...(old?.homes ?? [])],
-        // Unknown until the refetch; empty offers nothing the server might refuse.
-        allowed_types: [],
+        // Kept until the refetch, never guessed here: the server answers a stale offer with 409.
+        allowed_types: old?.allowed_types ?? [],
+        lived_in_home_id: old?.lived_in_home_id ?? null,
       }));
       void queryClient.invalidateQueries({ queryKey: key });
     },
@@ -214,8 +216,9 @@ export function useAcceptInvite(token: string) {
       const key = homesKey(session?.user.id);
       queryClient.setQueryData<Homes>(key, (old) => ({
         homes: [home, ...(old?.homes ?? []).filter((h) => h.id !== home.id)],
-        // Unknown until the refetch; empty offers nothing the server might refuse.
-        allowed_types: [],
+        // Kept until the refetch, never guessed here: the server answers a stale offer with 409.
+        allowed_types: old?.allowed_types ?? [],
+        lived_in_home_id: old?.lived_in_home_id ?? null,
       }));
       void queryClient.invalidateQueries({ queryKey: key });
       void queryClient.invalidateQueries({ queryKey: ['invite', token] });

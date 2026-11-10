@@ -9,6 +9,9 @@ DELETE /homes/{home_id}/members/{user_id} (a Landlord removes a Tenant), both th
 and domain/homes. Every refusal is the same 403 as require_role's.
 
 Story 2.1: HomeOut says whether the caller may set up Tasks and whether the Home has any.
+
+Story 1.9: one rule for creating and joining. A refused Household create answers 409 with the
+same message as joining (routes/messages).
 """
 
 import uuid
@@ -25,15 +28,9 @@ from app.models.membership import Role
 from app.permissions.current_user import CurrentUser
 from app.permissions.require_role import FORBIDDEN
 from app.routes.deps import AnyMember, ErrorOut, Landlord, Leaver, SessionDep
+from app.routes.messages import in_other_home_message
 
 router = APIRouter(prefix="/homes", tags=["homes"])
-
-LANDLORD_ONLY = (
-    "Som utleier kan du bare opprette flere utleieboliger. Bor du selv i et kollektiv, "
-    "blir du med der gjennom en invitasjon."
-)
-# Story 1.4 (decision 3): one Home at a time, also by invite.
-ALREADY_IN_HOME = "Du er allerede med i et hjem, og du kan bare være med i ett hjem om gangen."
 
 HomeName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=HOME_NAME_MAX_LENGTH)
@@ -65,8 +62,11 @@ class HomeOut(BaseModel):
 class HomesOut(BaseModel):
     # The Home the caller most recently created or joined first.
     homes: list[HomeOut]
-    # The Home types the caller may create; empty when they join by invite instead.
+    # The Home types the caller may create (Story 1.9): Landlord Home always, Household Home
+    # only when lived_in_home_id is null.
     allowed_types: list[HomeType]
+    # The Home where the caller is Household Member or Tenant, if any (the one-Home limit).
+    lived_in_home_id: uuid.UUID | None
 
 
 def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
@@ -93,9 +93,11 @@ def home_out_for(session: Session, member_home: homes.MemberHome) -> HomeOut:
 def list_homes(user: CurrentUser, session: SessionDep) -> HomesOut:
     member_homes = homes.homes_for(session, user)
     with_tasks = tasks.home_ids_with_tasks(session, (h.home.id for h in member_homes))
+    lived_in = homes.lived_in_home(session, user)
     return HomesOut(
         homes=[home_out(h, has_tasks=h.home.id in with_tasks) for h in member_homes],
         allowed_types=homes.allowed_types(session, user),
+        lived_in_home_id=lived_in.id if lived_in is not None else None,
     )
 
 
@@ -105,7 +107,7 @@ def list_homes(user: CurrentUser, session: SessionDep) -> HomesOut:
     responses={
         status.HTTP_409_CONFLICT: {
             "model": ErrorOut,
-            "description": "The caller may not create a Home of this type",
+            "description": "Household Home refused: the caller already lives in another Home",
         }
     },
 )
@@ -113,7 +115,7 @@ def create_home(body: CreateHomeRequest, user: CurrentUser, session: SessionDep)
     try:
         created = homes.create_home(session, user, name=body.name, type=body.type)
     except homes.HomeCreationNotAllowed as exc:
-        detail = LANDLORD_ONLY if exc.allowed else ALREADY_IN_HOME
+        detail = in_other_home_message(exc.home.name)
         raise HTTPException(status.HTTP_409_CONFLICT, detail=detail) from None
     # A new Home has no Tasks yet; Task Setup follows (Story 2.1).
     return home_out(created, has_tasks=False)

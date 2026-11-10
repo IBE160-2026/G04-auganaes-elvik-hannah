@@ -4,6 +4,9 @@ Story 1.4: plus the Landlord Kari's Home and the Tenant Anders, who joins it by 
 
 Story 2.1 (FR-4, FR-8, decisions 4 and 7): plus eight Tasks in each example Home, set up as of
 an earlier date so some are due soon or overdue; a Home the homes step skipped gets none.
+
+Story 1.9 (issue #30): a Landlord Home may always be created, and a Landlord elsewhere may still
+create a Household Home.
 """
 
 from datetime import timedelta
@@ -282,7 +285,7 @@ def test_anders_in_another_home_is_skipped_and_no_link_is_made(
     assert f"Hoppet over {ANDERS}: er allerede med i «Anders sitt»" in capsys.readouterr().out
 
 
-def test_kari_in_a_household_home_is_skipped_with_a_reason(
+def test_kari_in_a_household_home_still_gets_storgata_12_and_anders_joins(
     session: Session, capsys: pytest.CaptureFixture[str]
 ) -> None:
     seed_users(session)
@@ -292,14 +295,29 @@ def test_kari_in_a_household_home_is_skipped_with_a_reason(
     seed_homes(session)
     seed_tasks(session)
 
-    assert count(session, InviteLink) == 0
-    assert not homes.homes_for(session, by_email(session, ANDERS))
-    out = capsys.readouterr().out
-    assert f"Hoppet over «{LANDLORD_HOME_NAME}»" in out
-    # Story 2.1: Kari's Household Home gets no Tasks; Mari's still does.
+    storgata = own_home(session, KARI, LANDLORD_HOME_NAME)
+    roles = {h.home.name: h.role for h in homes.homes_for(session, by_email(session, KARI))}
+    assert roles == {"Karis": "household_member", LANDLORD_HOME_NAME: "landlord"}
+    assert [h.home.id for h in homes.homes_for(session, by_email(session, ANDERS))] == [storgata.id]
+    assert count(session, InviteLink) == 1
+    assert task_count(session, storgata) == 8
     assert task_count(session, own_home(session, KARI, "Karis")) == 0
-    assert task_count(session, own_home(session, MARI, EXAMPLE_HOME_NAME)) == 8
-    assert f"Hoppet over oppgavene i «{LANDLORD_HOME_NAME}»" in out
+    assert homes.fr3_violations(session) == []
+
+
+def test_mari_landlord_elsewhere_still_gets_the_household_home(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seed_users(session)
+    homes.create_home(session, by_email(session, MARI), name="Marias utleie", type="landlord")
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    home = own_home(session, MARI, EXAMPLE_HOME_NAME)
+    assert {h.home.id for h in homes.homes_for(session, by_email(session, JONAS))} == {home.id}
+    assert f"Opprettet hjemmet «{EXAMPLE_HOME_NAME}»" in capsys.readouterr().out
+    assert homes.fr3_violations(session) == []
 
 
 def test_a_home_set_up_by_hand_is_left_as_it_is(

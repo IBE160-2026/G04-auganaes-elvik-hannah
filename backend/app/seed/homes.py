@@ -9,7 +9,7 @@ time. Never deletes or overwrites.
 from sqlmodel import Session, select
 
 from app.domain import homes, invites
-from app.models.home import HOME_TYPES, Home
+from app.models.home import Home
 from app.models.membership import Membership
 from app.models.user import User
 from app.seed.users import EXAMPLE_USERS
@@ -38,7 +38,7 @@ def _seed_household(session: Session) -> None:
     home = _own_home(session, mari, EXAMPLE_HOME_NAME)
     if home is not None:
         print(f"Hjemmet «{EXAMPLE_HOME_NAME}» finnes allerede")
-    elif homes.allowed_types(session, mari) != list(HOME_TYPES):
+    elif "household" not in homes.allowed_types(session, mari):
         print(f"Hoppet over «{EXAMPLE_HOME_NAME}»: {CREATOR_EMAIL} er allerede med i et annet hjem")
         return
     else:
@@ -63,13 +63,8 @@ def _seed_landlord(session: Session) -> None:
     home = _own_home(session, kari, LANDLORD_HOME_NAME)
     if home is not None:
         print(f"Hjemmet «{LANDLORD_HOME_NAME}» finnes allerede")
-    elif "landlord" not in homes.allowed_types(session, kari):
-        print(
-            f"Hoppet over «{LANDLORD_HOME_NAME}»: {LANDLORD_EMAIL} er allerede med i et hjem "
-            "og kan ikke opprette en utleiebolig"
-        )
-        return
     else:
+        # Story 1.9: a Landlord Home may always be created.
         home = homes.create_home(session, kari, name=LANDLORD_HOME_NAME, type="landlord").home
         print(f"Opprettet hjemmet «{LANDLORD_HOME_NAME}» med {LANDLORD_EMAIL}")
 

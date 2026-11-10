@@ -1,10 +1,14 @@
 """Story 1.3 (FR-1, FR-3, AD-1, AD-2): the Home creation rule and the Role a Member gets.
 
+Story 1.9 (issue #30): one rule for creating and joining (lived_in_home), the matrix in
+spec-1-9-one-rule-for-creating-homes.md.
+
 Story 1.5: the members list (members_of) and the FR-3 "never mixed" check (fr3_violations).
 
 Story 1.8 (FR-23, AD-16): leave, remove_tenant and the rules can_leave / can_remove.
 """
 
+import inspect as inspect_module
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -53,7 +57,8 @@ def test_create_household_makes_creator_a_household_member(session: Session) -> 
     assert created.home.type == "household"
     membership = session.exec(select(Membership)).one()
     assert (membership.user_id, membership.home_id) == (user.id, created.home.id)
-    assert homes.allowed_types(session, user) == []
+    assert homes.allowed_types(session, user) == ["landlord"]
+    assert homes.lived_in_home(session, user) == created.home
 
 
 def test_create_landlord_makes_creator_the_only_landlord_with_zero_tenants(
@@ -65,7 +70,8 @@ def test_create_landlord_makes_creator_the_only_landlord_with_zero_tenants(
     assert created.role == "landlord"
     roles = session.exec(select(Membership.role).where(Membership.home_id == created.home.id))
     assert roles.all() == ["landlord"]
-    assert homes.allowed_types(session, user) == ["landlord"]
+    assert homes.allowed_types(session, user) == ["household", "landlord"]
+    assert homes.lived_in_home(session, user) is None
 
 
 def test_landlord_may_create_another_landlord_home(session: Session) -> None:
@@ -79,37 +85,138 @@ def test_landlord_may_create_another_landlord_home(session: Session) -> None:
     assert [h.home.name for h in homes.homes_for(session, user)] == ["Storgata 2", "Storgata 1"]
 
 
-def test_landlord_may_not_create_a_household_home(session: Session) -> None:
-    user = new_user(session)
-    homes.create_home(session, user, name="Storgata 1", type="landlord")
+def test_landlord_may_create_her_own_household_home(session: Session) -> None:
+    kari = new_user(session, "Kari")
+    homes.create_home(session, kari, name="Storgata 12", type="landlord")
+
+    created = homes.create_home(session, kari, name="Karis", type="household")
+
+    assert created.role == "household_member"
+    assert homes.lived_in_home(session, kari) == created.home
+    assert homes.allowed_types(session, kari) == ["landlord"]
+    assert homes.fr3_violations(session) == []
+
+
+def test_landlord_with_her_own_household_may_not_create_another(session: Session) -> None:
+    kari = new_user(session, "Kari")
+    homes.create_home(session, kari, name="Storgata 12", type="landlord")
+    own = homes.create_home(session, kari, name="Karis", type="household").home
 
     with pytest.raises(homes.HomeCreationNotAllowed) as exc:
-        homes.create_home(session, user, name="Kollektivet", type="household")
-    assert exc.value.allowed == ["landlord"]
-    assert count(session, Home) == 1 and count(session, Membership) == 1
+        homes.create_home(session, kari, name="Hytta", type="household")
+    assert exc.value.home.id == own.id
+    assert count(session, Home) == 2 and count(session, Membership) == 2
+    assert homes.fr3_violations(session) == []
 
 
-@pytest.mark.parametrize("type", ["household", "landlord"])
-def test_household_member_may_not_create_again(session: Session, type: str) -> None:
+def test_landlord_who_is_a_tenant_elsewhere_may_create_only_landlord_homes(
+    session: Session,
+) -> None:
+    kari, other = new_user(session, "Kari"), new_user(session, "Annen")
+    homes.create_home(session, kari, name="Storgata 12", type="landlord")
+    hybel = homes.create_home(session, other, name="Hybel", type="landlord").home
+    homes.add_member(session, hybel, kari)
+
+    assert homes.allowed_types(session, kari) == ["landlord"]
+    assert homes.lived_in_home(session, kari) == hybel
+    with pytest.raises(homes.HomeCreationNotAllowed) as exc:
+        homes.create_home(session, kari, name="Eget", type="household")
+    assert exc.value.home.id == hybel.id
+    homes.create_home(session, kari, name="Storgata 14", type="landlord")
+    assert homes.fr3_violations(session) == []
+
+
+def test_household_member_may_create_a_landlord_home_and_keeps_her_membership(
+    session: Session,
+) -> None:
+    jonas = new_user(session, "Jonas")
+    own = homes.create_home(session, jonas, name="Mari og Jonas sitt hjem", type="household")
+
+    created = homes.create_home(session, jonas, name="Jonas sin utleie", type="landlord")
+
+    assert created.role == "landlord"
+    roles = {h.home.id: h.role for h in homes.homes_for(session, jonas)}
+    assert roles == {own.home.id: "household_member", created.home.id: "landlord"}
+    assert homes.lived_in_home(session, jonas) == own.home
+    assert homes.fr3_violations(session) == []
+
+
+def test_household_member_may_not_create_a_household_home(session: Session) -> None:
     user = new_user(session)
-    homes.create_home(session, user, name="Kollektivet", type="household")
+    own = homes.create_home(session, user, name="Kollektivet", type="household").home
 
     with pytest.raises(homes.HomeCreationNotAllowed) as exc:
-        homes.create_home(session, user, name="Nytt", type=type)  # type: ignore[arg-type]
-    assert exc.value.allowed == []
+        homes.create_home(session, user, name="Nytt", type="household")
+    assert exc.value.home.id == own.id
     assert count(session, Home) == 1
+    assert homes.fr3_violations(session) == []
 
 
-@pytest.mark.parametrize("type", ["household", "landlord"])
-def test_tenant_may_not_create_a_home(session: Session, type: str) -> None:
+def test_tenant_may_create_a_landlord_home_but_not_a_household_home(session: Session) -> None:
     landlord, tenant = new_user(session, "Utleier"), new_user(session, "Leietaker")
-    home = homes.create_home(session, landlord, name="Storgata 1", type="landlord").home
+    home = homes.create_home(session, landlord, name="Storgata 12", type="landlord").home
     homes.add_member(session, home, tenant)
 
-    assert homes.allowed_types(session, tenant) == []
-    with pytest.raises(homes.HomeCreationNotAllowed):
-        homes.create_home(session, tenant, name="Eget", type=type)  # type: ignore[arg-type]
+    assert homes.allowed_types(session, tenant) == ["landlord"]
+    with pytest.raises(homes.HomeCreationNotAllowed) as exc:
+        homes.create_home(session, tenant, name="Eget", type="household")
+    assert exc.value.home.id == home.id
     assert count(session, Home) == 1
+
+    created = homes.create_home(session, tenant, name="Eget bygg", type="landlord")
+    assert created.role == "landlord"
+    assert homes.lived_in_home(session, tenant) == home
+    assert homes.fr3_violations(session) == []
+
+
+def test_refused_create_rolls_back_pending_changes(session: Session) -> None:
+    user = new_user(session)
+    home = homes.create_home(session, user, name="Kollektivet", type="household").home
+    home.name = "Endret uten commit"
+    session.add(home)
+
+    with pytest.raises(homes.HomeCreationNotAllowed):
+        homes.create_home(session, user, name="Nytt", type="household")
+    session.expire_all()
+    assert session.get(Home, home.id).name == "Kollektivet"  # type: ignore[union-attr]
+
+
+def test_invite_to_own_home_is_already_member_not_in_other_home(session: Session) -> None:
+    mari = new_user(session, "Mari")
+    home = homes.create_home(session, mari, name="Kollektivet", type="household").home
+
+    assert isinstance(homes.join_blocker(session, home, mari), homes.AlreadyMember)
+
+
+def test_landlord_with_her_own_household_may_not_join_another(session: Session) -> None:
+    kari, mari = new_user(session, "Kari"), new_user(session, "Mari")
+    homes.create_home(session, kari, name="Storgata 12", type="landlord")
+    own = homes.create_home(session, kari, name="Karis", type="household").home
+    other = homes.create_home(session, mari, name="Kollektivet", type="household").home
+
+    blocker = homes.join_blocker(session, other, kari)
+    assert isinstance(blocker, homes.InOtherHome) and blocker.home.id == own.id
+
+
+def _function_source(name: str) -> str:
+    return inspect_module.getsource(getattr(homes, name))
+
+
+def test_one_home_limit_is_stated_only_in_lived_in_home() -> None:
+    # Story 1.9 (issue #34): a second Household Home later must be a one-place change.
+    for name in ("allowed_types", "join_blocker"):
+        assert "lived_in_home(" in _function_source(name), name
+    landlord_filter = re.compile(r"""!==?\s*["']landlord["']""")
+    repo = Path(homes.__file__).resolve().parents[3]
+    sources = [*(repo / "backend" / "app").rglob("*.py")]
+    sources += [p for p in (repo / "frontend" / "src").rglob("*.ts*") if p.is_file()]
+    found = {
+        p.relative_to(repo).as_posix(): len(landlord_filter.findall(p.read_text("utf-8")))
+        for p in sources
+        if landlord_filter.search(p.read_text("utf-8"))
+    }
+    assert found == {"backend/app/domain/homes.py": 1}
+    assert landlord_filter.search(_function_source("lived_in_home"))
 
 
 def test_add_member_to_household_home_gives_household_member(session: Session) -> None:

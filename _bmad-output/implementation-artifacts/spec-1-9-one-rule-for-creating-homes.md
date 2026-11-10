@@ -2,9 +2,10 @@
 title: 'Story 1.9: One Rule for Creating Homes'
 type: 'feature'
 created: '2026-11-10'
-status: 'ready-for-dev'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: 'f1e7d72b7e708235b0a118cb6ad32ca35e8fdc06'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
 ---
@@ -62,15 +63,15 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `sprint-status.yaml` -- 1-9 → `in-progress`, `review` when the PR opens
-- [ ] `backend/app/domain/homes.py` -- `lived_in_home(session, user) -> Home | None`; `join_blocker` and `allowed_types` use it; `HomeCreationNotAllowed(home)`; docstrings
-- [ ] `backend/app/routes/messages.py`, `routes/homes.py`, `routes/invites.py` -- shared messages; 409 via `in_other_home_message(exc.home.name)`; `HomesOut.lived_in_home_id: uuid | None`
-- [ ] `backend/app/seed/homes.py` -- per Code Map
-- [ ] `backend/tests/*` -- every matrix row; `fr3_violations` `[]` after each create; source test (AST/inspect): `allowed_types` and `join_blocker` call `lived_in_home`, and `!= "landlord"` occurs only in it
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts` -- `cd backend && uv run python -m app.export_openapi`, then `cd frontend && npm run gen:api`
-- [ ] `frontend/src/routes/CreateHome.tsx`, `HomePage.tsx`, `api/queries.ts`, `fakeApi.ts`, tests -- decision 2 copy (each title case, lead with X), placeholders, frontend matrix rows
-- [ ] `README.md` -- step 4 new rule; :103 consistent
-- [ ] `docs/ki-logg/korrigeringer.md` -- corrections found in review
+- [x] `sprint-status.yaml` -- 1-9 → `in-progress`, `review` when the PR opens
+- [x] `backend/app/domain/homes.py` -- `lived_in_home(session, user) -> Home | None`; `join_blocker` and `allowed_types` use it; `HomeCreationNotAllowed(home)`; docstrings
+- [x] `backend/app/routes/messages.py`, `routes/homes.py`, `routes/invites.py` -- shared messages; 409 via `in_other_home_message(exc.home.name)`; `HomesOut.lived_in_home_id: uuid | None`
+- [x] `backend/app/seed/homes.py` -- per Code Map
+- [x] `backend/tests/*` -- every matrix row; `fr3_violations` `[]` after each create; source test (AST/inspect): `allowed_types` and `join_blocker` call `lived_in_home`, and `!= "landlord"` occurs only in it
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts` -- `cd backend && uv run python -m app.export_openapi`, then `cd frontend && npm run gen:api`
+- [x] `frontend/src/routes/CreateHome.tsx`, `HomePage.tsx`, `api/queries.ts`, `fakeApi.ts`, tests -- decision 2 copy (each title case, lead with X), placeholders, frontend matrix rows
+- [x] `README.md` -- step 4 new rule; :103 consistent
+- [x] `docs/ki-logg/korrigeringer.md` -- corrections found in review
 
 **Acceptance Criteria:**
 - Given the seed, when Kari opens «Opprett nytt hjem», then both types are offered, and choosing Husstand makes her its Household Member and goes on to Task Setup.
@@ -78,6 +79,14 @@ context:
 - Given the full test suite and `fr3_violations` in CI, when they run, then all pass with no Home mixing Roles.
 
 ## Implementation Notes
+
+Implementation 2026-11-10 (dev agent), choices the spec left open:
+
+- `join_blocker` checks `is_member` first, then `lived_in_home`; `create_home` re-reads `lived_in_home` after the refusal to name the Home.
+- The source test also scans `frontend/src` for `!== 'landlord'` (one occurrence allowed, in `lived_in_home`).
+- `fakeApi.homesResponse`/`signedInWith` take an optional `lived_in_home_id` (default null). `MembersPage.test.tsx` fixtures still use `['landlord']` for a Landlord who lives nowhere (not a creation test; left).
+- The seed's `_seed_household` still skips Jonas when he has any Membership (seed data unchanged by spec).
+- Vitest with default workers timed out on start on a loaded machine; `--maxWorkers=2..4` runs all 288 green.
 
 ## Spec Change Log
 
@@ -102,6 +111,25 @@ Spec review 2026-11-10 (one adversarial reviewer; 15 findings, verified against 
 | 13 | Lead per title case, InvitePage duplicate | low | decision 2 and Never |
 | 14 | Missing rows: Landlord+Tenant, landlord double submit, `lived_in_home_id` | low | matrix |
 | 15 | Line refs off; README :103 | low | fixed |
+
+Code review 2026-11-10 (Blind Hunter, Edge Case Hunter, Verification Gap; verified by the orchestrator):
+
+| # | Finding | Verdict | Route |
+|---|---|---|---|
+| R1 | After a household 409 the refetch shows landlord-only with the name kept; one more tap creates an unchosen Landlord Home (Blind, Edge) | medium — `onlyType` becomes `'landlord'` and `chosen = onlyType` | patch: reset form on 409 |
+| R2 | `assert lived_in is not None` stripped under `-O`; `lived_in_home` queried twice (Blind, Edge, VG) | low — real only if the invariant breaks; double query is real | patch: one query, shared `_types_for` |
+| R3 | `lived_in_home` `.first()` without `order_by` (Blind, Edge) | low — one row today; nondeterministic once #34 allows two | patch: order by `created_at, id` |
+| R4 | Source helper slices on `"\ndef "`, not AST/inspect as the spec says (Blind, Edge) | low — works today (named functions are not last), deviates from spec | patch: `inspect.getsource` |
+| R5 | Cache placeholder keeping `allowed_types` is not observed by any test (VG) | low — reverting to `[]` passes all tests | patch: InvitePage test asserts the create link |
+| R6 | README lacks the API 409 step; steps assume a fresh seed (Blind) | low | patch |
+| R7 | Seed `_seed_household` skips Jonas on any Membership, not `join_blocker` (Blind, VG) | medium — pre-existing (Story 1.6), recorded in Implementation Notes | defer |
+| R8 | Source guard regex misses other spellings of the filter (Blind, Edge) | false — the spec states exactly this assertion (`!= "landlord"` only in `lived_in_home`) | reject |
+| R9 | `useAcceptInvite` keeps stale `lived_in_home_id`/types until the refetch (VG other) | low — short window, server answers 409; fixing it means guessing the rule in the frontend (decision #34) | reject |
+| R10 | "Left then create" only tested with Jonas, not Kari leaving her own household (Blind) | false — matrix row is a Household Member who left; covered by `test_create_own_home_after_leaving` and `test_after_leaving_a_user_may_create_a_home_or_rejoin` | reject |
+| R11 | Landlord double submit tested sequentially (Blind) | false — landlord creates are never refused, so overlap changes nothing; lock is Postgres-only by design | reject |
+| R12 | No frontend test for a Tenant's lead; missing Home in `homes` (Blind) | low — lead logic reads only `lived_in_home_id`, role-agnostic; unlikely | reject |
+| R13 | «Opprett nytt hjem» link leads members to «Opprett ny utleiebolig» (Blind) | false — the epics AC requires «Opprett nytt hjem» on the Home page | reject |
+| R14 | Rollback test pins discarding the caller's pending changes (Blind) | low — existing `create_home` behaviour, mirrors `add_member` | reject |
 
 ## Verification
 

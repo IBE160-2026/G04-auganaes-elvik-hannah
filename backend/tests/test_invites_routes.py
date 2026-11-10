@@ -13,7 +13,8 @@ from app.models.invite_link import InviteLink
 from app.models.membership import Membership
 from app.models.user import User
 from app.permissions.require_role import FORBIDDEN
-from app.routes.invites import already_member_message, in_other_home_message, invalid_message
+from app.routes.invites import invalid_message
+from app.routes.messages import already_member_message, in_other_home_message
 from tests.helpers import register_via_api, sign_up
 
 INVALID_LANDLORD = "Denne invitasjonslenken er ikke lenger gyldig — be om en ny fra utleieren."

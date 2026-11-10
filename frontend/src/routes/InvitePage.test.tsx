@@ -1,10 +1,10 @@
 // Story 1.4 (FR-2, UJ-1, UJ-2): every state of the invite page, and registering or signing in
 // through a link without losing it.
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import type { InvitePreview } from '../api/invites';
-import { OLA, OLAS_HOME, authResponse, fakeApi, json, resetApi, signedInWith } from '../test-utils/fakeApi';
+import { OLA, OLAS_HOME, authResponse, fakeApi, homesResponse, json, resetApi, signedInWith } from '../test-utils/fakeApi';
 
 const TOKEN = 'tok_ABC-123';
 const PREVIEW_PATH = `/api/invites/${TOKEN}`;
@@ -64,7 +64,7 @@ describe('Invite page, signed out', () => {
         return json(201, { ...authResponse('a1', { ...OLA, name: 'Jonas' }), joined_home_id: OLAS_HOME.id });
       },
       'GET /api/auth/me': () => json(200, { ...OLA, name: 'Jonas' }),
-      'GET /api/homes': () => json(200, { homes: [OLAS_HOME], allowed_types: [] }),
+      'GET /api/homes': () => json(200, homesResponse([OLAS_HOME], ['landlord'], OLAS_HOME.id)),
     });
     renderAt(`/invitasjon/${TOKEN}`);
 
@@ -145,7 +145,7 @@ describe('Invite page, signed out', () => {
       ...signedOut,
       'POST /api/auth/login': () => json(200, authResponse('a1')),
       'GET /api/auth/me': () => json(200, OLA),
-      'GET /api/homes': () => json(200, { homes: [OLAS_HOME], allowed_types: [] }),
+      'GET /api/homes': () => json(200, homesResponse([OLAS_HOME], ['landlord'], OLAS_HOME.id)),
     });
     renderAt('/logg-inn?invitasjon=..%2Fhjem%2Fx');
 
@@ -180,18 +180,27 @@ describe('Invite page, signed in', () => {
       [`GET ${PREVIEW_PATH}`]: () => json(200, { ...VALID, viewer: 'can_join' }),
       // After the join, the Homes refetch never answers: only the cache write can show the Home.
       'GET /api/homes': () =>
-        accepted ? new Promise<Response>(() => {}) : json(200, { homes: [], allowed_types: ['household', 'landlord'] }),
+        accepted ? new Promise<Response>(() => {}) : json(200, homesResponse([], ['household', 'landlord'])),
       [`POST ${ACCEPT_PATH}`]: () => {
         accepted = true;
         return json(200, OLAS_HOME);
       },
     });
-    renderAt(`/invitasjon/${TOKEN}`);
+    // Story 1.9: load the Homes first (Create Home), so the join has a cached list to keep
+    // allowed_types from; then follow the link inside the app.
+    renderAt('/nytt-hjem');
+    expect(await screen.findByRole('heading', { name: 'Opprett hjemmet ditt' })).toBeInTheDocument();
+    act(() => {
+      window.history.pushState({}, '', `/invitasjon/${TOKEN}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
 
     await userEvent.click(await screen.findByRole('button', { name: 'Bli med i «Kollektivet»' }));
 
     expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
+    // Story 1.9: the placeholder keeps the cached allowed_types until the (frozen) refetch.
+    expect(screen.getByRole('link', { name: 'Opprett nytt hjem' })).toBeInTheDocument();
     expect(server.calls('POST', ACCEPT_PATH)).toHaveLength(1);
   });
 
