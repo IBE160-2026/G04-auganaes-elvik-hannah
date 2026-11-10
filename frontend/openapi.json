@@ -278,7 +278,7 @@
             }
           },
           "409": {
-            "description": "The caller may not create a Home of this type",
+            "description": "Household Home refused: the caller already lives in another Home",
             "content": {
               "application/json": {
                 "schema": {
@@ -975,12 +975,25 @@
             },
             "type": "array",
             "title": "Allowed Types"
+          },
+          "lived_in_home_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lived In Home Id"
           }
         },
         "type": "object",
         "required": [
           "homes",
-          "allowed_types"
+          "allowed_types",
+          "lived_in_home_id"
         ],
         "title": "HomesOut"
       },

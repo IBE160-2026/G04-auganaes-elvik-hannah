@@ -2,6 +2,8 @@
 // from the server's allowed_types, so the creation rule lives only in the backend domain.
 // Story 1.8: the no-Home state after leaving shows «Du har forlatt «X».»
 // Story 2.1: a created Home goes on to Task Setup.
+// Story 1.9 (issue #30, decision 2): the title follows what is offered, and a user who lives in
+// a Home (lived_in_home_id) is told their Membership there is unchanged.
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate } from 'react-router';
@@ -41,13 +43,21 @@ export function CreateHome() {
   if (!homes.data) return <HomesLoadError onRetry={() => void homes.refetch()} />;
 
   const allowed = homes.data.allowed_types;
-  // Nothing to create (a Household Member or Tenant): back to their Home page. Not while a
-  // create is in flight or just done, since the cache then holds a placeholder.
+  // The server always offers a Landlord Home, so an empty list is only a cache placeholder (after
+  // accepting an invite with nothing cached) or a test fixture: back to "/" until the refetch.
+  // Not while a create is in flight or just done, since the cache then holds a placeholder.
   if (allowed.length === 0 && !createHome.isPending && !createHome.isSuccess) {
     return <Navigate to="/" replace />;
   }
   const onlyType = allowed.length === 1 ? allowed[0] : null;
   const isFirstHome = homes.data.homes.length === 0;
+  const livedInId = homes.data.lived_in_home_id;
+  const livedIn = livedInId ? homes.data.homes.find((h) => h.id === livedInId) : undefined;
+  const title = isFirstHome
+    ? 'Opprett hjemmet ditt'
+    : onlyType === 'landlord'
+      ? 'Opprett ny utleiebolig'
+      : 'Opprett nytt hjem';
 
   function showErrors(next: HomeFieldErrors) {
     // Render aria-invalid and the message first, so screen readers announce the error on focus.
@@ -75,8 +85,11 @@ export function CreateHome() {
             showErrors(fieldsOf<HomeFieldErrors>(error));
           } else if (error instanceof ApiError && error.status === 409) {
             setFormError(error.message);
-            // The allowed types changed (e.g. a Home made in another tab): re-render from the
-            // server's, which sends the user to "/" when none remain.
+            // Cleared, so the re-rendered form (maybe only a Landlord Home now) never creates a
+            // type the user did not choose with one more tap.
+            formRef.current?.reset();
+            // The allowed types changed (e.g. a Home made or joined in another tab): re-render
+            // from the server's, which then offers only a Landlord Home and names the user's Home.
             void homes.refetch();
           } else {
             setFormError(HOME_MESSAGES.unknown);
@@ -89,11 +102,14 @@ export function CreateHome() {
   return (
     <div className="auth-page">
       <PendingNotice className="create-home__notice" />
-      <h1 className="auth-page__title">
-        {isFirstHome ? 'Opprett hjemmet ditt' : 'Opprett ny utleiebolig'}
-      </h1>
+      <h1 className="auth-page__title">{title}</h1>
       {isFirstHome && (
         <p className="create-home__lead">Bor dere sammen, eller leier du ut? Velg det som passer.</p>
+      )}
+      {!isFirstHome && livedIn && (
+        <p className="create-home__lead">
+          Du blir utleier for den nye boligen. Medlemskapet ditt i «{livedIn.name}» endres ikke.
+        </p>
       )}
       <form ref={formRef} className="auth-form" onSubmit={handleSubmit} noValidate>
         {!onlyType && (

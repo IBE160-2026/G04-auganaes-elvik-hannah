@@ -8,6 +8,11 @@ Household Members with a Landlord or Tenants, and a Landlord Home has exactly on
 Story 1.4 (team decision 3, 2026-11-07): a user is Household Member or Tenant in at most one
 Home. Landlord Memberships do not count, so a Landlord may also join one such Home.
 
+Story 1.9 (issue #30, retro R1): one rule for creating and joining. lived_in_home is the one
+statement of the one-Home limit, read by both allowed_types and join_blocker. A Landlord Home
+may always be created; a Household Home only when lived_in_home finds nothing. A second
+Household Home (issue #34) would be a change to lived_in_home alone.
+
 Story 1.5 (FR-3, team decision 2, 2026-11-08): members_of lists a Home's Members. The
 "never mixed" rule stays here (_CREATOR_ROLE, _JOINER_ROLE); create_home and add_member are the
 only places a Membership is made, and a test guards against a new Membership constructor
@@ -65,11 +70,11 @@ def joiner_role(home: Home) -> Role:
 
 
 class HomeCreationNotAllowed(Exception):
-    """The user may not create a Home of this type. `allowed` is what they may create."""
+    """The user may not create a Household Home: they already live in `home` (Story 1.9)."""
 
-    def __init__(self, allowed: list[HomeType]) -> None:
-        super().__init__(f"allowed types: {allowed}")
-        self.allowed = allowed
+    def __init__(self, home: Home) -> None:
+        super().__init__(f"already lives in another home: {home.id}")
+        self.home = home
 
 
 class AlreadyMember(Exception):
@@ -97,22 +102,34 @@ class MemberHome(NamedTuple):
     role: Role
 
 
-def _roles(session: Session, user: User) -> set[str]:
-    return set(session.exec(select(Membership.role).where(Membership.user_id == user.id)).all())
+def lived_in_home(session: Session, user: User) -> Home | None:
+    """The Home where the user is Household Member or Tenant, if any (the one-Home limit).
+
+    The one statement of the limit (Story 1.9): allowed_types and join_blocker both read it, so
+    creating and joining cannot drift apart. Landlord Memberships never count.
+    """
+    return session.exec(
+        select(Home)
+        .join(Membership, col(Membership.home_id) == col(Home.id))
+        .where(Membership.user_id == user.id, Membership.role != "landlord")
+        .order_by(col(Membership.created_at), col(Membership.id))
+    ).first()
+
+
+def _types_for(lived_in: Home | None) -> list[HomeType]:
+    """A Landlord Home always; a Household Home only when the user lives in no other Home."""
+    if lived_in is None:
+        return list(HOME_TYPES)
+    return ["landlord"]
 
 
 def allowed_types(session: Session, user: User) -> list[HomeType]:
-    """The Home types this user may create through the self-service flow.
+    """The Home types this user may create through the self-service flow (Story 1.9).
 
-    No Membership: either type. Landlord in at least one Home: more Landlord Homes (Epic 6
-    portfolio). Only Household Member or Tenant Memberships: none, they join by invite.
+    A Landlord Home always; a Household Home only when the user lives in no other Home
+    (lived_in_home), which is exactly the joining limit.
     """
-    roles = _roles(session, user)
-    if not roles:
-        return list(HOME_TYPES)
-    if "landlord" in roles:
-        return ["landlord"]
-    return []
+    return _types_for(lived_in_home(session, user))
 
 
 def create_home(session: Session, user: User, *, name: str, type: HomeType) -> MemberHome:
@@ -126,10 +143,11 @@ def create_home(session: Session, user: User, *, name: str, type: HomeType) -> M
     # below (a double click would otherwise give a Household Member two Homes). Postgres only;
     # SQLite ignores FOR UPDATE.
     session.exec(select(User).where(User.id == user.id).with_for_update()).one()
-    allowed = allowed_types(session, user)
-    if type not in allowed:
+    lived_in = lived_in_home(session, user)
+    # _types_for refuses only a Household Home, and only when lived_in is set.
+    if type not in _types_for(lived_in) and lived_in is not None:
         session.rollback()
-        raise HomeCreationNotAllowed(allowed)
+        raise HomeCreationNotAllowed(lived_in)
     home = Home(name=name, type=type)
     role = _CREATOR_ROLE[type]
     session.add(home)
@@ -145,14 +163,13 @@ def join_blocker(session: Session, home: Home, user: User) -> AlreadyMember | In
 
     The invite preview shows it before the tap; add_member enforces it.
     """
-    rows = session.exec(
-        select(Membership.home_id, Membership.role).where(Membership.user_id == user.id)
-    ).all()
-    if any(home_id == home.id for home_id, _ in rows):
+    # AlreadyMember first, so a Household Member opening an invite to their own Home is told
+    # they are already there, not that they live elsewhere.
+    if is_member(session, home.id, user.id):
         return AlreadyMember(home)
-    other = next((home_id for home_id, role in rows if role != "landlord"), None)
+    other = lived_in_home(session, user)
     if other is not None:
-        return InOtherHome(session.exec(select(Home).where(Home.id == other)).one())
+        return InOtherHome(other)
     return None
 
 

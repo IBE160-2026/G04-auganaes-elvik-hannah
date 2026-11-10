@@ -5,6 +5,8 @@ route-level write paths.
 
 Story 1.8 (FR-23, AD-16): DELETE /api/homes/{home_id}/members/me and .../members/{user_id},
 can_leave on every HomeOut and can_remove on MemberOut.
+
+Story 1.9 (issue #30): one rule for creating and joining; allowed_types and lived_in_home_id.
 """
 
 import uuid
@@ -20,7 +22,7 @@ from app.models.home import Home
 from app.models.membership import Membership
 from app.models.user import User
 from app.permissions.require_role import FORBIDDEN
-from app.routes.homes import ALREADY_IN_HOME, LANDLORD_ONLY
+from app.routes.messages import in_other_home_message
 from tests.helpers import sign_up
 
 
@@ -83,49 +85,129 @@ def test_landlord_creates_another_landlord_home(client: TestClient, engine: Engi
 
     body = client.get("/api/homes", headers=auth).json()
     assert [h["name"] for h in body["homes"]] == ["Storgata 2", "Storgata 1"]
+    assert (body["allowed_types"], body["lived_in_home_id"]) == (["household", "landlord"], None)
+
+
+def fr3_ok(engine: Engine) -> bool:
+    with Session(engine) as session:
+        return homes.fr3_violations(session) == []
+
+
+def add_tenant(engine: Engine, home_id: str, name: str) -> None:
+    with Session(engine) as session:
+        home = session.get(Home, uuid.UUID(home_id))
+        assert home is not None
+        user = session.exec(select(User).where(User.name == name)).one()
+        homes.add_member(session, home, user)
+
+
+def test_landlord_creates_her_own_household_home(client: TestClient, engine: Engine) -> None:
+    kari = sign_up(client, "Kari")
+    create(client, kari, "Storgata 12", "landlord")
+
+    response = create(client, kari, "Karis", "household")
+
+    assert response.status_code == 201
+    assert response.json()["role"] == "household_member"
+    body = client.get("/api/homes", headers=kari).json()
     assert body["allowed_types"] == ["landlord"]
+    assert body["lived_in_home_id"] == response.json()["id"]
+    assert fr3_ok(engine)
 
 
-def test_landlord_creating_household_is_409_and_writes_nothing(
+def test_landlord_with_own_household_creating_household_is_409_naming_it(
+    client: TestClient, engine: Engine
+) -> None:
+    kari = sign_up(client, "Kari")
+    create(client, kari, "Storgata 12", "landlord")
+    create(client, kari, "Karis", "household")
+
+    response = create(client, kari, "Hytta", "household")
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": in_other_home_message("Karis")}
+    assert response.json()["detail"] == (
+        "Du er allerede med i «Karis». Du kan bare være med i ett hjem om gangen."
+    )
+    assert counts(engine) == (2, 2)
+    assert fr3_ok(engine)
+
+
+def test_landlord_who_is_a_tenant_elsewhere_gets_409_naming_that_home(
+    client: TestClient, engine: Engine
+) -> None:
+    kari, other = sign_up(client, "Kari"), sign_up(client, "Annen")
+    create(client, kari, "Storgata 12", "landlord")
+    hybel_id = create(client, other, "Hybel", "landlord").json()["id"]
+    add_tenant(engine, hybel_id, "Kari")
+
+    body = client.get("/api/homes", headers=kari).json()
+    assert (body["allowed_types"], body["lived_in_home_id"]) == (["landlord"], hybel_id)
+    response = create(client, kari, "Eget", "household")
+    assert response.status_code == 409
+    assert response.json() == {"detail": in_other_home_message("Hybel")}
+    assert counts(engine) == (2, 3)
+
+
+def test_household_member_creates_a_landlord_home_and_keeps_her_membership(
+    client: TestClient, engine: Engine
+) -> None:
+    jonas = sign_up(client, "Jonas")
+    own = create(client, jonas, "Mari og Jonas sitt hjem", "household").json()
+
+    body = client.get("/api/homes", headers=jonas).json()
+    assert (body["allowed_types"], body["lived_in_home_id"]) == (["landlord"], own["id"])
+    response = create(client, jonas, "Jonas sin utleie", "landlord")
+
+    assert response.status_code == 201
+    assert response.json()["role"] == "landlord"
+    body = client.get("/api/homes", headers=jonas).json()
+    roles = {h["id"]: h["role"] for h in body["homes"]}
+    assert roles == {own["id"]: "household_member", response.json()["id"]: "landlord"}
+    assert body["lived_in_home_id"] == own["id"]
+    assert fr3_ok(engine)
+
+
+def test_household_member_creating_household_is_409_and_writes_nothing(
     client: TestClient, engine: Engine
 ) -> None:
     auth = sign_up(client)
-    create(client, auth, "Storgata 1", "landlord")
+    create(client, auth, "Mari og Jonas sitt hjem", "household")
 
-    response = create(client, auth, "Kollektivet", "household")
+    response = create(client, auth, "Nytt", "household")
     assert response.status_code == 409
-    assert response.json() == {"detail": LANDLORD_ONLY}
+    assert response.json() == {"detail": in_other_home_message("Mari og Jonas sitt hjem")}
     assert counts(engine) == (1, 1)
 
 
-@pytest.mark.parametrize("type", ["household", "landlord"])
-def test_member_creating_again_is_409_and_writes_nothing(
-    client: TestClient, engine: Engine, type: str
+def test_tenant_may_create_a_landlord_home_but_not_a_household_home(
+    client: TestClient, engine: Engine
 ) -> None:
-    auth = sign_up(client)
-    create(client, auth, "Kollektivet", "household")
-
-    response = create(client, auth, "Nytt", type)
-    assert response.status_code == 409
-    assert response.json() == {"detail": ALREADY_IN_HOME}
-    assert counts(engine) == (1, 1)
-
-
-def test_tenant_creating_is_409(client: TestClient, engine: Engine) -> None:
     landlord_auth = sign_up(client, "Utleier")
-    home_id = create(client, landlord_auth, "Storgata 1", "landlord").json()["id"]
+    home_id = create(client, landlord_auth, "Storgata 12", "landlord").json()["id"]
     tenant_auth = sign_up(client, "Leietaker")
-    with Session(engine) as session:
-        home = session.get(Home, uuid.UUID(home_id))
-        tenant = session.exec(select(User).where(User.name == "Leietaker")).one()
-        homes.add_member(session, home, tenant)
+    add_tenant(engine, home_id, "Leietaker")
 
     body = client.get("/api/homes", headers=tenant_auth).json()
-    assert [(h["name"], h["role"]) for h in body["homes"]] == [("Storgata 1", "tenant")]
-    assert body["allowed_types"] == []
-    response = create(client, tenant_auth, "Eget", "landlord")
+    assert [(h["name"], h["role"]) for h in body["homes"]] == [("Storgata 12", "tenant")]
+    assert (body["allowed_types"], body["lived_in_home_id"]) == (["landlord"], home_id)
+    response = create(client, tenant_auth, "Eget", "household")
     assert response.status_code == 409
-    assert response.json() == {"detail": ALREADY_IN_HOME}
+    assert response.json() == {"detail": in_other_home_message("Storgata 12")}
+    assert counts(engine) == (1, 2)
+
+    assert create(client, tenant_auth, "Eget bygg", "landlord").status_code == 201
+    assert fr3_ok(engine)
+
+
+def test_two_landlord_creates_in_a_row_both_succeed(client: TestClient, engine: Engine) -> None:
+    # A double submit of a Landlord Home is never refused (the UI guards with a pending button).
+    auth = sign_up(client)
+    create(client, auth, "Kollektivet", "household")
+    responses = [create(client, auth, "Storgata 12", "landlord") for _ in range(2)]
+    assert [r.status_code for r in responses] == [201, 201]
+    assert counts(engine) == (3, 3)
+    assert fr3_ok(engine)
 
 
 @pytest.mark.parametrize("name", ["", "   ", "x" * 61])
@@ -158,7 +240,11 @@ def test_signed_out_is_401(client: TestClient, engine: Engine, method: str) -> N
 
 def test_list_without_homes_is_empty_with_both_types(client: TestClient) -> None:
     body = client.get("/api/homes", headers=sign_up(client)).json()
-    assert body == {"homes": [], "allowed_types": ["household", "landlord"]}
+    assert body == {
+        "homes": [],
+        "allowed_types": ["household", "landlord"],
+        "lived_in_home_id": None,
+    }
 
 
 def test_list_shows_only_the_callers_homes_with_their_role(client: TestClient) -> None:
@@ -168,7 +254,7 @@ def test_list_shows_only_the_callers_homes_with_their_role(client: TestClient) -
 
     body = client.get("/api/homes", headers=ola).json()
     assert body["homes"] == [created]
-    assert body["allowed_types"] == []
+    assert (body["allowed_types"], body["lived_in_home_id"]) == (["landlord"], created["id"])
 
 
 # Story 1.5: GET /api/homes/{home_id}/members, one test per row of the spec's matrix.
@@ -391,7 +477,11 @@ def test_household_member_leaves(client: TestClient, engine: Engine, household) 
     assert response.status_code == 204
     assert response.content == b""
     assert rows(members(client, mari, home_id)) == [("Mari", "household_member", True)]
-    assert homes_of(client, jonas) == {"homes": [], "allowed_types": ["household", "landlord"]}
+    assert homes_of(client, jonas) == {
+        "homes": [],
+        "allowed_types": ["household", "landlord"],
+        "lived_in_home_id": None,
+    }
     assert fr3_violations(engine) == []
 
 

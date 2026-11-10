@@ -56,8 +56,13 @@ export const OLAS_HOME: Home = {
   has_tasks: true,
 };
 
-export function homesResponse(homes: readonly Home[] = [OLAS_HOME], allowed_types: HomeType[] = []) {
-  return { homes, allowed_types };
+// Story 1.9: lived_in_home_id is the Home where the user is Household Member or Tenant, if any.
+export function homesResponse(
+  homes: readonly Home[] = [OLAS_HOME],
+  allowed_types: HomeType[] = [],
+  lived_in_home_id: string | null = null,
+) {
+  return { homes, allowed_types, lived_in_home_id };
 }
 
 // Story 1.5: Ola's own row, as GET /api/homes/<id>/members returns it.
@@ -107,11 +112,12 @@ export const TASK_TYPES: TaskTypes = {
 export function signedInWith(
   homes: readonly Home[] = [OLAS_HOME],
   allowed_types: HomeType[] = [],
+  lived_in_home_id: string | null = null,
 ): Record<string, Handler> {
   return {
     'POST /api/auth/refresh': () => json(200, authResponse('a1')),
     'GET /api/auth/me': () => json(200, OLA),
-    'GET /api/homes': () => json(200, homesResponse(homes, allowed_types)),
+    'GET /api/homes': () => json(200, homesResponse(homes, allowed_types, lived_in_home_id)),
     'GET /api/task-types': () => json(200, TASK_TYPES),
     ...Object.fromEntries(
       homes.flatMap((home) => [

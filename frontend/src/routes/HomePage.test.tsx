@@ -86,28 +86,36 @@ describe('Home page', () => {
     expect(screen.queryByText(HOME_MESSAGES.loadFailed)).not.toBeInTheDocument();
   });
 
-  it('shows a Member the Home, type and Role, and neither a Homes list nor a create link', async () => {
-    fakeApi(signedInWith([OLAS_HOME], []));
+  it('shows a Member the Home, type and Role, no Homes list, and "Opprett nytt hjem"', async () => {
+    // Story 1.9: a Household Member may create a Landlord Home.
+    fakeApi(signedInWith([OLAS_HOME], ['landlord'], OLAS_HOME.id));
     renderAt('/');
 
     expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
     expect(screen.getByText('Husstand')).toBeInTheDocument();
     expect(screen.getByText('Husstandsmedlem')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Dine hjem' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Opprett nytt hjem' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Logg ut' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('link', { name: 'Opprett nytt hjem' }));
+    expect(await screen.findByRole('heading', { name: 'Opprett ny utleiebolig' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Du blir utleier for den nye boligen. Medlemskapet ditt i «Kollektivet» endres ikke.'),
+    ).toBeInTheDocument();
   });
 
-  it('sends a Member who opens /nytt-hjem directly back to the Home page', async () => {
+  it('shows no create link and sends /nytt-hjem back to "/" while nothing is offered', async () => {
+    // Only a cache placeholder or a fixture is empty: the server always offers a Landlord Home.
     fakeApi(signedInWith([OLAS_HOME], []));
     renderAt('/nytt-hjem');
 
     expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
+    expect(screen.queryByRole('link', { name: 'Opprett nytt hjem' })).not.toBeInTheDocument();
   });
 
   it('shows a Landlord the newest Home, all their Homes and "Opprett nytt hjem"', async () => {
-    fakeApi(signedInWith([RENTAL_2, RENTAL_1], ['landlord']));
+    fakeApi(signedInWith([RENTAL_2, RENTAL_1], ['household', 'landlord']));
     renderAt('/');
 
     expect(await screen.findByRole('heading', { name: 'Storgata 2' })).toBeInTheDocument();
@@ -117,7 +125,9 @@ describe('Home page', () => {
     expect(list).toHaveTextContent('Storgata 1');
 
     await userEvent.click(screen.getByRole('link', { name: 'Opprett nytt hjem' }));
-    expect(await screen.findByRole('heading', { name: 'Opprett ny utleiebolig' })).toBeInTheDocument();
+    // Story 1.9: a Landlord who lives in no Home is offered both types.
+    expect(await screen.findByRole('heading', { name: 'Opprett nytt hjem' })).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
     await waitFor(() => expect(window.location.pathname).toBe('/nytt-hjem'));
   });
 });

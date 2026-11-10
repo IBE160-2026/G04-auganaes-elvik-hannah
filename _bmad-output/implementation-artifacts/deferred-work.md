@@ -62,3 +62,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Story 2.4 must change `domain/tasks.tasks_of` from the earliest instance to the earliest open (not completed) instance.
   evidence: `tasks_of` uses `min(TaskInstance.due_on)`; once 2.4 stores completions, a completed past instance stays the earliest and the list would show an old date as «Neste gang». The architecture revision note now says so.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-9-one-rule-for-creating-homes.md`
+  summary: The seed's `_seed_household` skips Jonas when he has any Membership instead of asking `homes.join_blocker`, so a Jonas who is only a Landlord elsewhere is left out although the app would let him join.
+  evidence: `backend/app/seed/homes.py` (`elif jonas_home_ids:`) vs `_seed_landlord`, which uses `join_blocker`; pre-existing since Story 1.6, found in the Story 1.9 code review (R7). Fix: use `join_blocker` and add a seed test with Jonas as a Landlord elsewhere.
