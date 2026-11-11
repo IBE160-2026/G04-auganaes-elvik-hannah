@@ -1,10 +1,23 @@
-// Story 2.2 (decision 6): the read-only Task Detail, one test per case of the matrix row.
+// Story 2.2 (decision 6): Task Detail, one test per case of the matrix row.
+// Story 2.3 (FR-5, FR-8, UX-DR30): adjusting Må/Bør and Frequency, and a Tenant's locked view.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
+import { GENERIC_ERROR } from '../api/errors';
 import type { Home } from '../api/homes';
-import { TASK_MESSAGES } from '../api/tasks';
-import { OLAS_HOME, OLAS_TASKS, fakeApi, json, resetApi, signedInWith, tasksPath } from '../test-utils/fakeApi';
+import { TASK_MESSAGES, type Task } from '../api/tasks';
+import {
+  OLAS_HOME,
+  OLAS_TASKS,
+  OLAS_TENANCY,
+  adjustHandler,
+  fakeApi,
+  json,
+  resetApi,
+  signedInWith,
+  taskPath,
+  tasksPath,
+} from '../test-utils/fakeApi';
 
 const OVERVIEW = `/hjem/${OLAS_HOME.id}`;
 const [MUST, OVERDUE] = OLAS_TASKS;
@@ -25,7 +38,7 @@ afterEach(() => vi.useRealTimers());
 afterEach(resetApi);
 
 describe('Task Detail', () => {
-  it('opens from a row and shows the name, badge, interval and due text, with focus on the name', async () => {
+  it('opens from a row and shows the name, class, interval and due text, with focus on the name', async () => {
     fakeApi(signedInWith());
     renderAt(OVERVIEW);
 
@@ -34,12 +47,11 @@ describe('Task Detail', () => {
     const title = await screen.findByRole('heading', { level: 1, name: OVERDUE.name });
     expect(window.location.pathname).toBe(detailPath(OVERDUE.id));
     await waitFor(() => expect(title).toHaveFocus());
-    expect(screen.getByText('Bør')).toBeInTheDocument();
-    expect(screen.getByText('Hver 2. uke')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Bør' })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'Hvor ofte' })).toHaveDisplayValue('Hver 2. uke');
     expect(screen.getByText('Forfalt — frist var 8. november')).toBeInTheDocument();
-    // Read-only in 2.2: nothing to change, nothing to tick.
+    // The checkbox comes with Story 2.4.
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('link', { name: 'Tilbake til oppgavene' }));
     expect(await screen.findByRole('heading', { level: 1, name: OLAS_HOME.name })).toBeInTheDocument();
@@ -111,5 +123,258 @@ describe('Task Detail', () => {
 
     expect(await screen.findByRole('heading', { name: 'Opprett hjemmet ditt' })).toBeInTheDocument();
     expect(screen.queryByText(TASK_MESSAGES.loadFailed)).not.toBeInTheDocument();
+  });
+});
+
+// Story 2.3: the frontend rows of the spec's matrix.
+async function openDetail(task: Task = MUST) {
+  renderAt(detailPath(task.id));
+  await screen.findByRole('heading', { level: 1, name: task.name });
+}
+
+const saveButton = () => screen.getByRole('button', { name: /^(Lagre endringer|Prøv igjen)$/ });
+const frequencySelect = () => screen.getByRole('combobox', { name: 'Hvor ofte' });
+
+describe('Adjust a Task (Story 2.3)', () => {
+  it('saves only the changed class, announces «Lagret» and refetches the list', async () => {
+    const bodies: unknown[] = [];
+    const server = fakeApi({ ...signedInWith(), [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(MUST, 200, bodies) });
+    await openDetail();
+    const loads = server.calls('GET', tasksPath(OLAS_HOME)).length;
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    expect(server.calls('PATCH', taskPath(OLAS_HOME, MUST))).toHaveLength(0);
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByText(TASK_MESSAGES.saved)).toBeInTheDocument();
+    expect(bodies).toEqual([{ classification: 'should' }]);
+    expect(saveButton()).toHaveFocus();
+    await waitFor(() => expect(server.calls('GET', tasksPath(OLAS_HOME)).length).toBeGreaterThan(loads));
+  });
+
+  it('saves only the changed interval and then shows the saved value', async () => {
+    const bodies: unknown[] = [];
+    fakeApi({
+      ...signedInWith(),
+      // The server's list reflects what was saved.
+      [`GET ${tasksPath(OLAS_HOME)}`]: () =>
+        json(200, { tasks: OLAS_TASKS.map((t) => (t.id === MUST.id ? { ...t, ...(bodies.at(-1) as object) } : t)) }),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(MUST, 200, bodies),
+    });
+    await openDetail();
+
+    await userEvent.selectOptions(frequencySelect(), 'Hver 2. måned');
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByText(TASK_MESSAGES.saved)).toBeInTheDocument();
+    expect(bodies).toEqual([{ frequency_days: 60 }]);
+    expect(frequencySelect()).toHaveDisplayValue('Hver 2. måned');
+  });
+
+  it('shows the saved interval and due text from the answer before the list refetches', async () => {
+    const moved: Task = { ...MUST, frequency_days: 60, due_on: '2027-01-08', due_status: 'later', days_until_due: 59 };
+    let loads = 0;
+    fakeApi({
+      ...signedInWith(),
+      // The first load answers; the refetch after the save never does, so only the cache write
+      // can show the saved values.
+      [`GET ${tasksPath(OLAS_HOME)}`]: () =>
+        loads++ === 0 ? json(200, { tasks: OLAS_TASKS }) : new Promise<Response>(() => {}),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: () => json(200, moved),
+    });
+    await openDetail();
+
+    await userEvent.selectOptions(frequencySelect(), 'Hver 2. måned');
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByText(TASK_MESSAGES.saved)).toBeInTheDocument();
+    expect(frequencySelect()).toHaveDisplayValue('Hver 2. måned');
+    expect(screen.getByText('Neste gang: 8. januar 2027')).toBeInTheDocument();
+  });
+
+  it('keeps a value picked while the save is in flight', async () => {
+    let answer: (response: Response) => void = () => {};
+    fakeApi({
+      ...signedInWith(),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: async (request) => {
+        const body = (await request.json()) as Partial<Task>;
+        return new Promise<Response>((resolve) => {
+          answer = resolve;
+        }).then(() => json(200, { ...MUST, ...body }));
+      },
+    });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+    await userEvent.selectOptions(frequencySelect(), 'Hvert år');
+    answer(json(200));
+
+    expect(await screen.findByText(TASK_MESSAGES.saved)).toBeInTheDocument();
+    expect(frequencySelect()).toHaveDisplayValue('Hvert år');
+  });
+
+  it('sends nothing when no field differs from the server, and says so', async () => {
+    const server = fakeApi({ ...signedInWith(), [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(MUST) });
+    await openDetail();
+
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(TASK_MESSAGES.nothingToSave));
+
+    // Changed and changed back is no change either.
+    await userEvent.selectOptions(frequencySelect(), 'Hvert år');
+    await userEvent.selectOptions(frequencySelect(), 'Hver måned');
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(TASK_MESSAGES.nothingToSave));
+    expect(server.calls('PATCH', taskPath(OLAS_HOME, MUST))).toHaveLength(0);
+  });
+
+  it('shows a failed save at the form, keeps the draft, and «Prøv igjen» saves it', async () => {
+    const bodies: unknown[] = [];
+    let fail = true;
+    fakeApi({
+      ...signedInWith(),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: (request) => adjustHandler(MUST, fail ? 500 : 200, bodies)(request),
+    });
+    await openDetail();
+
+    await userEvent.selectOptions(frequencySelect(), 'Hver uke');
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(GENERIC_ERROR);
+    expect(frequencySelect()).toHaveDisplayValue('Hver uke');
+    expect(saveButton()).toHaveTextContent('Prøv igjen');
+
+    fail = false;
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByText(TASK_MESSAGES.saved)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(bodies).toEqual([{ frequency_days: 7 }, { frequency_days: 7 }]);
+  });
+
+  it('shows the same message when the network fails', async () => {
+    fakeApi({
+      ...signedInWith(),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(GENERIC_ERROR);
+    expect(screen.getByRole('radio', { name: 'Bør' })).toBeChecked();
+  });
+
+  it('shows no inline error on a 403 and lets the refetched Homes route the user away', async () => {
+    let member = true;
+    fakeApi({
+      ...signedInWith(),
+      'GET /api/homes': () =>
+        json(200, { homes: member ? [OLAS_HOME] : [], allowed_types: ['household', 'landlord'], lived_in_home_id: null }),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: (request) => {
+        member = false;
+        return adjustHandler(MUST, 403)(request);
+      },
+    });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole('heading', { name: 'Opprett hjemmet ditt' })).toBeInTheDocument();
+    expect(screen.queryByText(GENERIC_ERROR)).not.toBeInTheDocument();
+  });
+
+  it('goes back to the overview on a 404 once the refetched list lacks the Task', async () => {
+    let gone = false;
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: () =>
+        json(200, { tasks: gone ? OLAS_TASKS.filter((t) => t.id !== MUST.id) : OLAS_TASKS }),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: (request) => {
+        gone = true;
+        return adjustHandler(MUST, 404)(request);
+      },
+    });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole('heading', { level: 1, name: OLAS_HOME.name })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(OVERVIEW);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it("shows another Member's save in fields this user has not touched, and sends nothing for them", async () => {
+    // Another Member changed the interval to 60 days; Ola's refetch after his own save brings it.
+    let server: Task = MUST;
+    const bodies: unknown[] = [];
+    const api = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks: [server, ...OLAS_TASKS.slice(1)] }),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: async (request) => {
+        const body = (await request.json()) as Partial<Task>;
+        bodies.push(body);
+        server = { ...server, ...body, frequency_days: 60 };
+        return json(200, { ...MUST, ...body });
+      },
+    });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(frequencySelect()).toHaveDisplayValue('Hver 2. måned'));
+    expect(screen.getByRole('radio', { name: 'Bør' })).toBeChecked();
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(TASK_MESSAGES.nothingToSave));
+    expect(bodies).toEqual([{ classification: 'should' }]);
+    expect(api.calls('PATCH', taskPath(OLAS_HOME, MUST))).toHaveLength(1);
+  });
+
+  it('drops an unsaved interval when the user leaves, and sends nothing', async () => {
+    const server = fakeApi({ ...signedInWith(), [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(MUST) });
+    await openDetail();
+
+    await userEvent.selectOptions(frequencySelect(), 'Hvert år');
+    await userEvent.click(screen.getByRole('link', { name: 'Tilbake til oppgavene' }));
+    await userEvent.click(await screen.findByRole('link', { name: /^Rens sluket/ }));
+
+    await screen.findByRole('heading', { level: 1, name: MUST.name });
+    expect(frequencySelect()).toHaveDisplayValue('Hver måned');
+    expect(server.calls('PATCH', taskPath(OLAS_HOME, MUST))).toHaveLength(0);
+  });
+
+  it("shows a Tenant read-only fields «Satt av utleier», reachable by Tab, with no select or radio", async () => {
+    fakeApi(signedInWith([OLAS_TENANCY]));
+    renderAt(`/hjem/${OLAS_TENANCY.id}/oppgaver/${MUST.id}`);
+    const title = await screen.findByRole('heading', { level: 1, name: MUST.name });
+    await waitFor(() => expect(title).toHaveFocus());
+
+    const classification = screen.getByRole('textbox', { name: 'Viktighet' });
+    const frequency = screen.getByRole('textbox', { name: 'Hvor ofte' });
+    for (const [field, value] of [
+      [classification, 'Må'],
+      [frequency, 'Hver måned'],
+    ] as const) {
+      expect(field).toHaveValue(value);
+      expect(field).toHaveAttribute('readonly');
+      expect(field).toHaveAttribute('aria-readonly', 'true');
+      expect(field).not.toBeDisabled();
+      expect(field).toHaveAccessibleDescription(TASK_MESSAGES.lockedByLandlord);
+    }
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lagre endringer' })).not.toBeInTheDocument();
+
+    await userEvent.tab();
+    expect(classification).toHaveFocus();
+    await userEvent.tab();
+    expect(frequency).toHaveFocus();
   });
 });

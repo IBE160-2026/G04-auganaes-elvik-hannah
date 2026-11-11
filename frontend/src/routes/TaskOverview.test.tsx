@@ -29,7 +29,7 @@ const RENTAL: Home = {
   role: 'landlord',
   can_leave: false,
 };
-const TENANCY: Home = { ...RENTAL, role: 'tenant', can_invite: false, can_set_up_tasks: false, has_tasks: false };
+const TENANCY: Home = { ...RENTAL, role: 'tenant', can_invite: false, can_set_up_tasks: false, can_adjust_tasks: false, has_tasks: false };
 const NOTHING_DUE: Task[] = OLAS_TASKS.map((task) => ({ ...task, due_status: 'later', days_until_due: 30 }));
 
 function renderAt(path: string) {

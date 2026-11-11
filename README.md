@@ -130,9 +130,21 @@ Seed-kommandoen lager disse eksempelbrukerne:
 **Prøv oppgaveoversikten (Story 2.2):** Steg 3 og 4 forutsetter en nyseedet database, siden de lager et nytt hjem.
 
 1. Logg inn som Mari. `/` åpner oppgaveoversikten for hjemmet hennes. Alle **Må**-oppgaver står over alle **Bør**-oppgaver, også når en Bør-oppgave er forfalt. Mens seed-dataene er ferske, står «Rens sluket» (Må) med «Snart forfall» i gult og fet skrift, og «Støvsug og vask gulvene» (Bør) med «Forfalt — frist var …» i rødt. Antall dager («i dag», «i morgen», «om N dager») og hvilke oppgaver som er forfalt, flytter seg med datoen, siden oppgavene er satt opp relativt til dagen seed-en ble kjørt. «Snart forfall» betyr innen 3 dager, og det er serveren som avgjør det (`due_status` i `GET /api/homes/{home_id}/tasks`).
-2. Trykk på en oppgave for å se detaljene (bare lesing; redigering kommer i Story 2.3). Trykk **Oppdater** øverst (eller dra lista ned på mobil) for å hente oppgavene på nytt; skjermleseren sier «Oppdatert». Bruk Tab: fokus går fra overskriften via **Medlemmer og invitasjon** og **Oppdater** gjennom oppgavene ovenfra og ned, og til slutt fanelinja. **Husly** øverst er en lenke til `/`.
+2. Trykk på en oppgave for å se detaljene. Der kan du endre **Må**/**Bør** og **Hvor ofte** (se Story 2.3 under). Trykk **Oppdater** øverst (eller dra lista ned på mobil) for å hente oppgavene på nytt; skjermleseren sier «Oppdatert». Bruk Tab: fokus går fra overskriften via **Medlemmer og invitasjon** og **Oppdater** gjennom oppgavene ovenfra og ned, og til slutt fanelinja. **Husly** øverst er en lenke til `/`.
 3. Logg inn som Kari, gå til **Innstillinger**, trykk **Opprett nytt hjem**, velg **Husstand** og sett opp oppgavene. Hun har nå to hjem, og oppgaveoversikten viser **Bytt hjem**.
 4. Trykk **Bytt hjem** og velg «Storgata 12» under **Dine hjem**. Last siden på nytt og gå til `/` (eller trykk **Husly**): appen åpner «Storgata 12», fordi det er sist brukte hjem. Dette huskes i nettleseren (`localStorage`), per bruker og per enhet, ikke på serveren.
+
+**Prøv å justere oppgaver (Story 2.3):** Forutsetter en nyseedet database, siden stegene endrer oppgavene.
+
+1. Logg inn som Mari, trykk på «Rens sluket» og velg **Bør**. Ingenting lagres før du trykker **Lagre endringer**; da står det «Lagret». Trykker du uten å ha endret noe, står det «Ingen endringer å lagre.», og ingenting blir sendt.
+2. Logg inn som Jonas i en annen nettleser (eller et privat vindu) og trykk **Oppdater** på oppgaveoversikten: «Rens sluket» står nå blant Bør-oppgavene.
+3. Velg en ny verdi under **Hvor ofte** og lagre. Fristen flytter seg fra samme startpunkt: «Hver måned» → «Hver 2. måned» gir 30 dager senere frist. Velger du et kortere intervall, kan oppgaven bli forfalt med en gang. Endrer du bare Må/Bør, står fristen stille.
+4. Logg inn som Anders (leietaker) og åpne en oppgave i «Storgata 12». **Viktighet** og **Hvor ofte** vises låst med «Satt av utleier», og kan nås med Tab, men ikke endres. Serveren svarer også 403 for ham, uansett innhold, hvis han prøver direkte i <http://localhost:8000/docs>:
+   1. Kjør `POST /api/auth/login` med `anders@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
+   2. Trykk **Authorize** øverst og lim inn tokenet.
+   3. Hent id-en til «Storgata 12» med `GET /api/homes` og en oppgave-id med `GET /api/homes/{home_id}/tasks`.
+   4. Kjør `PATCH /api/homes/{home_id}/tasks/{task_id}` med for eksempel `{"classification": "should"}`. Svaret er 403.
+5. Går du fra siden uten å lagre, forkastes endringen uten advarsel.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 

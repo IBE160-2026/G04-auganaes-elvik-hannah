@@ -1,5 +1,7 @@
 """Story 2.1 (FR-4, FR-8, AD-2, AD-6): GET /api/task-types, POST /api/homes/{home_id}/tasks/setup,
 GET /api/homes/{home_id}/tasks and HomeOut's can_set_up_tasks / has_tasks.
+
+Story 2.3 (FR-5, FR-8): PATCH /api/homes/{home_id}/tasks/{task_id} and HomeOut.can_adjust_tasks.
 """
 
 import uuid
@@ -15,7 +17,7 @@ from app.domain import homes, tasks
 from app.domain.task_types import CATALOG_VERSION, FREQUENCY_DAYS, TASK_TYPES
 from app.models.task import Task, TaskInstance
 from app.permissions.require_role import FORBIDDEN
-from app.routes.tasks import ALREADY_SET_UP
+from app.routes.tasks import ALREADY_SET_UP, TASK_NOT_FOUND
 from tests.helpers import count, sign_up
 
 ALL = [
@@ -332,3 +334,241 @@ def test_setup_through_the_api_leaves_fr3_unchanged(client: TestClient, engine: 
     set_up(client, kari, home_id, ALL)
     with Session(engine) as session:
         assert homes.fr3_violations(session) == []
+
+
+# Story 2.3 (FR-5, FR-8, issue #40): PATCH /api/homes/{home_id}/tasks/{task_id}.
+
+
+def adjust(client: TestClient, auth: dict[str, str], home_id: str, task_id: str, body: object):
+    return client.patch(f"/api/homes/{home_id}/tasks/{task_id}", json=body, headers=auth)
+
+
+def sluket(client: TestClient, auth: dict[str, str], home_id: str) -> dict:
+    return next(
+        t
+        for t in list_tasks(client, auth, home_id).json()["tasks"]
+        if t["task_type"] == "rens-sluket"
+    )
+
+
+def stored(engine: Engine, task_id: str) -> tuple[str, int, list[date]]:
+    with Session(engine) as session:
+        task = session.exec(select(Task).where(Task.id == uuid.UUID(task_id))).one()
+        dates = session.exec(
+            select(TaskInstance.due_on).where(TaskInstance.task_id == task.id)
+        ).all()
+        return task.classification, task.frequency_days, sorted(dates)
+
+
+def household_with_tasks(client: TestClient) -> tuple[dict[str, str], dict[str, str], str]:
+    mari = sign_up(client, "Mari")
+    home_id = create_home(client, mari)
+    set_up(client, mari, home_id, ALL)
+    jonas = join(client, mari, home_id, "Jonas")
+    return mari, jonas, home_id
+
+
+def landlord_with_tasks(client: TestClient) -> tuple[dict[str, str], dict[str, str], str]:
+    kari = sign_up(client, "Kari")
+    home_id = create_home(client, kari, "landlord")
+    set_up(client, kari, home_id, ALL)
+    anders = join(client, kari, home_id, "Anders")
+    return kari, anders, home_id
+
+
+def test_a_member_moves_a_task_to_bor_and_every_member_sees_it(
+    client: TestClient, engine: Engine
+) -> None:
+    mari, jonas, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+
+    response = adjust(client, mari, home_id, task["id"], {"classification": "should"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {**task, "classification": "should"}
+    listed = list_tasks(client, jonas, home_id).json()["tasks"]
+    musts = [t["name"] for t in listed if t["classification"] == "must"]
+    shoulds = [t["name"] for t in listed if t["classification"] == "should"]
+    assert "Rens sluket" in shoulds and "Rens sluket" not in musts
+    assert stored(engine, task["id"])[2] == [date.fromisoformat(task["due_on"])]
+
+
+def test_a_landlord_lengthens_the_frequency_and_the_open_date_moves(
+    client: TestClient, engine: Engine
+) -> None:
+    kari, anders, home_id = landlord_with_tasks(client)
+    task = sluket(client, kari, home_id)
+    old_due = date.fromisoformat(task["due_on"])
+
+    response = adjust(client, kari, home_id, task["id"], {"frequency_days": 60})
+
+    assert response.status_code == 200
+    assert response.json()["frequency_days"] == 60
+    assert response.json()["due_on"] == (old_due + timedelta(days=30)).isoformat()
+    assert response.json()["days_until_due"] == task["days_until_due"] + 30
+    # The Tenant reads the Landlord's change.
+    assert sluket(client, anders, home_id)["frequency_days"] == 60
+    assert stored(engine, task["id"]) == ("must", 60, [old_due + timedelta(days=30)])
+
+
+def test_a_shorter_frequency_can_make_it_overdue_at_once(
+    client: TestClient, engine: Engine
+) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    today = utc_now().date()
+    # As if set up 65 days ago with «Hvert år».
+    with Session(engine) as session:
+        row = session.exec(select(Task).where(Task.id == uuid.UUID(task["id"]))).one()
+        row.frequency_days = 365
+        instance = session.exec(select(TaskInstance).where(TaskInstance.task_id == row.id)).one()
+        instance.due_on = today - timedelta(days=65) + timedelta(days=365)
+        session.add(row)
+        session.add(instance)
+        session.commit()
+
+    response = adjust(client, mari, home_id, task["id"], {"frequency_days": 7})
+
+    assert response.json()["due_on"] == (today - timedelta(days=58)).isoformat()
+    assert (response.json()["due_status"], response.json()["days_until_due"]) == ("overdue", -58)
+
+
+def test_equal_values_or_a_resend_are_200_and_write_nothing(
+    client: TestClient, engine: Engine
+) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    before = stored(engine, task["id"])
+
+    same = adjust(
+        client, mari, home_id, task["id"], {"classification": "must", "frequency_days": 30}
+    )
+    assert same.status_code == 200
+    assert same.json() == task
+    assert stored(engine, task["id"]) == before
+
+    first = adjust(client, mari, home_id, task["id"], {"frequency_days": 60})
+    again = adjust(client, mari, home_id, task["id"], {"frequency_days": 60})
+    assert again.status_code == 200
+    assert again.json() == first.json()
+
+
+def test_null_means_leave_as_is(client: TestClient, engine: Engine) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+
+    response = adjust(
+        client, mari, home_id, task["id"], {"classification": None, "frequency_days": 14}
+    )
+
+    assert (response.json()["classification"], response.json()["frequency_days"]) == ("must", 14)
+
+
+@pytest.mark.parametrize(
+    "body", [{"classification": "should"}, {"frequency_days": 60}, {}, {"frequency_days": 10}]
+)
+def test_a_tenant_gets_403_for_any_body_and_any_task(
+    client: TestClient, engine: Engine, body: dict
+) -> None:
+    kari, anders, home_id = landlord_with_tasks(client)
+    task = sluket(client, kari, home_id)
+    before = stored(engine, task["id"])
+    mari, _, other_home = household_with_tasks(client)
+    foreign = sluket(client, mari, other_home)
+
+    for task_id in (task["id"], foreign["id"], str(uuid.uuid4())):
+        response = adjust(client, anders, home_id, task_id, body)
+        assert response.status_code == 403
+        assert response.json() == {"detail": FORBIDDEN}
+    assert stored(engine, task["id"]) == before
+
+
+def test_outsider_and_unknown_home_get_403(client: TestClient) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    outsider = sign_up(client, "Per")
+    create_home(client, outsider)
+
+    for target in (home_id, str(uuid.uuid4())):
+        response = adjust(client, outsider, target, task["id"], {"classification": "should"})
+        assert response.status_code == 403
+        assert response.json() == {"detail": FORBIDDEN}
+
+
+def test_another_homes_task_or_an_unknown_id_is_404(client: TestClient, engine: Engine) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    kari, _, other_home = landlord_with_tasks(client)
+    foreign = sluket(client, kari, other_home)
+    before = stored(engine, foreign["id"])
+
+    for task_id in (foreign["id"], str(uuid.uuid4())):
+        response = adjust(client, mari, home_id, task_id, {"classification": "should"})
+        assert response.status_code == 404
+        assert response.json() == {"detail": TASK_NOT_FOUND}
+    assert stored(engine, foreign["id"]) == before
+
+
+@pytest.mark.parametrize("body", [{}, {"classification": None, "frequency_days": None}])
+def test_nothing_to_change_is_422_ingen_endring(client: TestClient, body: dict) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+
+    response = adjust(client, mari, home_id, task["id"], body)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": tasks.NO_CHANGE}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"frequency_days": 10},
+        {"frequency_days": "x"},
+        {"classification": "x"},
+        {"classification": "Må"},
+    ],
+)
+def test_adjust_shape_errors_are_pydantic_422s(
+    client: TestClient, engine: Engine, body: dict
+) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    before = stored(engine, task["id"])
+
+    response = adjust(client, mari, home_id, task["id"], body)
+
+    assert response.status_code == 422
+    assert isinstance(response.json()["detail"], list)
+    assert stored(engine, task["id"]) == before
+
+
+def test_a_bad_task_id_is_a_shape_422(client: TestClient) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    response = adjust(client, mari, home_id, "ikke-en-uuid", {"classification": "should"})
+    assert response.status_code == 422
+
+
+def test_adjusting_signed_out_is_401(client: TestClient) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    response = client.patch(
+        f"/api/homes/{home_id}/tasks/{task['id']}", json={"classification": "should"}
+    )
+    assert response.status_code == 401
+
+
+def test_home_out_says_who_may_adjust_tasks(client: TestClient) -> None:
+    kari, anders, home_id = landlord_with_tasks(client)
+    mari, jonas, household_id = household_with_tasks(client)
+
+    def flag(auth: dict[str, str], home: str) -> bool:
+        listed = client.get("/api/homes", headers=auth).json()["homes"]
+        return next(h for h in listed if h["id"] == home)["can_adjust_tasks"]
+
+    assert flag(kari, home_id) is True
+    assert flag(anders, home_id) is False
+    assert flag(mari, household_id) is True
+    assert flag(jonas, household_id) is True
+    created = client.post("/api/homes", json={"name": "Ny", "type": "landlord"}, headers=kari)
+    assert created.json()["can_adjust_tasks"] is True

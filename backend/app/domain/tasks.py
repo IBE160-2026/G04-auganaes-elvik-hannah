@@ -4,6 +4,10 @@ set_up_tasks is the only place Tasks are created. It runs once per Home: the use
 catalog's recommendations, adjusts Must/Should and Frequency, unticks what does not fit, and
 every chosen Task is created with its first TaskInstance in one transaction. can_set_up_tasks
 is the one statement of who may do it; routes and the frontend read it, never the Roles.
+
+Story 2.3 (FR-5, FR-8, issue #40): adjust_task changes one Task's Må/Bør and/or Frequency after
+setup. can_adjust_tasks is the one rule for who may; a new Frequency moves the open instance's
+date from the same start point (team decision 1, 2026-11-11).
 """
 
 import uuid
@@ -25,11 +29,15 @@ from app.models.task import Task, TaskInstance
 # household_member exists only in Household Homes and landlord only in Landlord Homes.
 SETUP_ROLES: frozenset[Role] = frozenset({"household_member", "landlord"})
 
+# Story 2.3: the same Roles as setup; a Tenant inherits the Landlord's setting.
+ADJUST_ROLES: frozenset[Role] = SETUP_ROLES
+
 NO_TASKS_CHOSEN = "Velg minst én oppgave."
 UNKNOWN_TASK_TYPE = "Ukjent oppgave: «{key}»."
 DUPLICATE_TASK_TYPE = "Oppgaven «{key}» er valgt mer enn én gang."
 BAD_CLASSIFICATION = "En oppgave må være «Må» eller «Bør»."
 BAD_FREQUENCY = "Velg et av intervallene i lista."
+NO_CHANGE = "Ingen endring."
 
 # Decision (Story 2.2, 1): a Task is due soon from today up to and including today + 3 days.
 # With 7, a weekly Task would always be due soon.
@@ -51,6 +59,10 @@ def can_set_up_tasks(role: str) -> bool:
     return role in SETUP_ROLES
 
 
+def can_adjust_tasks(role: str) -> bool:
+    return role in ADJUST_ROLES
+
+
 class TaskChoice(NamedTuple):
     """One ticked row of Task Setup."""
 
@@ -69,6 +81,18 @@ class InvalidTaskChoices(ValueError):
 
 class TasksAlreadySetUp(Exception):
     """The Home already has Tasks; setup runs once per Home."""
+
+
+class TaskNotFound(Exception):
+    """No Task with this id in the Membership's Home."""
+
+
+class NothingToChange(ValueError):
+    """Neither classification nor Frequency was given; the message is NO_CHANGE."""
+
+    def __init__(self) -> None:
+        super().__init__(NO_CHANGE)
+        self.message = NO_CHANGE
 
 
 class TaskWithDue(NamedTuple):
@@ -172,3 +196,76 @@ def tasks_of(session: Session, home_id: uuid.UUID) -> list[TaskWithDue]:
         )
     ).all()
     return [TaskWithDue(task, due) for task, due in rows]
+
+
+def _open_instance(session: Session, task_id: uuid.UUID) -> TaskInstance:
+    """The instance a Frequency change moves: the Task's earliest one.
+
+    Story 2.4 must make this the earliest *open* instance, together with tasks_of
+    (deferred-work.md).
+    """
+    return session.exec(
+        select(TaskInstance)
+        .where(TaskInstance.task_id == task_id)
+        .order_by(col(TaskInstance.due_on))
+        .limit(1)
+    ).one()
+
+
+def adjust_task(
+    session: Session,
+    membership: Membership,
+    task_id: uuid.UUID,
+    classification: task_types.Classification | None = None,
+    frequency_days: task_types.Frequency | None = None,
+) -> TaskWithDue:
+    """Change a Task's Må/Bør and/or Frequency (Story 2.3, FR-5, FR-8).
+
+    `membership` is what require_role returned; None means "leave as is". A new Frequency moves
+    the open instance to `due_on - old + new` (same start point, new interval), so it may become
+    overdue at once; a classification-only change leaves the date alone. Values equal to the
+    stored ones write nothing. Raises NothingToChange when both are None, TaskNotFound when the
+    Task is not in the Membership's Home, and InvalidTaskChoices for a value outside the catalog
+    rules (the route's types already stop those).
+    """
+    if not can_adjust_tasks(membership.role):
+        raise ValueError(f"role {membership.role!r} may not adjust tasks")
+    if classification is None and frequency_days is None:
+        raise NothingToChange
+    if classification is not None and classification not in task_types.CLASSIFICATIONS:
+        raise InvalidTaskChoices(BAD_CLASSIFICATION)
+    if frequency_days is not None and frequency_days not in task_types.FREQUENCY_DAYS:
+        raise InvalidTaskChoices(BAD_FREQUENCY)
+    # Locks the Task row until commit, so two parallel saves cannot mix one's Frequency with the
+    # other's date shift. Postgres only; SQLite ignores FOR UPDATE (accepted risk).
+    task = session.exec(
+        select(Task).where(Task.id == task_id, Task.home_id == membership.home_id).with_for_update()
+    ).first()
+    if task is None:
+        session.rollback()
+        raise TaskNotFound
+    instance = _open_instance(session, task.id)
+    changed = False
+    if frequency_days is not None and frequency_days != task.frequency_days:
+        instance.due_on += timedelta(days=frequency_days - task.frequency_days)
+        task.frequency_days = frequency_days
+        session.add(instance)
+        changed = True
+    if classification is not None and classification != task.classification:
+        task.classification = classification
+        changed = True
+    if changed:
+        session.add(task)
+        session.commit()
+    else:
+        # Nothing written; ends the transaction and releases the lock.
+        session.rollback()
+    session.refresh(task)
+    return TaskWithDue(task, _next_due(session, task.id))
+
+
+def _next_due(session: Session, task_id: uuid.UUID) -> date:
+    """The Task's next due date as tasks_of reads it."""
+    return session.exec(
+        select(func.min(TaskInstance.due_on)).where(TaskInstance.task_id == task_id)
+    ).one()

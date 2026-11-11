@@ -32,3 +32,5 @@ Leaver = Annotated[Membership, Depends(require_role(*sorted(homes.LEAVER_ROLES))
 Landlord = Annotated[Membership, Depends(require_role("landlord"))]
 # Story 2.1: who may set up a Home's Tasks.
 TaskSetter = Annotated[Membership, Depends(require_role(*sorted(tasks.SETUP_ROLES)))]
+# Story 2.3: who may adjust a Task's Må/Bør and Frequency.
+TaskAdjuster = Annotated[Membership, Depends(require_role(*sorted(tasks.ADJUST_ROLES)))]
