@@ -63,5 +63,6 @@
 - [x] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — PR #41: CI, preview på Vercel (Eirik), bmad-walkthrough og merge (løst 2026-11-11: merget `b30716c`)
 - [x] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Etter merge av PR #41: 2-3 → done, CLAUDE.md (neste er Story 2.4), rad i KI-loggens README (løst 2026-11-11: statuscommit `2311d0a`)
 - [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Story 2.4: `tasks_of` og `_open_instance` må bruke tidligste åpne forekomst (deferred-work)
-- [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Merge `chore/status-etter-story-2-3`, deretter Story 2.4 med `bmad-build`
+- [x] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Merge `chore/status-etter-story-2-3`, deretter Story 2.4 med `bmad-build` (løst 2026-11-11: PR #42 merget `fb4f199`; 2.4 klargjort)
 - [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Teste radlåsen i `adjust_task` med to samtidige PATCH mot Postgres (valgfritt, ikke automatisert)
+- [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Story 2.4 med `bmad-build` i ny økt (issue #43, branch `story/2-4-self-checkoff`)
