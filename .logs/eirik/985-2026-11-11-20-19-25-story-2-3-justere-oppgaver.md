@@ -50,3 +50,32 @@ Merge statuspakken for 2.2 (PR #39) og bygge Story 2.3 med `bmad-build`: endre M
 - PR #41: CI på Linux og Windows, preview på Vercel (Eirik), `bmad-walkthrough`, og merge når Eirik sier fra.
 - Etter merge av PR #41: 2-3 → done, CLAUDE.md (neste er Story 2.4) og en rad i KI-loggens README.
 - Story 2.4 må endre `tasks_of` og `_open_instance` til tidligste *åpne* forekomst (`deferred-work.md`).
+
+## 2026-11-11 kl. 20:57 — Eirik
+
+### Oppgave
+Fullføre PR #41: veiledning til preview-testen på Vercel, `bmad-walkthrough`, merge og statusarbeid etter merge.
+
+### Plan
+- Huke av CI i PR-en (grønn på Linux og Windows) og skrive en trinnvis veiledning for previewen, med en utleier og en leietaker via invitasjon.
+- Walkthrough: orientering, løype i seks deler, risikopunkter og forslag til egne tester.
+- Merge når Eirik godkjenner, og deretter en statusbranch fra `main`.
+
+### Resultat
+- **Preview:** Eirik testet på Vercel, og alt fungerte. Det er huket av i PR-en.
+- **Walkthrough:** risikopunktene var:
+  - at fristen flyttes i databasen (2.4 og 2.5 må endre `_open_instance`)
+  - at låsen bare virker på Postgres
+  - den nye skriveruten, der 403 kommer før 404
+  - aliaset `ADJUST_ROLES = SETUP_ROLES`
+  - at cachen oppdateres før lista hentes på nytt
+- **Godkjenning:** Eirik godkjente uten å kjøre de valgfrie testene (to faner, låsen på Postgres, `/docs`).
+- **Merge:** PR #41 er merget (`b30716c`), og issue #40 er lukket.
+- **Statuscommit** `2311d0a` på `chore/status-etter-story-2-3`:
+  - 2-3 → done
+  - CLAUDE.md: neste er Story 2.4, med en merknad om `_open_instance` og en sjekk av git etter subagenter
+  - rad i KI-loggens README
+
+### Åpne punkter
+- Merge `chore/status-etter-story-2-3`, og deretter Story 2.4 med `bmad-build`.
+- Valgfritt: teste låsen med to samtidige `PATCH` mot Postgres (ikke testet automatisk).
