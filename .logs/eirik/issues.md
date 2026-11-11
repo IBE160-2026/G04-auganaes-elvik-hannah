@@ -54,7 +54,9 @@
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Hytte / flere husstandshjem per bruker (issue #34): mulig senere versjon, planlegges med correct-course
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Seed: `_seed_household` bør bruke `join_blocker` for Jonas (deferred-work)
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Sjekke i Neon at preview-branchen for PR #35 er slettet
-- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: sjekke CI på Linux og Windows
-- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: manuelle tester (320 px, Kari oppretter hjem nummer to og bytter, godta invitasjon med et hjem, forlate sist brukte hjem)
-- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: preview på Vercel (Eirik) og bmad-walkthrough før merge
-- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Etter merge av PR #38: 2-2 → done, CLAUDE.md (neste er Story 2.3), rad i KI-loggens README
+- [x] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: sjekke CI på Linux og Windows (løst 2026-11-11)
+- [x] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: manuelle tester (320 px, Kari oppretter hjem nummer to og bytter, godta invitasjon med et hjem, forlate sist brukte hjem) (løst 2026-11-11)
+- [x] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: preview på Vercel (Eirik) og bmad-walkthrough før merge (løst 2026-11-11)
+- [x] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Etter merge av PR #38: 2-2 → done, CLAUDE.md (neste er Story 2.3), rad i KI-loggens README (løst 2026-11-11)
+- [ ] 2026-11-11 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Vurdere om «i dag» i `due_status` skal være norsk dato i stedet for UTC (én dag bak mellom kl. 00 og 01/02 norsk tid)
+- [ ] 2026-11-11 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Merge `chore/status-etter-story-2-2`, deretter Story 2.3 med `bmad-build`

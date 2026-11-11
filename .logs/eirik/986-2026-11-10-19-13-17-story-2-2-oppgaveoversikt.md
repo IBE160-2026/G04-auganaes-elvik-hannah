@@ -45,3 +45,47 @@ Fortsette arbeidet: bygge Story 2.2 (issue #37) med `bmad-build`. Storyen gjelde
   - forlate det hjemmet man sist brukte
 - PR #38: preview på Vercel (Eirik), `bmad-walkthrough`, og deretter merge på Eiriks ord.
 - Etter merge: statuscommit med 2-2 → done, CLAUDE.md (neste er Story 2.3) og en rad i KI-loggens README.
+
+## 2026-11-11 kl. 19:33 — Eirik
+
+### Oppgave
+Fortsette med PR #38 (Story 2.2): sjekke CI, kjøre de manuelle testene, få Eiriks preview-test, ta `bmad-walkthrough` og merge, og deretter gjøre statusarbeidet etter merge.
+
+### Plan
+- Sjekke CI på PR #38.
+- Manuelle tester i Chrome mot engangsdatabasen `husly_smoke` (backend :8001, Vite :5174 med midlertidig config, slettet etterpå).
+- Forklare preview-testene for Eirik. Han testet selv på Vercel.
+- `bmad-walkthrough` (orientering, gjennomgang, detaljer, testing), så kjøre testene fra walkthroughen og merge etter Eiriks «gjør testene og merge etterpå».
+- Statusbranch `chore/status-etter-story-2-2` fra `main`.
+
+### Resultat
+- **CI:** grønn på Linux og Windows.
+- **Manuelle tester, alle bestått:**
+  - 320 px, via en iframe fordi vinduet ikke lot seg krympe
+  - Kari oppretter hjem nummer to og bytter
+  - forlate sist brukte hjem: meldingen vises én gang
+  - godta en invitasjon med et hjem fra før
+- Resultatene er ført inn i spec-en og PR-sjekklista (`f7f12ae`).
+- **Preview på Vercel:** Eirik testet, og alt fungerte.
+- **Walkthrough:** detaljgjennomgangen pekte på:
+  - UTC-dato for «i dag»
+  - at 2.4 må endre «neste forfall» til tidligste åpne forekomst
+  - klientvakten (tilgangen håndheves av `require_role`)
+  - at id-er i `localStorage` blir liggende etter utlogging
+  - den globale `overscroll-behavior`
+- **Testene fra walkthroughen**, lagt som kommentar på PR #38:
+  - farger: gul og rød, fet skrift
+  - tastaturrekkefølge og «Oppdatert»
+  - API-felter (`due_status`, `days_until_due`)
+  - feil ved lasting: lista blir stående, og meldingen leses opp
+  - Min forventning om «Prøv igjen» etter omlasting med API-et nede var feil. Da kommer innloggingssiden, fordi økta ikke kan gjenopprettes (Story 1.2). Dette er ikke en feil i 2.2.
+- **Merge:** PR #38 er merget (`cab0ccb`), og issue #37 er lukket.
+- **Statuscommit** `d00b562` på `chore/status-etter-story-2-2`:
+  - 2-2 → done i sprint-status
+  - CLAUDE.md: neste er Story 2.3
+  - rad i KI-loggens README
+  - øktfilene i KI-loggen
+
+### Åpne punkter
+- Vurdere om «i dag» i `due_status` skal være norsk dato i stedet for UTC. Mellom kl. 00 og 01/02 norsk tid ligger statusen én dag bak.
+- Merge statusbranchen `chore/status-etter-story-2-2`, og deretter Story 2.3 med `bmad-build`.
