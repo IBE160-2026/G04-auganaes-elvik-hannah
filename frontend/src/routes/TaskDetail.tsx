@@ -1,14 +1,27 @@
-// Story 2.2 (decision 6): a minimal, read-only Task Detail at /hjem/<id>/oppgaver/<taskId>, so a
-// row on the Task Overview leads somewhere. Read from the Home's tasks query (no new route);
-// Story 2.3 adds editing of Må/Bør and the interval here.
+// Story 2.2 (decision 6): a minimal Task Detail at /hjem/<id>/oppgaver/<taskId>, so a row on the
+// Task Overview leads somewhere. Read from the Home's tasks query (no new route).
+// Story 2.3 (FR-5, FR-8, UX-DR30): a Household Member or the Landlord changes Må/Bør and the
+// interval here and saves with «Lagre endringer» (decision 2); a Tenant sees the two as locked,
+// focusable read-only fields «Satt av utleier». Who may edit is the server's can_adjust_tasks.
 // Guards as on the Task Overview: a foreign or unknown Home goes to "/", a Home without Tasks to
 // its overview (which routes on), and a loaded list without this Task back to the overview.
+import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
 import type { Home } from '../api/homes';
-import { useHomes, useTasks } from '../api/queries';
-import { FREQUENCY_LABELS, TASK_MESSAGES, dueText, type Task } from '../api/tasks';
-import { Badge } from '../components/Badge';
+import { useAdjustTask, useHomes, useTasks } from '../api/queries';
+import {
+  CLASSIFICATION_LABELS,
+  FREQUENCIES,
+  FREQUENCY_LABELS,
+  TASK_MESSAGES,
+  dueText,
+  type Classification,
+  type Frequency,
+  type Task,
+  type TaskChanges,
+} from '../api/tasks';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
 import './AuthForm.css';
@@ -66,17 +79,8 @@ function Detail({ home, task }: { home: Home; task: Task }) {
       <h1 ref={titleRef} tabIndex={-1} className="task-detail__title">
         {task.name}
       </h1>
+      {home.can_adjust_tasks ? <AdjustForm home={home} task={task} /> : <LockedFields task={task} />}
       <dl className="task-detail__facts">
-        <div>
-          <dt>Viktighet</dt>
-          <dd>
-            <Badge classification={task.classification} />
-          </dd>
-        </div>
-        <div>
-          <dt>Hvor ofte</dt>
-          <dd>{FREQUENCY_LABELS[task.frequency_days]}</dd>
-        </div>
         <div>
           <dt>Frist</dt>
           <dd className={`task-detail__due task-detail__due--${task.due_status}`}>{dueText(task)}</dd>
@@ -84,6 +88,174 @@ function Detail({ home, task }: { home: Home; task: Task }) {
       </dl>
       <BackLink home={home} />
     </div>
+  );
+}
+
+/** The message for a failed save, or null when another part of the app handles it. */
+function saveError(error: Error | null): string | null {
+  if (!error) return null;
+  if (error instanceof ApiError) {
+    // 403: the global handler refetches and the guards route. 404: the tasks refetch and the
+    // TaskLoader guard returns to the overview.
+    if (error.status === 403 || error.status === 404) return null;
+    return error.message;
+  }
+  // Network failure: the same message as a 5xx (deliberate).
+  return TASK_MESSAGES.saveFailed;
+}
+
+/**
+ * Decision 2: a draft per field, null meaning "show the server's value", so a refetch after
+ * another Member's save updates every field this user has not touched. Only fields whose draft
+ * differs from the current Task are sent.
+ */
+function AdjustForm({ home, task }: { home: Home; task: Task }) {
+  const adjust = useAdjustTask(home.id);
+  const [classification, setClassification] = useState<Classification | null>(null);
+  const [frequency, setFrequency] = useState<Frequency | null>(null);
+  const [status, setStatus] = useState('');
+  const frequencyId = useId();
+
+  const shownClassification = classification ?? task.classification;
+  const shownFrequency = frequency ?? task.frequency_days;
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const changes: TaskChanges = {};
+    if (classification !== null && classification !== task.classification) changes.classification = classification;
+    if (frequency !== null && frequency !== task.frequency_days) changes.frequency_days = frequency;
+    if (Object.keys(changes).length === 0) {
+      adjust.reset();
+      setStatus(TASK_MESSAGES.nothingToSave);
+      return;
+    }
+    setStatus('');
+    adjust.mutate(
+      { taskId: task.id, changes },
+      {
+        // A field changed again while the save was in flight keeps its newer draft.
+        onSuccess: () => {
+          if (changes.classification !== undefined) {
+            setClassification((draft) => (draft === changes.classification ? null : draft));
+          }
+          if (changes.frequency_days !== undefined) {
+            setFrequency((draft) => (draft === changes.frequency_days ? null : draft));
+          }
+          setStatus(TASK_MESSAGES.saved);
+        },
+      },
+    );
+  }
+
+  function edited() {
+    setStatus('');
+  }
+
+  const error = saveError(adjust.error);
+
+  return (
+    <form className="task-detail__form" onSubmit={handleSubmit} noValidate>
+      <fieldset className="task-detail__field">
+        <legend className="task-detail__label">Viktighet</legend>
+        <div className="task-detail__choices">
+          {(['must', 'should'] as const).map((value) => (
+            <label key={value} className={`task-detail__pill task-detail__pill--${value}`}>
+              <input
+                type="radio"
+                name={`klassifisering-${task.id}`}
+                value={value}
+                checked={shownClassification === value}
+                onChange={() => {
+                  setClassification(value);
+                  edited();
+                }}
+              />
+              {CLASSIFICATION_LABELS[value]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="task-detail__field">
+        <label className="task-detail__label" htmlFor={frequencyId}>
+          Hvor ofte
+        </label>
+        <select
+          id={frequencyId}
+          className="task-detail__select"
+          value={shownFrequency}
+          onChange={(e) => {
+            setFrequency(Number(e.target.value) as Frequency);
+            edited();
+          }}
+        >
+          {FREQUENCIES.map((days) => (
+            <option key={days} value={days}>
+              {FREQUENCY_LABELS[days]}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <p className="auth-form__error" role="alert">
+          {error}
+        </p>
+      )}
+      <PrimaryButton type="submit" pending={adjust.isPending}>
+        {error ? 'Prøv igjen' : 'Lagre endringer'}
+      </PrimaryButton>
+      {/* Always in the DOM, so «Lagret» and «Ingen endringer å lagre.» are announced. */}
+      <p className="task-detail__status" role="status">
+        {status}
+      </p>
+    </form>
+  );
+}
+
+/** UX-DR30: a Tenant's view. Read-only inputs, focusable and labelled, never disabled. */
+function LockedFields({ task }: { task: Task }) {
+  return (
+    <div className="task-detail__form">
+      <LockedField label="Viktighet" value={CLASSIFICATION_LABELS[task.classification]} />
+      <LockedField label="Hvor ofte" value={FREQUENCY_LABELS[task.frequency_days]} />
+    </div>
+  );
+}
+
+function LockedField({ label, value }: { label: string; value: string }) {
+  const inputId = useId();
+  const reasonId = useId();
+  return (
+    <div className="task-detail__field">
+      <label className="task-detail__label" htmlFor={inputId}>
+        {label}
+      </label>
+      <div className="task-detail__locked">
+        <LockGlyph />
+        <input
+          id={inputId}
+          type="text"
+          className="task-detail__locked-input"
+          value={value}
+          readOnly
+          aria-readonly="true"
+          aria-describedby={reasonId}
+        />
+      </div>
+      <p id={reasonId} className="task-detail__reason">
+        {TASK_MESSAGES.lockedByLandlord}
+      </p>
+    </div>
+  );
+}
+
+function LockGlyph() {
+  return (
+    <svg className="task-detail__lock" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="1em" height="1em">
+      <path
+        fill="currentColor"
+        d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-.5V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z"
+      />
+    </svg>
   );
 }
 

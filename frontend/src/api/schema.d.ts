@@ -300,10 +300,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Adjust Task */
+        patch: operations["adjust_task_api_homes__home_id__tasks__task_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdjustTaskRequest */
+        AdjustTaskRequest: {
+            /** Classification */
+            classification?: ("must" | "should") | null;
+            /** Frequency Days */
+            frequency_days?: (7 | 14 | 30 | 42 | 60 | 90 | 182 | 365) | null;
+        };
         /** AuthResponse */
         AuthResponse: {
             /** Access Token */
@@ -368,6 +392,8 @@ export interface components {
             can_set_up_tasks: boolean;
             /** Has Tasks */
             has_tasks: boolean;
+            /** Can Adjust Tasks */
+            can_adjust_tasks: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -1178,6 +1204,60 @@ export interface operations {
             };
             /** @description Not a Member of this Home, or no such Home */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adjust_task_api_homes__home_id__tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Not a Household Member or the Landlord of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

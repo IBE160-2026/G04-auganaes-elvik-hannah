@@ -66,3 +66,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-9-one-rule-for-creating-homes.md`
   summary: The seed's `_seed_household` skips Jonas when he has any Membership instead of asking `homes.join_blocker`, so a Jonas who is only a Landlord elsewhere is left out although the app would let him join.
   evidence: `backend/app/seed/homes.py` (`elif jonas_home_ids:`) vs `_seed_landlord`, which uses `join_blocker`; pre-existing since Story 1.6, found in the Story 1.9 code review (R7). Fix: use `join_blocker` and add a seed test with Jonas as a Landlord elsewhere.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
+  summary: Story 2.4 must switch `domain/tasks._open_instance` (the instance a Frequency change moves) to the earliest *open* instance together with `tasks_of`, so both always point at the same instance.
+  evidence: Story 2.3 moves the earliest instance, which is the open one only until 2.4 adds completion. If only `tasks_of` changes, a Frequency change would move an already completed instance.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
+  summary: After Story 2.5, moving the open instance on a Frequency change may hit `uq_task_instances_task_id_due_on` when another instance of the Task already has the new date; decide the behaviour (and test it) in 2.5.
+  evidence: Story 2.3 spec review. Today every Task has one instance (seed and setup make one), so the shift cannot collide; once completion creates the next instance, a completed instance can share the date.

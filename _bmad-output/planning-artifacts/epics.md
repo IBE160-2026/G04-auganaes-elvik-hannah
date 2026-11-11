@@ -813,6 +813,8 @@ So that the task list matches my Home's real priorities, while Tenants see a sta
 **When** the Household Member or Landlord sees the result
 **Then** an inline error with a retry affordance shows at the field — not a silent failure (UX-DR30)
 
+> **Note 2026-11-11 (team decisions, Story 2.3 spec, `spec-2-3-adjust-task-classification-frequency.md`, issue #40):** The two fields are saved with a «Lagre endringer» button instead of on change ("directly editable inline" still holds: same page, no admin screen); only fields that differ from the server's current value are sent, and with no difference nothing is sent and «Ingen endringer å lagre.» is announced. "Immediately reflected to all Members" means on their next refetch (window focus, «Oppdater» or navigation), since there is no real-time layer (AD-10). A failed save shows its inline error and «Prøv igjen» at the form, under both fields, not at each field. Decision 1: a new Frequency also moves the open instance's due date to `due_on − old Frequency + new Frequency` (same start point, new interval), so it may become overdue at once; a classification-only change leaves the date alone. Story 2.5's reschedule then counts from the completion date with the stored Frequency.
+
 ### Story 2.4: Self-Checkoff Completion with Shared Status & Attribution
 
 **Stage:** Trinn 1

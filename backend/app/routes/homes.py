@@ -9,6 +9,7 @@ DELETE /homes/{home_id}/members/{user_id} (a Landlord removes a Tenant), both th
 and domain/homes. Every refusal is the same 403 as require_role's.
 
 Story 2.1: HomeOut says whether the caller may set up Tasks and whether the Home has any.
+Story 2.3: and whether the caller may adjust a Task's Må/Bør and Frequency.
 
 Story 1.9: one rule for creating and joining. A refused Household create answers 409 with the
 same message as joining (routes/messages).
@@ -57,6 +58,8 @@ class HomeOut(BaseModel):
     # Story 2.1: whether the caller may set up this Home's Tasks, and whether it has any.
     can_set_up_tasks: bool
     has_tasks: bool
+    # Story 2.3: whether the caller may change a Task's Må/Bør and Frequency (a Tenant may not).
+    can_adjust_tasks: bool
 
 
 class HomesOut(BaseModel):
@@ -81,6 +84,7 @@ def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
         can_leave=homes.can_leave(member_home.role),
         can_set_up_tasks=tasks.can_set_up_tasks(member_home.role),
         has_tasks=has_tasks,
+        can_adjust_tasks=tasks.can_adjust_tasks(member_home.role),
     )
 
 

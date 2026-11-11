@@ -815,10 +815,140 @@
           }
         }
       }
+    },
+    "/api/homes/{home_id}/tasks/{task_id}": {
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Adjust Task",
+        "operationId": "adjust_task_api_homes__home_id__tasks__task_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a Household Member or the Landlord of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such Task in this Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdjustTaskRequest": {
+        "properties": {
+          "classification": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "must",
+                  "should"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification"
+          },
+          "frequency_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  7,
+                  14,
+                  30,
+                  42,
+                  60,
+                  90,
+                  182,
+                  365
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Days"
+          }
+        },
+        "type": "object",
+        "title": "AdjustTaskRequest"
+      },
       "AuthResponse": {
         "properties": {
           "access_token": {
@@ -940,6 +1070,10 @@
           "has_tasks": {
             "type": "boolean",
             "title": "Has Tasks"
+          },
+          "can_adjust_tasks": {
+            "type": "boolean",
+            "title": "Can Adjust Tasks"
           }
         },
         "type": "object",
@@ -952,7 +1086,8 @@
           "can_invite",
           "can_leave",
           "can_set_up_tasks",
-          "has_tasks"
+          "has_tasks",
+          "can_adjust_tasks"
         ],
         "title": "HomeOut"
       },

@@ -3,6 +3,7 @@
 // this module only names the fixed intervals and the Must/Should labels.
 // Story 2.2 (FR-6, decisions 1 and 8): the due text, from the server's due_status and
 // days_until_due, never from the browser's clock.
+// Story 2.3 (FR-5, FR-8): adjusting a Task's Må/Bør and Frequency on Task Detail.
 import { api } from './client';
 import { ApiError, GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
@@ -11,6 +12,7 @@ export type Task = components['schemas']['TaskOut'];
 export type TaskTypes = components['schemas']['TaskTypesOut'];
 export type TaskType = components['schemas']['TaskTypeOut'];
 export type TaskChoice = components['schemas']['TaskChoiceIn'];
+export type TaskChanges = components['schemas']['AdjustTaskRequest'];
 export type Classification = Task['classification'];
 export type Frequency = Task['frequency_days'];
 export type DueStatus = Task['due_status'];
@@ -26,6 +28,12 @@ export const TASK_MESSAGES = {
   // Decision 2 and 10: shown above the full list when nothing is overdue or due soon.
   nothingDueHousehold: 'Ingen oppgaver akkurat nå — nyt det! 🎉',
   nothingDueLandlord: 'Ingen aktive oppgaver i dette hjemmet.',
+  // Story 2.3 (decision 2): saved with «Lagre endringer».
+  saved: 'Lagret',
+  nothingToSave: 'Ingen endringer å lagre.',
+  saveFailed: GENERIC_ERROR,
+  // UX-DR30: the label on a Tenant's locked fields.
+  lockedByLandlord: 'Satt av utleier',
 } as const;
 
 // Text first; the badge colour only reinforces it.
@@ -46,6 +54,10 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   182: 'Hvert halvår',
   365: 'Hvert år',
 };
+
+// Story 2.3: the intervals a Task's Frequency can be changed to, shortest first (integer keys
+// keep ascending order). From the labels, so Task Detail needs no catalog query.
+export const FREQUENCIES = Object.keys(FREQUENCY_LABELS).map(Number) as Frequency[];
 
 const DUE_FORMAT = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'long' });
 const DUE_FORMAT_WITH_YEAR = new Intl.DateTimeFormat('nb-NO', {
@@ -114,4 +126,20 @@ export async function setUpTasks(homeId: string, tasks: TaskChoice[]): Promise<T
     throw toApiError(response, error, { passThrough: [409, 422], fallback: TASK_MESSAGES.setupFailed });
   }
   return data.tasks;
+}
+
+/**
+ * Story 2.3: changes the Task's Må/Bør and/or Frequency; only the changed fields are sent.
+ * A 404 (not in this Home) or a domain 422 carries the server's reason; anything else, including
+ * a 5xx, gets the generic message. A 403 is the global handler's.
+ */
+export async function adjustTask(homeId: string, taskId: string, changes: TaskChanges): Promise<Task> {
+  const { data, error, response } = await api.PATCH('/api/homes/{home_id}/tasks/{task_id}', {
+    params: { path: { home_id: homeId, task_id: taskId } },
+    body: changes,
+  });
+  if (!data) {
+    throw toApiError(response, error, { passThrough: [404, 422], fallback: TASK_MESSAGES.saveFailed });
+  }
+  return data;
 }

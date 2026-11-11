@@ -3,6 +3,8 @@
 // Story 2.1: Homes carry can_set_up_tasks and has_tasks; every Home's tasks list and the
 // catalog answer by default.
 // Story 2.2: tasks carry due_status and days_until_due; OLAS_TASKS has one of each due state.
+// Story 2.3: Homes carry can_adjust_tasks; OLAS_TENANCY is a Tenant's Home; adjustHandler
+// answers PATCH /api/homes/<id>/tasks/<taskId>.
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
 import type { Task, TaskTypes } from '../api/tasks';
@@ -55,6 +57,19 @@ export const OLAS_HOME: Home = {
   can_leave: true,
   can_set_up_tasks: true,
   has_tasks: true,
+  can_adjust_tasks: true,
+};
+
+// Story 2.3: a Tenant's Home, set up by the Landlord; Ola may read but not adjust its Tasks.
+export const OLAS_TENANCY: Home = {
+  ...OLAS_HOME,
+  id: '00000000-0000-4000-8000-0000000000b1',
+  name: 'Storgata 12',
+  type: 'landlord',
+  role: 'tenant',
+  can_invite: false,
+  can_set_up_tasks: false,
+  can_adjust_tasks: false,
 };
 
 // Story 1.9: lived_in_home_id is the Home where the user is Household Member or Tenant, if any.
@@ -109,6 +124,27 @@ export const OLAS_TASKS: Task[] = [
     days_until_due: 1,
   },
 ];
+
+export const taskPath = (home: Pick<Home, 'id'>, task: Pick<Task, 'id'>) => `${tasksPath(home)}/${task.id}`;
+
+/**
+ * Story 2.3: a PATCH handler. 200 answers the Task with the sent fields applied (and records the
+ * body in `bodies`); 403, 404 and 500 answer as the server would.
+ */
+export function adjustHandler(
+  task: Task,
+  status: 200 | 403 | 404 | 500 = 200,
+  bodies: unknown[] = [],
+): Handler {
+  return async (request) => {
+    const body = (await request.json()) as Partial<Task>;
+    bodies.push(body);
+    if (status === 403) return json(403, { detail: 'Du har ikke tilgang til dette hjemmet.' });
+    if (status === 404) return json(404, { detail: 'Fant ikke oppgaven.' });
+    if (status === 500) return json(500, { detail: 'Internal Server Error' });
+    return json(200, { ...task, ...body });
+  };
+}
 
 export const TASK_TYPES: TaskTypes = {
   catalog_version: 1,

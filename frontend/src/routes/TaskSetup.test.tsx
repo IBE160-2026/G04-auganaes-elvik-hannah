@@ -275,7 +275,7 @@ describe('Task Setup', () => {
   });
 
   it.each([
-    ['a Tenant', { ...NEW_HOME, role: 'tenant', can_invite: false, can_set_up_tasks: false } as Home],
+    ['a Tenant', { ...NEW_HOME, role: 'tenant', can_invite: false, can_set_up_tasks: false, can_adjust_tasks: false } as Home],
     ['a Home already set up', OLAS_HOME],
   ])('sends %s to its Task Overview', async (_case, home) => {
     const server = fakeApi(signedInWith([home]));

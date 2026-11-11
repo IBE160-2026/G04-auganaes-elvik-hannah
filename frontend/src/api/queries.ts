@@ -23,7 +23,15 @@ import {
 } from './homes';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
-import { fetchTasks, fetchTaskTypes, setUpTasks, type Task, type TaskChoice } from './tasks';
+import {
+  adjustTask,
+  fetchTasks,
+  fetchTaskTypes,
+  setUpTasks,
+  type Task,
+  type TaskChanges,
+  type TaskChoice,
+} from './tasks';
 
 export function createQueryClient(): QueryClient {
   /**
@@ -168,6 +176,29 @@ export function useSetUpTasks(homeId: string) {
         queryClient.invalidateQueries({ queryKey: tasksKey(homeId, userId) }),
         queryClient.refetchQueries({ queryKey: homesKey(userId) }),
       ]);
+    },
+  });
+}
+
+/**
+ * Story 2.3: changes one Task. The answer replaces that Task in the cached list, so the form
+ * shows the saved values at once; the list is then refetched so the order (Must first) comes
+ * from the server. A 404 (the Task is gone from this Home) refetches too, and Task Detail's
+ * guard returns to the overview. A 403 is the global handler's.
+ */
+export function useAdjustTask(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const key = tasksKey(homeId, session?.user.id);
+  return useMutation({
+    mutationFn: ({ taskId, changes }: { taskId: string; changes: TaskChanges }) =>
+      adjustTask(homeId, taskId, changes),
+    onSuccess: (task: Task) => {
+      queryClient.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? task : t)));
+      void queryClient.invalidateQueries({ queryKey: key });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 404) void queryClient.invalidateQueries({ queryKey: key });
     },
   });
 }
