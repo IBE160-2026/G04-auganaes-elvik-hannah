@@ -59,4 +59,7 @@
 - [x] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: preview på Vercel (Eirik) og bmad-walkthrough før merge (løst 2026-11-11)
 - [x] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Etter merge av PR #38: 2-2 → done, CLAUDE.md (neste er Story 2.3), rad i KI-loggens README (løst 2026-11-11)
 - [ ] 2026-11-11 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Vurdere om «i dag» i `due_status` skal være norsk dato i stedet for UTC (én dag bak mellom kl. 00 og 01/02 norsk tid)
-- [ ] 2026-11-11 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Merge `chore/status-etter-story-2-2`, deretter Story 2.3 med `bmad-build`
+- [x] 2026-11-11 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Merge `chore/status-etter-story-2-2`, deretter Story 2.3 med `bmad-build` (løst 2026-11-11: PR #39 merget, Story 2.3 bygget i PR #41)
+- [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — PR #41: CI, preview på Vercel (Eirik), bmad-walkthrough og merge
+- [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Etter merge av PR #41: 2-3 → done, CLAUDE.md (neste er Story 2.4), rad i KI-loggens README
+- [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Story 2.4: `tasks_of` og `_open_instance` må bruke tidligste åpne forekomst (deferred-work)
