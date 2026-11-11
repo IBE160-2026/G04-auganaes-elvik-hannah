@@ -139,7 +139,12 @@ Settled after the spec review (orchestrator, shown to the team at Checkpoint 1):
 - The overview header is a `<div>`, so the page keeps one banner landmark.
 - `overscroll-behavior-y: contain` is set on `document.documentElement` while the task list is mounted (review fix), not on the list.
 - `test-setup.ts` clears `localStorage` after each test; due-text tests freeze `Date` at 2026-11-10.
-- Chrome smoke on a throwaway DB `husly_smoke22` (backend :8001, Vite :5174, removed afterwards): Mari's overview, due states, tab bar, Settings. Not done by hand: 320px width (window would not resize), Kari's second Home, invite accept, leaving the last used Home (covered by tests).
+- Chrome smoke on a throwaway DB `husly_smoke22` (backend :8001, Vite :5174, removed afterwards): Mari's overview, due states, tab bar, Settings. Not done by hand then: 320px width, Kari's second Home, invite accept, leaving the last used Home (covered by tests).
+- Manual checks 2026-11-11 on a throwaway DB `husly_smoke` (backend :8001, Vite :5174, removed afterwards), all passed:
+  - 320px: the window would not shrink, so `/`, `/hjem/<id>`, `/innstillinger` and the Members page were loaded in a 320px iframe; no element extends past 320px.
+  - Kari creates a second Home («Karis leilighet», Household), sets up Tasks, gets «Bytt hjem», switches via «Dine hjem»; `/`, the wordmark and the «Oppgaver» tab all open the last used Home.
+  - Kari leaves the last used Home: lands on «Storgata 12» with «Du har forlatt «Karis leilighet».», shown once (gone after reload); «Bytt hjem» disappears.
+  - Kari (last used «Storgata 12») accepts an invite to «Mari og Jonas sitt hjem»: lands on `/hjem/<joined>`, which becomes last used (`/` opens it).
 
 ## Spec Change Log
 
