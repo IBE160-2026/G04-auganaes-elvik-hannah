@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-11-2026 20:56
+last_updated: 11-11-2026 21:27
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -58,7 +58,7 @@ development_status:
   2-1-task-setup-at-home-creation: done
   2-2-must-first-task-overview: done
   2-3-adjust-task-classification-frequency: done
-  2-4-self-checkoff-completion-with-shared-status-attribution: backlog
+  2-4-self-checkoff-completion-with-shared-status-attribution: in-progress
   2-5-auto-reschedule-on-completion: backlog
   2-6-add-and-remove-tasks: backlog
   epic-2-retrospective: optional
