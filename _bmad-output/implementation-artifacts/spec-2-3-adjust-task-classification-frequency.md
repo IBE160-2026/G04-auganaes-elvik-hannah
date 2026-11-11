@@ -95,6 +95,8 @@ context:
 - Tenant fixture `OLAS_TENANCY` added to `fakeApi.ts`; existing Tenant fixtures get `can_adjust_tasks: false`.
 - Git incident during implementation: a `git stash`/`pop` left a stale `.git/index.lock` and no index; the subagent rebuilt the index from HEAD (`git reset -q`), working tree untouched. Orchestrator verified: no lock, no stash, HEAD `9a2070a`, all 23 changed files present.
 
+- Chrome smoke 2026-11-11 on a throwaway DB `husly_smoke` (backend :8001, Vite :5174, removed afterwards), all passed: Mari «Lagre endringer» with no change → «Ingen endringer å lagre.»; «Rens sluket» Må→Bør and «Hver måned»→«Hver 2. måned» → «Lagret», due 13 Nov → 13 Dec, Overview lists it among Bør; backend stopped → «Noe gikk galt. Prøv igjen om litt.» at the form, draft kept, button «Prøv igjen»; backend restarted → «Prøv igjen» saves, error gone; Anders (Tenant) sees two read-only inputs (`readOnly`, `aria-readonly="true"`, described by «Satt av utleier», not disabled, dashed border, lock) and no save button; his `PATCH` via curl → 403, Task unchanged.
+
 ## Spec Change Log
 
 ## Review Triage Log
