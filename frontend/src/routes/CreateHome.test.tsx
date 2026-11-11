@@ -27,6 +27,19 @@ function submit() {
 afterEach(resetApi);
 
 describe('Create Home', () => {
+  it('lets a user without a Home sign out (Story 2.2, decision 7)', async () => {
+    const server = fakeApi({
+      ...signedInWith([], ['household', 'landlord']),
+      'POST /api/auth/logout': () => new Response(null, { status: 204 }),
+    });
+    renderAt('/nytt-hjem');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Logg ut' }));
+
+    expect(await screen.findByRole('heading', { name: 'Logg inn' })).toBeInTheDocument();
+    expect(server.calls('POST', '/api/auth/logout')).toHaveLength(1);
+  });
+
   it('creates a Household Home and goes on to Task Setup without bouncing back', async () => {
     let created = false;
     const server = fakeApi({

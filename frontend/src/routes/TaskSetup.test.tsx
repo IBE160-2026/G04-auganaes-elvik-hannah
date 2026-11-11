@@ -1,10 +1,13 @@
 // Story 2.1 (FR-4, FR-8, AD-6): Task Setup, one test per frontend row of the spec's matrix.
+// Story 2.2 (decision 12): success, a 409 and the guard go to this Home's /hjem/<id>, never "/".
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import type { Home } from '../api/homes';
+import { lastHomeKey } from '../api/lastHome';
 import { TASK_MESSAGES, type Task } from '../api/tasks';
 import {
+  OLA,
   OLAS_HOME,
   TASK_TYPES,
   fakeApi,
@@ -18,6 +21,8 @@ import {
 
 const NEW_HOME: Home = { ...OLAS_HOME, has_tasks: false };
 const PAGE = `/hjem/${NEW_HOME.id}/oppgaveoppsett`;
+const OVERVIEW = `/hjem/${NEW_HOME.id}`;
+const OTHER: Home = { ...OLAS_HOME, id: '00000000-0000-4000-8000-0000000000b1', name: 'Storgata 12', type: 'landlord', role: 'landlord' };
 const ALREADY_SET_UP = 'Oppgavene i dette hjemmet er allerede satt opp.';
 
 // What POST …/tasks/setup answers after the test's choices below.
@@ -29,6 +34,8 @@ const CREATED: Task[] = [
     classification: 'must',
     frequency_days: 42,
     due_on: '2026-12-21',
+    due_status: 'later',
+    days_until_due: 42,
   },
   {
     id: '00000000-0000-4000-8000-0000000000d2',
@@ -37,6 +44,8 @@ const CREATED: Task[] = [
     classification: 'must',
     frequency_days: 60,
     due_on: '2027-01-08',
+    due_status: 'later',
+    days_until_due: 60,
   },
 ];
 
@@ -81,12 +90,15 @@ describe('Task Setup', () => {
     expect(new Set(names).size).toBe(TASK_TYPES.task_types.length);
   });
 
-  it('saves one adjusted and one unticked task, lands on "/" and lists them without bouncing back', async () => {
+  it('saves one adjusted and one unticked task, lands on this Home and lists them without bouncing back', async () => {
     let saved = false;
+    // Another Home was used last: success still goes to this one, not to what "/" would pick.
+    localStorage.setItem(lastHomeKey(OLA.id), OTHER.id);
     const server = fakeApi({
-      ...signedInWith([NEW_HOME]),
+      ...signedInWith([OTHER, NEW_HOME], ['landlord']),
       // After the save neither refetch answers: only the cache writes can show the list.
-      'GET /api/homes': () => (saved ? new Promise<Response>(() => {}) : json(200, homesResponse([NEW_HOME]))),
+      'GET /api/homes': () =>
+        saved ? new Promise<Response>(() => {}) : json(200, homesResponse([OTHER, NEW_HOME], ['landlord'])),
       [`GET ${tasksPath(NEW_HOME)}`]: () => new Promise<Response>(() => {}),
       [`POST ${setupPath(NEW_HOME)}`]: () => {
         saved = true;
@@ -106,7 +118,7 @@ describe('Task Setup', () => {
     const section = await screen.findByRole('region', { name: 'Oppgaver' });
     expect(within(section).getByText('Vask stekeovnen')).toBeInTheDocument();
     expect(within(section).queryByText('Rens sluket')).not.toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(window.location.pathname).toBe(OVERVIEW);
     // replace: Back does not return to the setup form.
     expect(window.history.length).toBe(entries);
 
@@ -148,7 +160,7 @@ describe('Task Setup', () => {
     expect(server.calls('POST', setupPath(NEW_HOME))).toHaveLength(0);
   });
 
-  it('after a 409, waits for the server and goes to "/" without a bounce', async () => {
+  it('after a 409, waits for the server and goes to this Home without a bounce', async () => {
     let conflicted = false;
     const server = fakeApi({
       ...signedInWith([NEW_HOME]),
@@ -165,7 +177,7 @@ describe('Task Setup', () => {
     await save();
 
     expect(await screen.findByRole('region', { name: 'Oppgaver' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(window.location.pathname).toBe(OVERVIEW);
     // The form, and its message, are gone with the redirect.
     expect(screen.queryByText(ALREADY_SET_UP)).not.toBeInTheDocument();
     expect(server.calls('POST', setupPath(NEW_HOME))).toHaveLength(1);
@@ -231,7 +243,7 @@ describe('Task Setup', () => {
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Prøv igjen' }));
     expect(await screen.findByRole('region', { name: 'Oppgaver' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(window.location.pathname).toBe(OVERVIEW);
   });
 
   it('shows a network failure inline too', async () => {
@@ -265,22 +277,22 @@ describe('Task Setup', () => {
   it.each([
     ['a Tenant', { ...NEW_HOME, role: 'tenant', can_invite: false, can_set_up_tasks: false } as Home],
     ['a Home already set up', OLAS_HOME],
-  ])('sends %s to "/"', async (_case, home) => {
+  ])('sends %s to its Task Overview', async (_case, home) => {
     const server = fakeApi(signedInWith([home]));
     renderAt(PAGE);
 
-    expect(await screen.findByRole('region', { name: 'Oppgaver' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(await screen.findByRole('heading', { level: 1, name: home.name })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(OVERVIEW);
     expect(server.calls('GET', '/api/task-types')).toHaveLength(0);
   });
 
-  it('sends a Home that is not among the user\'s to "/" without fetching anything for it', async () => {
+  it('sends a Home that is not among the user\'s to "/" (then the user\'s Home) without fetching anything for it', async () => {
     const server = fakeApi(signedInWith([OLAS_HOME]));
     const foreign = '00000000-0000-4000-8000-0000000000ff';
     renderAt(`/hjem/${foreign}/oppgaveoppsett`);
 
     expect(await screen.findByRole('heading', { name: OLAS_HOME.name })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
     expect(server.requests.some((r) => r.url.includes(foreign))).toBe(false);
   });
 

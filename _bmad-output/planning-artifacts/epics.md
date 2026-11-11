@@ -727,6 +727,8 @@ So that I always know what's non-negotiable before what's optional.
 **When** the checkbox and the row are both present
 **Then** they are two independently focusable tap targets in that order in the tab sequence (checkbox first), with the row tap navigating to Task Detail
 
+*Moved to Story 2.4 on 2026-11-10 (Story 2.2 spec, decision 6): 2.2 has no checkbox; the row alone links to Task Detail.*
+
 **Given** a task's Must/Should badge
 **When** rendered
 **Then** it always carries the text label ("Must"/"Should") inline with the title — never color alone
@@ -751,11 +753,15 @@ So that I always know what's non-negotiable before what's optional.
 **When** any signed-in page renders
 **Then** a tab bar shows Task Overview and Settings/Profile, plus Portfolio for a Landlord who owns two or more Homes (EXPERIENCE.md)
 
+*The Portfolio part moved to Story 6.1 on 2026-11-10 (Story 2.2 spec, decision 5); Story 2.2 builds Task Overview and Settings/Profile.*
+
 *Added 2026-11-09 (Sprint Change Proposal):*
 
 **Given** a user with more than one Home (for example a Landlord with their own Household Home, Story 1.9)
 **When** they use the app
 **Then** each Home has its own Task Overview at `/hjem/<id>`, a «Dine hjem» list lets them switch between their Homes, and `/` opens the most recently used Home. The Portfolio tab (Landlord with ≥2 Landlord Homes) is unchanged.
+
+*The Portfolio tab moved to Story 6.1 on 2026-11-10 (Story 2.2 spec, decision 5).*
 
 *Added 2026-11-10 (team decision, Eirik, during the Story 1.9 walkthrough):*
 
@@ -764,6 +770,8 @@ So that I always know what's non-negotiable before what's optional.
 **Then** it is a link to `/`: a signed-in user lands on their Home (the same Home `/` opens, see the AC above), and a signed-out user is sent to sign-in by the existing route guard. It is a real link (keyboard-focusable, visible focus ring), not a click handler on text.
 
 > **Note 2026-11-10:** Today «Husly» in `AppShell` is plain text, so pages such as Create Home, Members & Invite and Task Setup have no quick way back. Placed in Story 2.2 rather than a separate fix because 2.2 decides what `/` opens for a user with several Homes, which is where the link should go.
+
+> **Note 2026-11-10 (team decisions, Story 2.2 spec, `spec-2-2-must-first-task-overview.md`):** The UI is Norwegian-only, so the badges read «Må»/«Bør» rather than "Must"/"Should". «Snart forfall» means due within 3 days (today up to today + 3); with 7, a weekly Task would always be due soon. The due state is computed on the server (`due_status`, `days_until_due`) so list and later push agree. The list always shows every Task, Must first; when nothing is overdue or due soon, the empty-state text shows above the list. The most recently used Home is kept per user on the device (`localStorage`), not on the server. Two ACs above moved: the checkbox/row focus-order AC moves to Story 2.4 (2.2 has no checkbox; the row opens a minimal read-only Task Detail that Story 2.3 extends), and the Portfolio tab moves to Story 6.1, which builds the Portfolio page. Settings/Profile (`/innstillinger`) holds «Dine hjem» and «Logg ut», and Create Home got «Logg ut» for a user without a Home.
 
 > **Note 2026-11-07 (team decision, Story 1.3):** The tab bar was deferred from Stories 1.1 and 1.2 to 1.3, and has now been split out of 1.3 too, since after 1.3 only a placeholder Home page and sign-out exist. It belongs here because Task Overview is its first real content. Until then, Story 1.3 gives Landlords a plain link to create another Home.
 
@@ -846,6 +854,12 @@ So that my housemates immediately see it's done without me needing to tell them.
 **Given** a task-card checkbox
 **When** a screen-reader user focuses it
 **Then** it announces an accessible label describing the action and task (for example, "Merk 'Vask bad' som fullført") (UX-DR42)
+
+*Moved from Story 2.2 on 2026-11-10 (team decision 6 in the Story 2.2 spec; 2.2 has no checkbox):*
+
+**Given** a task card
+**When** the checkbox and the row are both present
+**Then** they are two independently focusable tap targets in that order in the tab sequence (checkbox first), with the row tap navigating to Task Detail
 
 *Added 2026-11-08 (Sprint Change Proposal, AD-16):*
 
@@ -1336,6 +1350,12 @@ So that I can triage without visiting each one individually.
 **Given** a Landlord who owns exactly one Home
 **When** they check for this surface
 **Then** the Portfolio Dashboard tab/entry does not appear — it is shown only for Landlords with ≥2 Homes
+
+*Moved from Story 2.2 on 2026-11-10 (team decision 5 in the Story 2.2 spec; the tab has nothing to open before this story):*
+
+**Given** a Landlord with two or more Landlord Homes
+**When** any signed-in page renders
+**Then** the tab bar from Story 2.2 also shows a Portfolio tab that opens this dashboard
 
 **Given** the Portfolio Dashboard
 **When** the Landlord pulls down to refresh

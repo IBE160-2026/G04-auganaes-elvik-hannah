@@ -95,6 +95,15 @@ export function useHomes() {
   });
 }
 
+/**
+ * Story 2.2: the Homes list as the current page loaded it, for the tab bar. Never fetches by
+ * itself: an observer that fetches would mount before the page's own and load the list twice.
+ */
+export function useLoadedHomes() {
+  const session = useSession();
+  return useQuery({ queryKey: homesKey(session?.user.id), queryFn: fetchHomes, enabled: false });
+}
+
 // Story 1.5: keyed on the Home and the user. Refetched on mount and window focus, no polling.
 export function membersKey(homeId: string, userId: string | undefined) {
   return ['members', homeId, userId] as const;
@@ -136,9 +145,10 @@ export function useTasks(homeId: string) {
 
 /**
  * Story 2.1: on success the answer goes into the tasks cache and the Home is marked has_tasks
- * before the caller navigates, so "/" shows the list at once and never sends the user back to
- * setup. A 409 (set up meanwhile, e.g. in another tab) waits for the server's Homes and tasks;
- * the setup page's guard then routes to "/" (as useLeaveHome). A 403 is the global handler's.
+ * before the caller navigates, so the Home's overview (/hjem/<id>, Story 2.2) shows the list at
+ * once and never sends the user back to setup. A 409 (set up meanwhile, e.g. in another tab)
+ * waits for the server's Homes and tasks; the setup page's guard then routes to /hjem/<id>.
+ * A 403 is the global handler's.
  */
 export function useSetUpTasks(homeId: string) {
   const queryClient = useQueryClient();
@@ -204,8 +214,8 @@ export function useCreateInvite(homeId: string) {
 }
 
 /**
- * Like useCreateHome: the joined Home goes first into the cache before the caller navigates,
- * so "/" shows it at once (the server also orders it first) and never bounces.
+ * Like useCreateHome: the joined Home goes first into the cache before the caller navigates
+ * to /hjem/<id> (Story 2.2), so the overview finds it at once and never bounces to "/".
  */
 export function useAcceptInvite(token: string) {
   const queryClient = useQueryClient();

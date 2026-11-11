@@ -39,7 +39,7 @@
 - [ ] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Tiltak 5: sjekke Neon-konsollet for preview-branchene til PR #11–#22
 - [x] 2026-11-08 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Bygge Story 1.8 (forlat hjem / utleier fjerner leietaker) med `bmad-build` før Story 2.1 (bygget 2026-11-09, PR #26 venter på walkthrough og merge)
 - [x] 2026-11-09 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Fullføre `bmad-walkthrough` og merge PR #26 (Story 1.8), deretter statuscommit (1-8 og Epic 1 til done) (løst 2026-11-09: merget `5cef61b`, statuscommit `f37111f`)
-- [ ] 2026-11-09 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — «Opprett hjem» mangler utloggingsknapp (funnet i røyktest for 1.8)
+- [x] 2026-11-09 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — «Opprett hjem» mangler utloggingsknapp (funnet i røyktest for 1.8) (løst 2026-11-10, PR #38)
 - [x] 2026-11-09 [story-1-5-medlemsliste](990-2026-11-08-12-58-17-story-1-5-medlemsliste.md) — Story 2.1 med `bmad-build`, og ta hensyn til den globale 403-håndteringen i `createQueryClient` (løst 2026-11-09: bygget, PR #29, se [story-2-1-oppgaveoppsett](989-2026-11-09-20-51-00-story-2-1-oppgaveoppsett.md))
 - [x] 2026-11-09 [story-2-1-oppgaveoppsett](989-2026-11-09-20-51-00-story-2-1-oppgaveoppsett.md) — `bmad-walkthrough` av PR #29 (Story 2.1) og merge, deretter 2-1 til `done`, CLAUDE.md-status og KI-logg (løst 2026-11-09: merget `c08c1c2`, statuscommit `3dd683f`)
 - [x] 2026-11-09 [story-2-1-oppgaveoppsett](989-2026-11-09-20-51-00-story-2-1-oppgaveoppsett.md) — Én `bmad-correct-course` for issue #30 (utleier kan ikke opprette eget husstandshjem) og #31 (legge til/fjerne oppgaver selv, foreslått Story 2.6) før Story 2.2 (løst 2026-11-09: Sprint Change Proposal 2026-11-09, PR #33)
@@ -48,9 +48,13 @@
 - [ ] 2026-11-09 [story-2-1-oppgaveoppsett](989-2026-11-09-20-51-00-story-2-1-oppgaveoppsett.md) — Lokal database har testhjemmet «Røyktest 2.1» (Kari) fra røyktesten; fjern det selv ved behov
 - [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Merge PR #33 (correct-course for #30 og #31) (løst 2026-11-09: merget `48ce2fe`)
 - [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 1.9 (én regel for å opprette hjem) med `bmad-build`, issue #30, før Story 2.2 (løst 2026-11-10)
-- [ ] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.2 må ta med ny AC om bytte mellom hjem («Dine hjem», `/hjem/<id>`)
+- [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.2 må ta med ny AC om bytte mellom hjem («Dine hjem», `/hjem/<id>`) (løst 2026-11-10, PR #38)
 - [ ] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.6 (legge til og fjerne oppgaver, issue #31) etter Story 2.5
-- [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Story 2.2 må ta med AC-et om at Husly-logoen lenker til `/`
+- [x] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Story 2.2 må ta med AC-et om at Husly-logoen lenker til `/` (løst 2026-11-10, PR #38)
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Hytte / flere husstandshjem per bruker (issue #34): mulig senere versjon, planlegges med correct-course
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Seed: `_seed_household` bør bruke `join_blocker` for Jonas (deferred-work)
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Sjekke i Neon at preview-branchen for PR #35 er slettet
+- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: sjekke CI på Linux og Windows
+- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: manuelle tester (320 px, Kari oppretter hjem nummer to og bytter, godta invitasjon med et hjem, forlate sist brukte hjem)
+- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — PR #38: preview på Vercel (Eirik) og bmad-walkthrough før merge
+- [ ] 2026-11-10 [story-2-2-oppgaveoversikt](986-2026-11-10-19-13-17-story-2-2-oppgaveoversikt.md) — Etter merge av PR #38: 2-2 → done, CLAUDE.md (neste er Story 2.3), rad i KI-loggens README

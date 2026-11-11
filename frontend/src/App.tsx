@@ -11,7 +11,10 @@ import { InvitePage } from './routes/InvitePage';
 import { MembersPage } from './routes/MembersPage';
 import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
+import { Settings } from './routes/Settings';
 import { SignIn } from './routes/SignIn';
+import { TaskDetail } from './routes/TaskDetail';
+import { TaskOverview } from './routes/TaskOverview';
 import { TaskSetup } from './routes/TaskSetup';
 
 /**
@@ -61,6 +64,31 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <MembersPage />
+          </RequireAuth>
+        }
+      />
+      {/* Story 2.2: one Task Overview per Home, a read-only Task Detail, and Settings/Profile. */}
+      <Route
+        path="/hjem/:homeId"
+        element={
+          <RequireAuth>
+            <TaskOverview />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/hjem/:homeId/oppgaver/:taskId"
+        element={
+          <RequireAuth>
+            <TaskDetail />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/innstillinger"
+        element={
+          <RequireAuth>
+            <Settings />
           </RequireAuth>
         }
       />

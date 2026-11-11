@@ -8,7 +8,7 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.clock import utc_now
 from app.domain import homes, tasks
@@ -90,8 +90,13 @@ def test_accept_as_is_is_201_with_the_same_body_as_get(client: TestClient, engin
             "classification",
             "frequency_days",
             "due_on",
+            "due_status",
+            "days_until_due",
         }
         assert date.fromisoformat(task["due_on"]) == today + timedelta(days=task["frequency_days"])
+        assert task["days_until_due"] == task["frequency_days"]
+        due_soon = task["frequency_days"] <= tasks.DUE_SOON_DAYS
+        assert task["due_status"] == ("due_soon" if due_soon else "later")
     classes = [t["classification"] for t in body["tasks"]]
     assert classes == sorted(classes)  # "must" < "should": Must first
 
@@ -233,6 +238,33 @@ def test_any_member_reads_the_tasks_a_landlord_set_up(client: TestClient) -> Non
     assert response.status_code == 200
     assert response.json() == list_tasks(client, kari, home_id).json()
     assert len(response.json()["tasks"]) == 8
+
+
+@pytest.mark.parametrize(
+    ("offset", "status"),
+    [
+        (-1, "overdue"),
+        (0, "due_soon"),
+        (tasks.DUE_SOON_DAYS, "due_soon"),
+        (tasks.DUE_SOON_DAYS + 1, "later"),
+    ],
+)
+def test_get_says_each_tasks_due_status_and_day_count_from_the_utc_date(
+    client: TestClient, engine: Engine, offset: int, status: str
+) -> None:
+    auth = sign_up(client)
+    home_id = create_home(client, auth)
+    set_up(client, auth, home_id, [ALL[0]])
+    today = utc_now().date()
+    with Session(engine) as session:
+        task = session.exec(select(Task)).one()
+        session.add(TaskInstance(task_id=task.id, due_on=today + timedelta(days=offset)))
+        session.commit()
+
+    [task_out] = list_tasks(client, auth, home_id).json()["tasks"]
+
+    assert (task_out["due_status"], task_out["days_until_due"]) == (status, offset)
+    assert task_out["due_on"] == (today + timedelta(days=offset)).isoformat()
 
 
 def test_a_home_without_tasks_lists_none(client: TestClient) -> None:

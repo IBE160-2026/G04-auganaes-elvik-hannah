@@ -215,6 +215,44 @@ def test_next_due_is_the_earliest_instance(session: Session) -> None:
     assert listed.due_on == TODAY + timedelta(days=14)
 
 
+@pytest.mark.parametrize(
+    ("offset", "expected"),
+    [
+        (-30, "overdue"),
+        (-1, "overdue"),
+        (0, "due_soon"),
+        (1, "due_soon"),
+        (tasks.DUE_SOON_DAYS, "due_soon"),
+        (tasks.DUE_SOON_DAYS + 1, "later"),
+        (365, "later"),
+    ],
+)
+def test_due_status_boundaries(offset: int, expected: str) -> None:
+    assert tasks.due_status(TODAY + timedelta(days=offset), TODAY) == expected
+
+
+def test_due_soon_is_three_days_by_team_decision() -> None:
+    # Story 2.2, decision 1: with 7, a weekly Task would always be due soon.
+    assert tasks.DUE_SOON_DAYS == 3
+
+
+def test_a_must_due_much_later_is_listed_above_an_overdue_should(session: Session) -> None:
+    member = household(session)
+    # Set up 8 days ago: the Should (7 days) is a day overdue, the Must (30 days) due in 22.
+    tasks.set_up_tasks(
+        session,
+        member,
+        [tasks.TaskChoice("gulv", "should", 7), tasks.TaskChoice("rens-sluket", "must", 30)],
+        today=TODAY - timedelta(days=8),
+    )
+
+    listed = tasks.tasks_of(session, member.home_id)
+    assert [(r.task.classification, tasks.due_status(r.due_on, TODAY)) for r in listed] == [
+        ("must", "later"),
+        ("should", "overdue"),
+    ]
+
+
 def test_tasks_of_another_home_are_not_listed(session: Session) -> None:
     mine = household(session)
     other = household(session)

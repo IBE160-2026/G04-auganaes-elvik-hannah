@@ -9,7 +9,7 @@ is the one statement of who may do it; routes and the frontend read it, never th
 import uuid
 from collections.abc import Iterable, Sequence
 from datetime import date, timedelta
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
@@ -30,6 +30,21 @@ UNKNOWN_TASK_TYPE = "Ukjent oppgave: «{key}»."
 DUPLICATE_TASK_TYPE = "Oppgaven «{key}» er valgt mer enn én gang."
 BAD_CLASSIFICATION = "En oppgave må være «Må» eller «Bør»."
 BAD_FREQUENCY = "Velg et av intervallene i lista."
+
+# Decision (Story 2.2, 1): a Task is due soon from today up to and including today + 3 days.
+# With 7, a weekly Task would always be due soon.
+DUE_SOON_DAYS = 3
+
+DueStatus = Literal["overdue", "due_soon", "later"]
+
+
+def due_status(due_on: date, today: date) -> DueStatus:
+    """The one rule for a Task's due state (FR-6, UX-DR20); `today` is the UTC date."""
+    if due_on < today:
+        return "overdue"
+    if due_on <= today + timedelta(days=DUE_SOON_DAYS):
+        return "due_soon"
+    return "later"
 
 
 def can_set_up_tasks(role: str) -> bool:

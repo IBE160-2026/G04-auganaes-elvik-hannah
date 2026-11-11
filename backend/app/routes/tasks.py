@@ -12,6 +12,7 @@ from datetime import date
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.clock import utc_now
 from app.domain import task_types, tasks
 from app.domain.task_types import Classification, Frequency
 from app.permissions.current_user import CurrentUser
@@ -58,6 +59,11 @@ class TaskOut(BaseModel):
     frequency_days: Frequency
     # The next instance's date (UTC calendar date), YYYY-MM-DD.
     due_on: date
+    # From due_on and the server's UTC today (domain/tasks.due_status); the frontend renders it.
+    due_status: tasks.DueStatus
+    # due_on minus the same UTC today; negative when overdue. The due text reads this, never the
+    # browser's clock, so the words and due_status always agree.
+    days_until_due: int
 
 
 class TasksOut(BaseModel):
@@ -66,6 +72,7 @@ class TasksOut(BaseModel):
 
 
 def tasks_out(rows: list[tasks.TaskWithDue]) -> TasksOut:
+    today = utc_now().date()
     return TasksOut(
         tasks=[
             TaskOut(
@@ -75,6 +82,8 @@ def tasks_out(rows: list[tasks.TaskWithDue]) -> TasksOut:
                 classification=row.task.classification,
                 frequency_days=row.task.frequency_days,
                 due_on=row.due_on,
+                due_status=tasks.due_status(row.due_on, today),
+                days_until_due=(row.due_on - today).days,
             )
             for row in rows
         ]

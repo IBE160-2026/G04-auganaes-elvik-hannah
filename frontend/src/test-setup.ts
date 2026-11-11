@@ -27,4 +27,6 @@ globalThis.Request = class extends NodeRequest {
 
 afterEach(() => {
   cleanup();
+  // Story 2.2: the most recently used Home is kept in localStorage; no test inherits another's.
+  localStorage.clear();
 });

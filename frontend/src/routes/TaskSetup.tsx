@@ -3,7 +3,9 @@
 // all in one request. Who may do this is the server's can_set_up_tasks; whether the Home already
 // has Tasks is its has_tasks. Decision 8: never a dead end, so «Medlemmer og invitasjon» and
 // «Logg ut» are at the bottom. A 403 shows no inline error: the global handler refetches and the
-// guards route; a 409 shows the server's reason and refetches, and the guard sends the user to "/".
+// guards route; a 409 shows the server's reason and refetches, and the guard sends the user on.
+// Story 2.2 (decision 12): success and the has_tasks guard both go to this Home's /hjem/<id>,
+// never to "/", which would open the most recently used Home instead.
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
@@ -33,8 +35,10 @@ export function TaskSetup() {
   // A failed background refetch keeps the cached data; only a load with nothing to show is an error.
   if (!homes.data) return <HomesLoadError onRetry={() => void homes.refetch()} />;
   const home = homes.data.homes.find((h) => h.id === homeId);
-  // Not theirs (or a typo), not theirs to set up (a Tenant), or set up already: to "/".
-  if (!home || !home.can_set_up_tasks || home.has_tasks) return <Navigate to="/" replace />;
+  // Not theirs (or a typo): to "/". Not theirs to set up (a Tenant), or set up already: to the
+  // Home's own Task Overview.
+  if (!home) return <Navigate to="/" replace />;
+  if (!home.can_set_up_tasks || home.has_tasks) return <Navigate to={`/hjem/${home.id}`} replace />;
 
   return <SetupPage key={home.id} home={home} />;
 }
@@ -123,7 +127,7 @@ function SetupForm({ home, catalog }: { home: Home; catalog: TaskTypes }) {
       return;
     }
     setNoneChosen(false);
-    setUp.mutate(chosen, { onSuccess: () => navigate('/', { replace: true }) });
+    setUp.mutate(chosen, { onSuccess: () => navigate(`/hjem/${home.id}`, { replace: true }) });
   }
 
   const error = submitError(setUp.error);

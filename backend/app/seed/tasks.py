@@ -23,8 +23,10 @@ from app.seed.homes import (
     _user,
 )
 
-# (creator, Home name, set up this many days ago). 28 and 40 days give both overdue tasks and
-# tasks due within a week (the 14- and 30-day ones; see tests/test_seed.py).
+# (creator, Home name, set up this many days ago). 28 and 40 days give each Home overdue tasks and,
+# on the seed day, one task due soon by the 3-day rule (domain/tasks.DUE_SOON_DAYS): the 30-day
+# one in the Household Home and the 42-day one in the Landlord Home, both due in 2 days. See
+# tests/test_seed.py.
 EXAMPLE_SETUPS: tuple[tuple[str, str, int], ...] = (
     (CREATOR_EMAIL, EXAMPLE_HOME_NAME, 28),
     (LANDLORD_EMAIL, LANDLORD_HOME_NAME, 40),

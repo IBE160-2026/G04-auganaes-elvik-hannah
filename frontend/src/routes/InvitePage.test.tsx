@@ -1,9 +1,12 @@
 // Story 1.4 (FR-2, UJ-1, UJ-2): every state of the invite page, and registering or signing in
 // through a link without losing it.
-import { act, render, screen, waitFor } from '@testing-library/react';
+// Story 2.2 (decision 12): joining lands on the joined Home's /hjem/<id>, which becomes last used.
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
+import type { Home } from '../api/homes';
 import type { InvitePreview } from '../api/invites';
+import { lastHomeKey } from '../api/lastHome';
 import { OLA, OLAS_HOME, authResponse, fakeApi, homesResponse, json, resetApi, signedInWith } from '../test-utils/fakeApi';
 
 const TOKEN = 'tok_ABC-123';
@@ -140,7 +143,7 @@ describe('Invite page, signed out', () => {
     expect(window.location.pathname).toBe(`/invitasjon/${TOKEN}`);
   });
 
-  it('ignores a malformed invitasjon value: links drop it and sign-in goes to "/"', async () => {
+  it('ignores a malformed invitasjon value: links drop it and sign-in goes to "/" (the Home)', async () => {
     fakeApi({
       ...signedOut,
       'POST /api/auth/login': () => json(200, authResponse('a1')),
@@ -153,7 +156,7 @@ describe('Invite page, signed out', () => {
     await fillSignIn();
 
     expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
   });
 
   it('falls back to the signed-out view when the session expired and refresh fails', async () => {
@@ -198,10 +201,34 @@ describe('Invite page, signed in', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Bli med i «Kollektivet»' }));
 
     expect(await screen.findByRole('heading', { name: 'Kollektivet' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
-    // Story 1.9: the placeholder keeps the cached allowed_types until the (frozen) refetch.
-    expect(screen.getByRole('link', { name: 'Opprett nytt hjem' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
     expect(server.calls('POST', ACCEPT_PATH)).toHaveLength(1);
+    // Story 1.9: the placeholder keeps the cached allowed_types until the (frozen) refetch.
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Hovedmeny' })).getByRole('link', { name: 'Innstillinger' }));
+    expect(await screen.findByRole('link', { name: 'Opprett nytt hjem' })).toBeInTheDocument();
+  });
+
+  it('takes a Landlord who last used her rental to the joined Household Home, now the last used', async () => {
+    const rental: Home = { ...OLAS_HOME, id: '00000000-0000-4000-8000-0000000000b1', name: 'Storgata 12', type: 'landlord', role: 'landlord', can_leave: false };
+    localStorage.setItem(lastHomeKey(OLA.id), rental.id);
+    let accepted = false;
+    fakeApi({
+      ...signedInWith([rental, OLAS_HOME], ['landlord']),
+      [`GET ${PREVIEW_PATH}`]: () => json(200, { ...VALID, viewer: 'can_join' }),
+      'GET /api/homes': () =>
+        json(200, accepted ? homesResponse([OLAS_HOME, rental], ['landlord'], OLAS_HOME.id) : homesResponse([rental], ['household', 'landlord'])),
+      [`POST ${ACCEPT_PATH}`]: () => {
+        accepted = true;
+        return json(200, OLAS_HOME);
+      },
+    });
+    renderAt(`/invitasjon/${TOKEN}`);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Bli med i «Kollektivet»' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Kollektivet' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/hjem/${OLAS_HOME.id}`);
+    await waitFor(() => expect(localStorage.getItem(lastHomeKey(OLA.id))).toBe(OLAS_HOME.id));
   });
 
   it('tells a Member of the Home they are already in, with a link home', async () => {

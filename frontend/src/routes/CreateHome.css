@@ -71,3 +71,18 @@
   font-size: var(--font-size-meta);
   line-height: var(--line-height-meta);
 }
+
+/* Story 2.2: «Logg ut», outlined so «Opprett hjem» stays the one dominant action. */
+.create-home__secondary {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
