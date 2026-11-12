@@ -1307,6 +1307,24 @@ So that I can get unstuck right when I need it.
 **When** it is built in this story
 **Then** it sits behind a provider interface with a Gemini provider and a mock provider, the real Gemini provider is used only when `GEMINI_API_KEY` is set, and the automated tests always use the mock provider (AD-4, AD-15)
 
+*Built 2026-11-12 (Story 5.1 spec, issue #50):*
+
+**Given** a Member taps "?" on a task, whatever their Role
+**When** the popover opens
+**Then** it asks at once with a default question about the task, and a field lets the Member ask their own question of at most 300 characters
+
+**Given** the mock provider answered
+**When** the answer renders
+**Then** the popover says it is a demo answer, written in advance, that does not respond to the question typed
+
+**Given** a call fails or times out
+**When** it was made
+**Then** it still counts toward the 20 per day, a refused call does not, and the day is a UTC day
+
+**Given** the limit is reached
+**When** the Member taps "?"
+**Then** the message says when the count restarts, shown in the Member's local time
+
 ### Story 5.2: Escalate to Full AI Chat
 
 **Stage:** Trinn 2

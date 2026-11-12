@@ -378,6 +378,9 @@ describe('Adjust a Task (Story 2.3)', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Lagre endringer' })).not.toBeInTheDocument();
 
+    // Story 5.1: «Spør KI» sits under the title, before the fields.
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: `Spør KI om «${MUST.name}»` })).toHaveFocus();
     await userEvent.tab();
     expect(classification).toHaveFocus();
     await userEvent.tab();

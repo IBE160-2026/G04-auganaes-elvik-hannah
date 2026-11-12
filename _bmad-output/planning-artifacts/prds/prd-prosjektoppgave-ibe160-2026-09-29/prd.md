@@ -16,6 +16,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-08 | FR-23 added (leave a Home, remove Tenants); FR-3 reads "zero or more Tenants" | `sprint-change-proposal-2026-11-08.md` |
 | 2026-11-09 | One rule for creating Homes (FR-1, Q3); FR-24 added (add and archive Tasks); FR-8 fixed intervals | `sprint-change-proposal-2026-11-09.md` |
 | 2026-11-12 | Teacher's PRD feedback: Trinn 2 cut line decided (Q1), FR-11 rule (Q4), AI failure, limit and data (FR-14/15), FR-2 and FR-3 rules, FR-16 without "unit type", clean requirement text, account privacy, FR-1 to FR-24 count, SM-9 split, SM-15 | `sprint-change-proposal-2026-11-12.md` |
+| 2026-11-12 | Story 5.1 built: FR-14 states what counts toward the 20 AI calls, the UTC day and reset time, the question rules and who may use "?"; FR-22 mentions demo marking; account data lists the daily call count | `spec-5-1-contextual-quick-answer.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -260,7 +261,8 @@ Any task offers a "?" affordance that returns an immediate, task-specific answer
 - With no AI API key configured, the quick-answer still returns an answer in the same structure from mock data, so the feature can be run and tested without external accounts (FR-22).
 - If the AI call fails or takes longer than 10 seconds, "?" shows an error message (status "error") and can be retried; the task view and completion keep working.
 - Only the task's name, its catalog type and the user's own question are sent to the AI service — no names, e-mail addresses or Home names. The UI says the question goes to an external AI service.
-- A user can make at most 20 AI calls per day (quick answers and chat together). Beyond that, "?" says so plainly until the next day. The limit also applies to the mock answers, so it can be tested offline.
+- A user can make at most 20 AI calls per day (quick answers and chat together). The day is a UTC day. Every call that reaches the AI provider counts, also when it fails or times out, so a retry after an error uses up one of the 20; a refused call does not count. Beyond the limit, "?" says so plainly and tells when the count restarts (00:00 UTC, shown in the user's local time). The limit also applies to the mock answers, so it can be tested offline.
+- Tapping "?" asks at once with a default question about the task; the user can also type their own question of at most 300 characters. Every Role, including Tenants, can use "?".
 
 #### FR-15: Escalate to full AI chat
 From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions. Realizes UJ-1.
@@ -351,7 +353,7 @@ The application runs on a developer's or reviewer's own machine using a local Do
 
 **Consequences (testable):**
 - Following the README, `docker compose up` starts a local PostgreSQL database, and one further command applies the migrations and loads seed data.
-- With no AI key configured the AI assistant uses mock answers in the same `{status, answer, disclaimer}` structure; with no push keys configured (Trinn 2) push uses a mock sender.
+- With no AI key configured the AI assistant uses mock answers in the same `{status, answer, disclaimer}` structure and the app marks them as demo answers; with no push keys configured (Trinn 2) push uses a mock sender.
 - `.env.example` lists every environment variable, with no secrets, and the README describes setup from the first story onward.
 - The automated test suite runs without network access and without any key.
 
@@ -439,7 +441,7 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 - Photo Evidence (FR-18/19) is restricted by design to task types where completion is objectively visible without capturing sensitive or private content (for example, a cleaned drain, not a general room photo). This is a product-level scoping rule, not merely a UX suggestion. It is enforced by a curated, system-controlled allowlist: the flag `photo_evidence_eligible` in the task catalog, which no user can change. Custom Tasks can never require Photo Evidence (FR-24).
 - Photo retention: each photo is automatically replaced the next time the same task is completed — the system never accumulates a photo history for a task. Access is restricted to the Home's Landlord only.
 - Tenant data (task history, Photo Evidence, completion records) is visible to that Tenant's Landlord by design (this is the product's core value proposition for the Landlord segment) but must not be visible to other Tenants or other Landlords outside the relevant Home.
-- Account data: an account stores an e-mail address, a display name and a password hash. Other Members of a Home see only the display name, never the e-mail address. The only user-related data sent to an external service is the minimal AI call described in FR-14. Account deletion is described in §5.
+- Account data: an account stores an e-mail address, a display name and a password hash. Other Members of a Home see only the display name, never the e-mail address. The only user-related data sent to an external service is the minimal AI call described in FR-14. The app also stores, per user and day, how many AI calls were made (a number only, never the questions or answers). Account deletion is described in §5.
 
 ## 10. Cross-Cutting NFRs
 

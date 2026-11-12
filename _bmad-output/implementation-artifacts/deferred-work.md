@@ -78,3 +78,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-6-add-and-remove-tasks.md`
   summary: Give a Tenant a neutral text when every Task of the Home is archived («Ingen oppgaver i hjemmet ennå.») instead of «Utleier har ikke satt opp oppgaver ennå.», which is only true before setup.
   evidence: Code review of Story 2.6 (Blind Hunter, Edge Case Hunter). The wording follows EXPERIENCE.md's «No active Tasks» row (decided 2026-11-09), so changing it is a UX decision, not a patch; `TASK_MESSAGES.tenantWaiting` is used for both states in `TaskOverview.tsx`.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-1-contextual-quick-answer.md`
+  summary: Check «?» with a screen reader: the live region sits in a `hidden` panel, so the skeleton text at the moment of opening may not be announced, and the failure text has `role="alert"` inside the polite region.
+  evidence: Code review of Story 5.1 (Blind Hunter). Jest-dom cannot show what a screen reader says. Fix if it matters: keep a visually hidden status element outside the panel and drop `role="alert"` there.

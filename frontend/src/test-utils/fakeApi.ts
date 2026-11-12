@@ -6,6 +6,7 @@
 // Story 2.3: Homes carry can_adjust_tasks; OLAS_TENANCY is a Tenant's Home; adjustHandler
 // answers PATCH /api/homes/<id>/tasks/<taskId>.
 // Story 2.4: tasks carry instance_id and completion; completeHandler answers the completion POST.
+// Story 5.1: answerHandler answers the «?» POST (answer, error, limit, failure).
 // Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
@@ -151,6 +152,42 @@ export function adjustHandler(
     if (status === 404) return json(404, { detail: 'Fant ikke oppgaven.' });
     if (status === 500) return json(500, { detail: 'Internal Server Error' });
     return json(200, { ...task, ...body });
+  };
+}
+
+// Story 5.1: the «?» POST for a Task.
+export const answerPath = (home: Pick<Home, 'id'>, task: Pick<Task, 'id'>) => `${taskPath(home, task)}/answer`;
+
+export const DISCLAIMER = 'KI kan ta feil. Vær forsiktig, særlig med kjemikalier og rengjøringsmidler.';
+
+type AnswerOutcome = 'ok' | 'demo' | 'low_confidence' | 'error' | 'limit' | 'network' | 'slow' | 403 | 404 | 500;
+
+/**
+ * Story 5.1: answers the «?» POST as the server would, and records each body in `bodies`.
+ * `outcomes` are used in order, the last one repeating, so a retry can succeed after a failure.
+ * 'slow' never answers.
+ */
+export function answerHandler(outcomes: AnswerOutcome[] = ['ok'], bodies: unknown[] = []): Handler {
+  let calls = 0;
+  return async (request) => {
+    bodies.push(await request.json());
+    const outcome = outcomes[Math.min(calls, outcomes.length - 1)];
+    calls += 1;
+    if (outcome === 'network') throw new TypeError('Failed to fetch');
+    if (outcome === 'slow') return new Promise<Response>(() => {});
+    if (outcome === 403) return json(403, { detail: 'Du har ikke tilgang til dette hjemmet.' });
+    if (outcome === 404) return json(404, { detail: 'Fant ikke oppgaven.' });
+    if (outcome === 500) return json(500, { detail: 'Internal Server Error' });
+    if (outcome === 'limit') {
+      return json(429, { detail: 'Du har brukt de 20 KI-spørsmålene dine i dag.', resets_at: '2026-11-11T00:00:00Z' });
+    }
+    const status = outcome === 'demo' ? 'ok' : outcome;
+    return json(200, {
+      status,
+      answer: status === 'error' ? 'Vi fikk ikke svar fra KI-tjenesten akkurat nå.' : 'Rens rista med hansker.',
+      disclaimer: DISCLAIMER,
+      demo: outcome === 'demo',
+    });
   };
 }
 

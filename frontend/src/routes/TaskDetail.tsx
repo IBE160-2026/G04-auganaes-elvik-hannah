@@ -9,6 +9,7 @@
 // tick still on its way merged in as on the overview; completing from here comes with Epic 4.
 // Story 2.6 (FR-24): whoever may adjust Tasks also sees «Fjern oppgaven», an inline confirmation
 // that archives the Task and lands on the overview with «Fjernet «X».».
+// Story 5.1 (FR-14): «Spør KI» under the title opens the quick-answer popover, for every Role.
 import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
@@ -28,6 +29,7 @@ import {
   type TaskChanges,
 } from '../api/tasks';
 import { ConfirmAction } from '../components/ConfirmAction';
+import { QuickAnswer } from '../components/QuickAnswer';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
@@ -87,6 +89,7 @@ function Detail({ home, task }: { home: Home; task: TaskView }) {
       <h1 ref={titleRef} tabIndex={-1} className="task-detail__title">
         {task.name}
       </h1>
+      <QuickAnswer homeId={home.id} task={task} />
       {home.can_adjust_tasks ? <AdjustForm home={home} task={task} /> : <LockedFields task={task} />}
       <dl className="task-detail__facts">
         <div>

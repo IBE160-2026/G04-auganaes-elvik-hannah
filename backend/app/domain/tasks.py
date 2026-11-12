@@ -242,6 +242,16 @@ def photo_evidence_eligible(task: Task) -> bool:
     return entry is not None and entry.photo_evidence_eligible
 
 
+def active_task(session: Session, home_id: uuid.UUID, task_id: uuid.UUID) -> Task:
+    """The Home's active Task with this id. Raises TaskNotFound (Story 5.1: «?» on a Task)."""
+    task = session.exec(
+        select(Task).where(Task.id == task_id, Task.home_id == home_id, _is_active())
+    ).first()
+    if task is None:
+        raise TaskNotFound
+    return task
+
+
 def _open_instance(session: Session, task_id: uuid.UUID) -> TaskInstance:
     """The Task's one open instance (uq_task_instances_open_task_id)."""
     return session.exec(
