@@ -51,13 +51,6 @@ async function rows() {
   return (await (await taskList()).findAllByRole('link')).filter((link) => link.closest('li'));
 }
 
-// The fixtures' due dates are in 2026; formatDueOn adds the year in any other year.
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(2026, 10, 10, 12));
-});
-
-afterEach(() => vi.useRealTimers());
 afterEach(resetApi);
 
 describe('Task Overview', () => {

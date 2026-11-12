@@ -15,11 +15,10 @@ from pydantic import BaseModel, Field
 from app import ai
 from app.clock import UtcDatetime
 from app.domain import tasks
-from app.routes.deps import AnyMember, ErrorOut, SessionDep
+from app.routes.deps import TASK_NOT_FOUND, AnyMember, ErrorOut, SessionDep
 
 router = APIRouter(tags=["ai"])
 
-TASK_NOT_FOUND = "Fant ikke oppgaven."
 LIMIT_REACHED = f"Du har brukt de {ai.service.AI_DAILY_LIMIT} KI-spørsmålene dine i dag."
 
 

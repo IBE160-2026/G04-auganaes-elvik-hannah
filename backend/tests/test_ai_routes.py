@@ -12,7 +12,8 @@ from app import ai
 from app.ai import mock_answers, service
 from app.ai.providers import AiRequest, GeminiProvider, ProviderAnswer
 from app.models.ai_usage import AiUsage
-from app.routes.ai import LIMIT_REACHED, TASK_NOT_FOUND
+from app.routes.ai import LIMIT_REACHED
+from app.routes.deps import TASK_NOT_FOUND
 from tests.helpers import register_via_api, sign_up
 from tests.test_tasks_routes import ALL, create_home, join, list_tasks, set_up
 

@@ -23,7 +23,8 @@ from app.domain import tasks as task_domain
 from app.domain.task_types import CATALOG_VERSION, FREQUENCY_DAYS, TASK_TYPES
 from app.models.task import Task, TaskInstance
 from app.permissions.require_role import FORBIDDEN
-from app.routes.tasks import ALREADY_SET_UP, TASK_NOT_FOUND
+from app.routes.deps import TASK_NOT_FOUND
+from app.routes.tasks import ALREADY_SET_UP
 from tests.helpers import count, sign_up
 
 ALL = [

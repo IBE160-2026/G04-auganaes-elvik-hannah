@@ -16,9 +16,8 @@ async function loadIn(timeZone: string) {
 describe('formatDueOn', () => {
   it('shows the date as sent in a negative UTC offset, where new Date(iso) is the day before', async () => {
     const { formatDueOn } = await loadIn('America/Los_Angeles');
-    const thisYear = new Date(2026, 0, 1);
 
-    expect(formatDueOn('2026-12-09', thisYear)).toBe('9. desember');
+    expect(formatDueOn('2026-12-09', 2026)).toBe('9. desember');
     // The pitfall it avoids: UTC midnight is still the 8th in Los Angeles.
     const naive = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'long' });
     expect(naive.format(new Date('2026-12-09'))).toBe('8. desember');
@@ -26,12 +25,12 @@ describe('formatDueOn', () => {
 
   it('shows the date as sent in a positive UTC offset', async () => {
     const { formatDueOn } = await loadIn('Europe/Oslo');
-    expect(formatDueOn('2026-01-01', new Date(2026, 5, 1))).toBe('1. januar');
+    expect(formatDueOn('2026-01-01', 2026)).toBe('1. januar');
   });
 
   it('adds the year when it is not this year', async () => {
     const { formatDueOn } = await loadIn('Europe/Oslo');
-    expect(formatDueOn('2027-01-03', new Date(2026, 10, 9))).toBe('3. januar 2027');
+    expect(formatDueOn('2027-01-03', 2026)).toBe('3. januar 2027');
   });
 });
 
@@ -46,8 +45,6 @@ describe('labels', () => {
 
 // Story 2.2 (decision 8): the due text follows the server's status and day count.
 describe('dueText', () => {
-  const thisYear = new Date(2026, 10, 10);
-
   it.each([
     [-1, 'overdue', '2026-11-09', 'Forfalt — frist var 9. november'],
     [0, 'due_soon', '2026-11-10', 'Snart forfall — i dag'],
@@ -56,15 +53,33 @@ describe('dueText', () => {
     [4, 'later', '2026-11-14', 'Neste gang: 14. november'],
   ] as const)('%i days: %s', async (days, status, dueOn, text) => {
     const { dueText } = await loadIn('Europe/Oslo');
-    expect(dueText({ due_on: dueOn, due_status: status, days_until_due: days }, thisYear)).toBe(text);
+    expect(dueText({ due_on: dueOn, due_status: status, days_until_due: days })).toBe(text);
   });
 
   it('takes the day word from days_until_due, not from the browser date', async () => {
     const { dueText } = await loadIn('Pacific/Kiritimati');
     // The browser may already be on the 11th; the word follows the server's day count.
-    expect(dueText({ due_on: '2026-11-10', due_status: 'due_soon', days_until_due: 0 }, thisYear)).toBe(
+    expect(dueText({ due_on: '2026-11-10', due_status: 'due_soon', days_until_due: 0 })).toBe(
       'Snart forfall — i dag',
     );
+  });
+
+  it('takes the year from the server day count near New Year, whatever the browser year is', async () => {
+    const { dueText } = await loadIn('Europe/Oslo');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2031, 0, 1));
+    try {
+      // The server's today is 2026-12-30, so a due date in January is next year.
+      expect(dueText({ due_on: '2027-01-03', due_status: 'later', days_until_due: 4 })).toBe(
+        'Neste gang: 3. januar 2027',
+      );
+      // The server's today is 2026-12-27, so 31 December is this year.
+      expect(dueText({ due_on: '2026-12-31', due_status: 'later', days_until_due: 4 })).toBe(
+        'Neste gang: 31. desember',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

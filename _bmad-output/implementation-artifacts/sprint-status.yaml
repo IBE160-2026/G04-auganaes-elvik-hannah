@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 12-11-2026 23:10
+last_updated: 11-12-2026 23:29
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -62,7 +62,7 @@ development_status:
   2-4-self-checkoff-completion-with-shared-status-attribution: done
   2-5-auto-reschedule-on-completion: done
   2-6-add-and-remove-tasks: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   epic-3: backlog
   3-1-push-notification-permission-device-registration: backlog
@@ -150,3 +150,45 @@ action_items:
     owner: "Eirik + Claude"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-11-08.md"
+  - id: "epic-2-retro-item-1-state-the-utc-day-rule-in-prd-and-ad-3"
+    epic: 2
+    action: "State the UTC day rule in the PRD (FR-9) and AD-3 with a Revision log
+      row; decide separately whether Europe/Oslo should replace it (S1)"
+    owner: "Eirik, Claude drafts"
+    status: in-progress
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
+  - id: "epic-2-retro-item-2-review-convention-tests-must-guard-a-line"
+    epic: 2
+    action: "Review convention: a new test counts as coverage only if removing the
+      guarded line makes it fail; the author names the line (P1)"
+    owner: "Claude, Eirik approves"
+    status: in-progress
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
+  - id: "epic-2-retro-item-3-decide-domain-tasks-py-split-at-epic-3-start"
+    epic: 2
+    action: "At the start of Epic 3, decide whether to split domain/tasks.py into
+      read model and commands before Stories 3.2 and 3.3 (A1)"
+    owner: "Eirik and Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
+  - id: "epic-2-retro-item-4-remove-browser-clock-default-in-formatdueon"
+    epic: 2
+    action: "Remove the browser-clock default in formatDueOn and add a test that app
+      code never reads the browser clock (R1)"
+    owner: "Claude"
+    status: in-progress
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
+  - id: "epic-2-retro-item-5-move-task-not-found-and-add-usetasksscope"
+    epic: 2
+    action: "Move TASK_NOT_FOUND to routes/deps.py and add a shared tasks-key hook
+      in queries.ts (A2)"
+    owner: "Claude"
+    status: in-progress
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
+  - id: "epic-2-retro-item-6-tenant-text-and-screen-reader-check"
+    epic: 2
+    action: "Decide the Tenant text when every Task is archived (R2) and check the
+      Epic 2 pages and the AI popover with a screen reader"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"

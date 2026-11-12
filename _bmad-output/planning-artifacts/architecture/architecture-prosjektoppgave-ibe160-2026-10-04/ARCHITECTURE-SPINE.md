@@ -65,7 +65,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 
 - **Binds:** FR-7, FR-9, FR-17, FR-19
 - **Prevents:** the self-checkoff path (FR-17) and the photo-evidence-upload path (FR-19) rescheduling or attributing completion differently from each other.
-- **Rule:** A single domain function (`complete_task_instance`) is the only code path that marks a Task instance complete, records attribution, and triggers FR-9's reschedule-from-completion-date. Both the checkbox endpoint and the photo-upload endpoint call it; neither duplicates its logic. The function is idempotent: calling it again on an already-completed instance (e.g. a retried request) returns the existing completion state unchanged rather than re-attributing or re-scheduling.
+- **Rule:** A single domain function (`complete_task_instance`) is the only code path that marks a Task instance complete, records attribution, and triggers FR-9's reschedule-from-completion-date. Both the checkbox endpoint and the photo-upload endpoint call it; neither duplicates its logic. The function is idempotent: calling it again on an already-completed instance (e.g. a retried request) returns the existing completion state unchanged rather than re-attributing or re-scheduling. `[REVISED 2026-11-12 — Epic 2 retrospective]` — «today» is the server's UTC date everywhere a day is counted: due status, the next due date, `days_until_due` and «completed today». The frontend never reads the browser's clock; the year it prints on a due date comes from `due_on` minus `days_until_due`, and a test fails if app code calls `new Date()` or `Date.now()`.
 
 ### AD-4 — AI assistant calls are server-mediated through one service
 
