@@ -19,7 +19,8 @@ Veiledning til den som tester en PR i nettleseren før merge (i praksis Eirik, s
 
 1. Åpne PR-en på GitHub og vent til sjekkene er ferdige. Alle CI-jobbene og Vercel-bygget skal være grønne.
 2. Trykk **Details** ved Vercel-sjekken (eller **Visit Preview** i Vercel-kommentaren) for å åpne adressen. Den ser ut som `g04husly-git-<branch>-<team>.vercel.app`.
-3. Feiler Vercel-bygget, åpner du byggeloggen fra samme knapp. En feilende migrering stopper bygget, og da er det forrige versjon som står.
+3. **Bruk alltid adressen fra PR-en du tester, aldri en gammel lenke.** Vercel beholder adressene til gamle previews, og de kan ligge i nettleserhistorikken. Når en PR er merget, slettes Neon-grenen, og en gammel preview svarer «Databasen svarer ikke» (503). I appen ser det ut som «Noe gikk galt» når du prøver å registrere deg eller logge inn.
+4. Feiler Vercel-bygget, åpner du byggeloggen fra samme knapp. En feilende migrering stopper bygget, og da er det forrige versjon som står.
 
 ## 2. Sjekk at API-et og databasen lever
 
@@ -82,6 +83,7 @@ Gjenta det som er relevant for PR-en du tester. README har egne trinn per story 
 
 | Symptom | Mulig årsak |
 |---|---|
+| «Noe gikk galt» ved registrering eller innlogging | Du er på en gammel preview. `<preview>/api/health/db` svarer da 503. Bruk adressen fra den åpne PR-en (punkt 1). |
 | Vercel-bygget feiler | Migreringen feilet. Åpne byggeloggen. Migreringer må være bakoverkompatible med forrige versjon av koden. |
 | `/api/health/db` feiler | Neon-grenen ble ikke laget (grensen på gratisplanen er 10 grener). Slett gamle grener i Neon. |
 | Du blir kastet ut etter innlogging | Siden må kjøres på `https`. Åpne previewen via Vercel-adressen, ikke via en kopi av lenken med `http`. |
