@@ -649,7 +649,6 @@ describe('Self-checkoff (Story 2.4)', () => {
   });
 });
 
-
 describe('Task Overview, add and an empty list (Story 2.6)', () => {
   it('shows «Legg til oppgave» in the header to whoever may adjust Tasks, and not to a Tenant', async () => {
     fakeApi(signedInWith());

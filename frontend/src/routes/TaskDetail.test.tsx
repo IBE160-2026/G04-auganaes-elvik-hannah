@@ -415,7 +415,6 @@ describe('Adjust a Task (Story 2.3)', () => {
   });
 });
 
-
 describe('Task Detail, remove (Story 2.6)', () => {
   function serverWith(archive: ReturnType<ReturnType<typeof taskServer>['archive']>) {
     const tasks = taskServer();
@@ -423,7 +422,6 @@ describe('Task Detail, remove (Story 2.6)', () => {
       ...signedInWith(),
       [`GET ${tasksPath(OLAS_HOME)}`]: tasks.list,
       [`DELETE ${taskPath(OLAS_HOME, MUST)}`]: archive,
-      [`DELETE ${taskPath(OLAS_HOME, OVERDUE)}`]: tasks.archive(),
     });
   }
 
@@ -480,6 +478,31 @@ describe('Task Detail, remove (Story 2.6)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(TASK_MESSAGES.archiveFailed);
     expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeInTheDocument();
     expect(window.location.pathname).toBe(detailPath(MUST.id));
+  });
+
+  it('folds the confirmation and shows no message when the archive is refused with 403', async () => {
+    serverWith(taskServer().archive(403));
+    renderAt(detailPath(MUST.id));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ja, fjern oppgaven «Rens sluket»' }));
+
+    expect(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.archiveFailed)).not.toBeInTheDocument();
+  });
+
+  it('shows no error and refetches the list when the Task is already gone (404)', async () => {
+    const api = serverWith(taskServer().archive(404));
+    renderAt(detailPath(MUST.id));
+    await screen.findByRole('heading', { level: 1, name: MUST.name });
+    const before = api.calls('GET', tasksPath(OLAS_HOME)).length;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ja, fjern oppgaven «Rens sluket»' }));
+
+    await waitFor(() => expect(api.calls('GET', tasksPath(OLAS_HOME)).length).toBeGreaterThan(before));
+    expect(screen.queryByText(TASK_MESSAGES.archiveFailed)).not.toBeInTheDocument();
   });
 
   it('shows no «Fjern oppgaven» to a Tenant', async () => {

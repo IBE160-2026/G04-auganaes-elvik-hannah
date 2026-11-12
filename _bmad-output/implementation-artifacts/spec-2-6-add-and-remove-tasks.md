@@ -2,7 +2,7 @@
 title: 'Story 2.6: Add and Remove Tasks'
 type: 'feature'
 created: '2026-11-12'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: '60c287a2584e2cabe32f017989d34f4245a778e8'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -86,14 +86,14 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `backend/app/models/task.py` + migration + `ci.yml` probes -- schema and index backstops
-- [ ] `backend/app/domain/tasks.py` -- `add_task`, `archive_task`, archived filter, eligibility
-- [ ] `backend/app/routes/tasks.py` -- the two routes, `TaskOut.task_type` nullable
-- [ ] `backend/tests/*` -- matrix rows and permissions
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts`, `src/api/{tasks,queries}.ts`, `src/test-utils/fakeApi.ts`
-- [ ] `frontend/src/routes/AddTask.*`, `App.tsx` -- Add Task page and route
-- [ ] `frontend/src/routes/TaskOverview.*`, `TaskDetail.*` -- link, empty state, remove
-- [ ] `README.md`, `epics.md`, `deferred-work.md`, `sprint-status.yaml`
+- [x] `backend/app/models/task.py` + migration + `ci.yml` probes -- schema and index backstops
+- [x] `backend/app/domain/tasks.py` -- `add_task`, `archive_task`, archived filter, eligibility
+- [x] `backend/app/routes/tasks.py` -- the two routes, `TaskOut.task_type` nullable
+- [x] `backend/tests/*` -- matrix rows and permissions
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts`, `src/api/{tasks,queries}.ts`, `src/test-utils/fakeApi.ts`
+- [x] `frontend/src/routes/AddTask.*`, `App.tsx` -- Add Task page and route
+- [x] `frontend/src/routes/TaskOverview.*`, `TaskDetail.*` -- link, empty state, remove
+- [x] `README.md`, `epics.md`, `deferred-work.md`, `sprint-status.yaml`
 
 **Acceptance Criteria:**
 - Given Mari on Task Overview, when she adds a catalog Task or a custom Task and saves, then she lands back on the list with «La til «X».» announced and the Task listed in Must-first order.
@@ -103,11 +103,45 @@ context:
 
 ## Implementation Notes
 
+- Migration `d7a3b5c9e2f1`. Ran upgrade, `alembic check` (clean: the expression index `lower(name)` gives no false diff), `downgrade -1`, upgrade, `downgrade base`, upgrade and `alembic check` again against throwaway databases in the Docker container (`husly_scratch_26`, `husly_scratch_26b`, both dropped); the local `husly` was not touched. Probed on Postgres 18: a second active Task of a type or of the same lower-case name (incl. `Ø`) is refused, an archived twin and two custom Tasks (null type) are accepted, and the downgrade with data deletes custom and archived Tasks with their instances. The two refused cases and the accepted case are CI probes (`ci.yml`), validated against a seeded throwaway database.
+- `has_tasks` and `home_ids_with_tasks` are unchanged and count archived Tasks; `_rows` is the one place the active filter lives for reads (`_is_active`), plus the two lock lookups in `adjust_task` and `complete_task_instance`.
+- `add_task` signature puts `classification` and `frequency_days` first and `task_type`/`name` as keywords, so a call cannot swap the catalog key and the name. `set_up_tasks` and `add_task` share `_first_instance`.
+- The domain's duplicate check compares with Python `casefold` over the Home's active Tasks (one query), so Æ, Ø and Å fold correctly even on SQLite; the index is the race backstop (ASCII on SQLite, full on Postgres with a UTF-8 locale, which Docker's `postgres:18` has).
+- Notices (`La til`/`Fjernet`): set before the tasks refetch. Task Detail's guard redirects to the overview as soon as the refetch drops the Task, so setting the notice afterwards could land after the overview mounted.
+- Frontend: Add Task's remount-on-list-change idea was dropped: the form derives which catalog types are missing on every render and drops a choice another Member's add made unavailable, so a typed name and a shown error survive a refetch. `ConfirmAction` got an optional `confirmAriaLabel` so the confirm button names the Task.
+- Empty list: the header link is hidden while the list is empty and the empty state carries the one «Legg til oppgave» link, so the page never has two links with the same name.
+- Verification: pytest 629, Vitest 417, ruff, ESLint and build all pass. Chrome smoke: see the review step.
+
 ## Spec Change Log
 
 ## Review Triage Log
 
 Spec review 2026-11-12 (one adversarial reviewer; 15 findings, evidence checked by the orchestrator against `bb9ad4eac78d`, `env.py`, `ci.yml` and `TaskOverview.tsx`): all taken in. Catalog name vs active custom name, archive-then-re-add sequence, `IntegrityError` mapping, Add form state, archive-vs-404 lookup split, Tenant empty-state copy, notice left behind after navigation, ordered migration and downgrade steps, `alembic check` after the expression index, collation claim weakened, no cap on active Tasks (accepted), `responses` on DELETE, seed and CI counts unchanged, a11y focus and names, three test gaps.
+
+Code review 2026-11-12 (Blind Hunter B, Edge Case Hunter E, Verification Gap V; about 33 findings, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| `taskServer().add` filter dropped every Bør Task when a Må Task was added (B) | low (test helper; the tests passed anyway) | patch: keep all, then sort |
+| Generated ids from `stored.length` can collide after an archive (B) | low | patch: a counter |
+| 403 and 404 of add and archive never exercised; the 403 test title overstated it (B, V) | medium | patch: add(403), archive(403) and archive(404) tests, honest titles |
+| A shown error stays when the choice or a field changes, and a name error shows under a catalog choice (B, E) | medium | patch: `add.reset()` on change, with a test |
+| Lost race to a parallel duplicate not tested: only `NOT_ADDED` was (B, V) | medium | patch: `test_a_lost_race_to_a_parallel_duplicate_says_which_name` |
+| AddTask guard for a Home whose setup has not run untested (V) | low | patch: one test |
+| No test that a 422 refetches the list; weak assertions in two backend tests; unused DELETE handler in `serverWith`; double blank lines (B) | low | patch |
+| Tenant told «Utleier har ikke satt opp oppgaver ennå.» when every Task is archived (B, E) | low (copy) | defer: it is the wording EXPERIENCE.md prescribes for «No active Tasks»; a neutral Tenant text is a UX decision, recorded in `deferred-work.md` |
+| `photo_evidence_eligible` has no production caller (B) | rejected | the frozen spec requires it for Story 4.1; its fix would edit the spec |
+| `NO_CHOICE` reads oddly when both fields are given (B) | rejected | the matrix fixes the message; the UI cannot send both |
+| No `maxLength` or client-side check on the name; a body over 1000 characters gets the generic message (B, E) | low, rejected | the rule belongs to the server; the fix adds a second copy of it for a paste of over 1000 characters |
+| `utc_now()` read in the domain and again in the route (B, E) | low, rejected | the same pattern as `adjust_task` and the completion route, rejected in 2.4 (sub-second window at UTC midnight) |
+| Downgrade deletes history, no round-trip in CI (B) | false | the CI step runs `downgrade base && upgrade head`, which runs this revision's downgrade; the docstring says throwaway databases only, as in 2.4 |
+| Architecture and PRD not updated for nullable `task_type`, `archived_at` and the indexes (B) | false | the architecture's 2026-11-09 revision note and FR-24 already say it |
+| Any `IntegrityError` becomes `NOT_ADDED` (E) | rejected | after the locks the only reachable constraints are the two indexes: the Home exists, both values are validated |
+| NFC/NFD and inner-whitespace duplicates (E); `ß` and `İ` fold differently in Python and Postgres (V) | low, rejected | inner whitespace is kept by decision; the index is only the race backstop |
+| A chosen catalog type vanishes after another Member added it; controls disappear (E) | low, rejected | rare, and the fix adds an effect and a message; the choice then reads as not chosen |
+| Migration aborts when existing Tasks share `lower(name)` (E) | false | existing Tasks are catalog Tasks with distinct catalog names and distinct types |
+| Mutation stays pending if the refetch hangs after a successful add (E) | low, rejected | `refetchQueries` does not throw; a retry gets the duplicate message, which names the cause |
+| Migration only run on an empty schema (V) | false | downgrade with data and the probes were run on Postgres 18 on a throwaway database |
 
 ## Design Notes
 

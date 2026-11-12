@@ -873,7 +873,8 @@ def test_a_custom_task_is_listed_must_first_with_the_others(session: Session) ->
 
     tasks.add_task(session, mari, "must", 365, name="Sjekk røykvarsler", today=TODAY)
 
-    assert [r.task.name for r in tasks.tasks_of(session, mari.home_id)][0] == "Sjekk røykvarsler"
+    listed = [r.task.name for r in tasks.tasks_of(session, mari.home_id)]
+    assert listed == ["Sjekk røykvarsler", "Støvsug og vask gulvene"]
 
 
 @pytest.mark.parametrize("name", ["", "   ", "x" * 101])
@@ -990,7 +991,8 @@ def test_a_tenant_may_not_add_or_archive(session: Session) -> None:
 def test_a_landlord_may_add_in_a_home_without_tenants(session: Session) -> None:
     kari = landlord_and_tenant(session)[0]
     tasks.set_up_tasks(session, kari, [tasks.TaskChoice("gulv", "should", 7)], TODAY)
-    assert tasks.add_task(session, kari, "must", 30, name="Sjekk røykvarsler").task.name
+    added = tasks.add_task(session, kari, "must", 30, name="Sjekk røykvarsler")
+    assert (added.task.name, added.task.home_id) == ("Sjekk røykvarsler", kari.home_id)
 
 
 def test_archiving_hides_the_task_and_keeps_everything(session: Session) -> None:
@@ -1130,6 +1132,33 @@ def test_a_lost_race_on_the_unique_index_says_what_it_broke(
         tasks.add_task(session, mari, "should", 30, name="Noe nytt")
 
     assert caught.value.message == tasks.NOT_ADDED
+
+
+def test_a_lost_race_to_a_parallel_duplicate_says_which_name(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A parallel add of the same name committed first: the loser hears the duplicate message."""
+    mari = set_up_household(session)
+    real_commit = session.commit
+
+    def racing_commit() -> None:
+        session.rollback()
+        session.add(
+            Task(
+                home_id=mari.home_id,
+                name="Noe nytt",
+                classification="should",
+                frequency_days=30,
+            )
+        )
+        real_commit()
+        raise IntegrityError("INSERT", {}, Exception("uq_tasks_active_home_id_lower_name"))
+
+    monkeypatch.setattr(session, "commit", racing_commit)
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, "should", 30, name="noe nytt")
+
+    assert caught.value.message == tasks.DUPLICATE_NAME.format(name="noe nytt")
 
 
 @pytest.mark.parametrize(

@@ -193,6 +193,7 @@ export type CompleteOutcome = 200 | 403 | 404 | 500 | 'network';
  */
 export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Completion = DONE_BY_YOU_TODAY) {
   let stored = [...tasks];
+  let added = 0;
   const list: Handler = () => json(200, { tasks: stored });
   function complete(task: Task, outcomes: CompleteOutcome[] = [200], gate?: Promise<void>): Handler {
     let calls = 0;
@@ -223,9 +224,10 @@ export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Comp
       if (outcome === 409 || outcome === 422) return json(outcome, { detail: message });
       if (outcome === 500) return json(500, { detail: 'Internal Server Error' });
       const entry = TASK_TYPES.task_types.find((t) => t.key === body.task_type);
+      added += 1;
       const created: Task = {
-        id: `00000000-0000-4000-8000-0000000000d${stored.length}`,
-        instance_id: `00000000-0000-4000-8000-0000000000e${stored.length}`,
+        id: `00000000-0000-4000-8000-0000000000d${added}`,
+        instance_id: `00000000-0000-4000-8000-0000000000e${added}`,
         task_type: body.task_type ?? null,
         name: entry ? entry.name : (body.name ?? '').trim(),
         classification: body.classification,
@@ -235,8 +237,10 @@ export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Comp
         days_until_due: 30,
         completion: null,
       };
-      stored = [...stored.filter((t) => t.classification === 'must' || created.classification === 'should'), created]
-        .sort((a, b) => Number(a.classification === 'should') - Number(b.classification === 'should'));
+      // Must first, otherwise in the order they came (the real server also sorts by due date).
+      stored = [...stored, created].sort(
+        (a, b) => Number(a.classification === 'should') - Number(b.classification === 'should'),
+      );
       return json(201, created);
     };
   }

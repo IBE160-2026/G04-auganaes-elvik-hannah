@@ -914,6 +914,8 @@ As a Household Member or Landlord,
 I want to add tasks my Home needs and remove the ones it no longer needs,
 So that the task list keeps matching my Home after the first setup.
 
+*Decisions 2026-11-12 (Eirik, Story 2.6 spec; no acceptance criterion below changes):* Add Task is one page (a radio list of the catalog types the Home lacks plus «Egen oppgave»), «Legg til oppgave» sits in the Task Overview header, the overview shows «La til «X».» and «Fjernet «X».» once through the one-time notice, and adding before Task Setup has run answers 409. The same flag, `can_adjust_tasks`, covers add and archive. Adjusting or completing an archived Task is 404, archiving it again is 204.
+
 **Acceptance Criteria:**
 
 **Given** a Household Member or Landlord on Task Overview

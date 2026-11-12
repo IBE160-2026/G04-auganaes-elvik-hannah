@@ -170,7 +170,60 @@ describe('Add Task', () => {
     expect(await screen.findByText('Sett opp oppgavene først.')).toBeInTheDocument();
   });
 
-  it('shows the generic message for a 500, and a 403 shows none (the global handler routes)', async () => {
+  it('refetches the list after a 422, so a list that is behind is corrected', async () => {
+    const tasks = taskServer();
+    const api = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: tasks.list,
+      [`POST ${tasksPath(OLAS_HOME)}`]: tasks.add(422, [], 'Hjemmet har allerede en oppgave som heter «Vask badet grundig».'),
+    });
+    renderAt(ADD);
+    await userEvent.click(await screen.findByRole('radio', { name: MISSING }));
+    const before = api.calls('GET', tasksPath(OLAS_HOME)).length;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til' }));
+
+    expect(await screen.findByText(/Hjemmet har allerede/)).toBeInTheDocument();
+    await waitFor(() => expect(api.calls('GET', tasksPath(OLAS_HOME)).length).toBeGreaterThan(before));
+  });
+
+  it('clears a shown error when the user changes the choice, so it never sits under another one', async () => {
+    const tasks = taskServer();
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: tasks.list,
+      [`POST ${tasksPath(OLAS_HOME)}`]: tasks.add(422, [], 'Hjemmet har allerede en oppgave som heter «Rens sluket».'),
+    });
+    renderAt(ADD);
+    await userEvent.click(await screen.findByRole('radio', { name: 'Egen oppgave' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Navn på oppgaven' }), 'rens sluket');
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til' }));
+    expect(await screen.findByText(/Hjemmet har allerede/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('radio', { name: MISSING }));
+
+    expect(screen.queryByText(/Hjemmet har allerede/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Legg til' })).toBeInTheDocument();
+  });
+
+  it('shows no message for a 403 (the global handler routes) and keeps the form', async () => {
+    const tasks = taskServer();
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: tasks.list,
+      [`POST ${tasksPath(OLAS_HOME)}`]: tasks.add(403),
+    });
+    renderAt(ADD);
+
+    await userEvent.click(await screen.findByRole('radio', { name: MISSING }));
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Legg til' })).not.toHaveAttribute('aria-busy'));
+    expect(screen.queryByText('Du har ikke tilgang til dette hjemmet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.addFailed)).not.toBeInTheDocument();
+  });
+
+  it('shows the generic message for a 500', async () => {
     const tasks = taskServer();
     fakeApi({
       ...signedInWith(),
@@ -209,6 +262,14 @@ describe('Add Task', () => {
     expect(await screen.findByRole('heading', { level: 1, name: OLAS_TENANCY.name })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe(`/hjem/${OLAS_TENANCY.id}`);
+  });
+
+  it('sends a Home whose setup has not run to its overview, which routes on to the setup', async () => {
+    fakeApi(signedInWith([{ ...OLAS_HOME, has_tasks: false }]));
+    renderAt(ADD);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sett opp oppgaver' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
   });
 
   it('sends an unknown Home to "/"', async () => {

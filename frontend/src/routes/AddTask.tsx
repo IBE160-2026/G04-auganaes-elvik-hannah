@@ -122,7 +122,13 @@ function AddForm({
       : { ...CUSTOM_DEFAULTS };
   }
 
+  // A failed add belongs to what was sent; once the user changes something it no longer applies.
+  function edited() {
+    if (add.isError) add.reset();
+  }
+
   function choose(key: string) {
+    edited();
     flushSync(() => {
       setChoice(key);
       setDraft(defaultsOf(key));
@@ -201,7 +207,10 @@ function AddForm({
             value={name}
             aria-invalid={nameError ? true : undefined}
             aria-describedby={nameError ? ids.nameError : undefined}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              edited();
+              setName(e.target.value);
+            }}
           />
           {nameError && (
             <p id={ids.nameError} className="text-field__error" role="alert">
@@ -220,7 +229,10 @@ function AddForm({
                   name="klassifisering"
                   value={value}
                   checked={draft.classification === value}
-                  onChange={() => setDraft((d) => ({ ...d, classification: value }))}
+                  onChange={() => {
+                    edited();
+                    setDraft((d) => ({ ...d, classification: value }));
+                  }}
                 />
                 {CLASSIFICATION_LABELS[value]}
               </label>
@@ -231,7 +243,10 @@ function AddForm({
             <select
               className="task-setup__select"
               value={draft.frequency}
-              onChange={(e) => setDraft((d) => ({ ...d, frequency: Number(e.target.value) as Frequency }))}
+              onChange={(e) => {
+                edited();
+                setDraft((d) => ({ ...d, frequency: Number(e.target.value) as Frequency }));
+              }}
             >
               {frequencies.map((days) => (
                 <option key={days} value={days}>
