@@ -65,7 +65,10 @@
 - [x] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Story 2.4: `tasks_of` og `_open_instance` må bruke tidligste åpne forekomst (deferred-work) (løst 2026-11-12)
 - [x] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Merge `chore/status-etter-story-2-3`, deretter Story 2.4 med `bmad-build` (løst 2026-11-11: PR #42 merget `fb4f199`; 2.4 klargjort)
 - [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Teste radlåsen i `adjust_task` med to samtidige PATCH mot Postgres (valgfritt, ikke automatisert)
+- [ ] 2026-11-12 [correct-course-prd-tilbakemelding](983-2026-11-12-18-35-00-correct-course-prd-tilbakemelding.md) — Hannah og Steffen leser PR #45 (særlig kuttlinjen for Trinn 2) og kan protestere
+- [ ] 2026-11-12 [correct-course-prd-tilbakemelding](983-2026-11-12-18-35-00-correct-course-prd-tilbakemelding.md) — Story 3.3 og 5.1 bygges etter de nye kriteriene (FR-11-regelen, `ai_usage`-migrasjon, timeout 10 s, 20 kall per dag)
+- [ ] 2026-11-12 [correct-course-prd-tilbakemelding](983-2026-11-12-18-35-00-correct-course-prd-tilbakemelding.md) — Svar på Bårds refleksjonsspørsmål 2 i `docs/ki-logg/`, og linje om økten i sammendragstabellen i `docs/ki-logg/README.md`
 - [x] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Story 2.4 med `bmad-build` i ny økt (issue #43, branch `story/2-4-self-checkoff`) (løst 2026-11-12)
 - [ ] 2026-11-12 [story-2-4-avkrysning](984-2026-11-12-18-08-02-story-2-4-avkrysning.md) — Eirik: teste Vercel-previewen for PR #44, inkludert at migreringen `c4e1d2a7b9f3` kjører mot Neon-previewen
 - [ ] 2026-11-12 [story-2-4-avkrysning](984-2026-11-12-18-08-02-story-2-4-avkrysning.md) — Eirik: `bmad-walkthrough` av PR #44 og merge; deretter statuscommit på main (2.4 og 2.5 til `done`, CLAUDE.md, minne)
-- [ ] 2026-11-12 [story-2-4-avkrysning](984-2026-11-12-18-08-02-story-2-4-avkrysning.md) — Vurdere om tilbakemeldingen på PRD (`f76b547` på main) krever correct-course før Story 2.6
+- [x] 2026-11-12 [story-2-4-avkrysning](984-2026-11-12-18-08-02-story-2-4-avkrysning.md) — Vurdere om tilbakemeldingen på PRD (`f76b547` på main) krever correct-course før Story 2.6 (løst 2026-11-12: correct-course gjort, PR #45)

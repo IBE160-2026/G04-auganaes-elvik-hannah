@@ -2,20 +2,26 @@
 title: "PRD: AI-Driven Household Task App"
 status: final
 created: 2026-09-29
-updated: 2026-11-09
+updated: 2026-11-12
 ---
 
-> **Revision 2026-10-11:** Updated in response to the teacher's feedback of 2026-10-06 (see the brief's `tilbakemelding-product-brief.md` and `sprint-change-proposal-2026-10-11.md`): MVP scope is split into Trinn 1 and Trinn 2, a new FR-22 makes the app runnable without external accounts, success metrics are replaced by testable criteria, and the household is the primary user for Trinn 1.
+## Revision log
 
-> **Revision 2026-11-01:** The course offers Vercel as its only supported hosting (teacher's message of 2026-11-01; see `sprint-change-proposal-2026-11-01.md`). Open Question 2 is resolved as a daily morning batch, since Vercel Cron on the free plan runs at most once a day; FR-10 and FR-13 are tightened to match.
+Each change after the first final version, with the proposal that explains it. Requirement text below is kept clean; the reasons live in the proposals.
 
-> **Revision 2026-11-09:** Two team requests found during Story 2.1 (issues #30, #31; see `sprint-change-proposal-2026-11-09.md`): one rule for creating Homes replaces the Story 1.3 rule (FR-1, Open Question 3), and a new FR-24 lets Household Members and Landlords add and archive Tasks after Task Setup.
+| Date | Change | Proposal |
+|---|---|---|
+| 2026-10-11 | MVP split into Trinn 1 and Trinn 2, FR-22 added, testable success metrics, household as primary user | `sprint-change-proposal-2026-10-11.md` |
+| 2026-11-01 | Vercel is the only hosting; Open Question 2 resolved as a daily morning batch; FR-10 and FR-13 tightened | `sprint-change-proposal-2026-11-01.md` |
+| 2026-11-08 | FR-23 added (leave a Home, remove Tenants); FR-3 reads "zero or more Tenants" | `sprint-change-proposal-2026-11-08.md` |
+| 2026-11-09 | One rule for creating Homes (FR-1, Q3); FR-24 added (add and archive Tasks); FR-8 fixed intervals | `sprint-change-proposal-2026-11-09.md` |
+| 2026-11-12 | Teacher's PRD feedback: Trinn 2 cut line decided (Q1), FR-11 rule (Q4), AI failure, limit and data (FR-14/15), FR-2 and FR-3 rules, FR-16 without "unit type", clean requirement text, account privacy, FR-1 to FR-24 count, SM-9 split, SM-15 | `sprint-change-proposal-2026-11-12.md` |
 
 # PRD: AI-Driven Household Task App
 
 ## 0. Document Purpose
 
-This PRD translates the product brief (`brief-prosjektoppgave-ibe160-2026-09-12`) into implementable requirements for the 3-person IBE160 team. It is structured around three key user journeys, a shared glossary, and features with nested, globally numbered functional requirements (FR-1 through FR-22). It builds on the brief rather than repeating it — problem framing, competitive positioning, and long-term vision live there.
+This PRD translates the product brief (`brief-prosjektoppgave-ibe160-2026-09-12`) into implementable requirements for the 3-person IBE160 team. It is structured around three key user journeys, a shared glossary, and features with nested, globally numbered functional requirements (FR-1 through FR-24; FR-23 and FR-24 were added later and sit under their feature group, keeping their numbers because stories and code refer to them). It builds on the brief rather than repeating it — problem framing, competitive positioning, and long-term vision live there.
 
 ## 1. Vision
 
@@ -25,12 +31,17 @@ One core mechanic — create a Home, invite others into it — serves four kinds
 
 ## 2. Glossary
 
+- **Trinn 1 / Trinn 2** — The two delivery stages of the MVP (§6). Trinn 1 is the minimal core flow that must be finished and stable first; Trinn 2 is added once Trinn 1 is stable.
 - **Home** — A shared space (a household or a rental unit) that groups members, tasks, and settings. Either a Household Home (created by and open to Household Members only) or a Landlord Home (created by and containing exactly one Landlord plus Tenants). Has one or more Members.
+- **Household Home** — A Home created by and open to Household Members only.
+- **Landlord Home** — A Home created by a Landlord, with that Landlord as its only Landlord and zero or more Tenants.
+- **Task Setup** — The one-time review, when a Home is created, of the app's recommended Tasks (done once per Home).
 - **Member** — Any user linked to a Home. Role is one of: Household Member, Landlord, or Tenant.
 - **Household Member** — A Member with peer standing in a Household Home — can create, adjust, invite, and complete tasks with equal permissions to every other Household Member of that Home, including the Home's creator. Covers single-occupant, samboer, and kollektiv contexts.
 - **Landlord** — The sole Member of a Landlord Home with elevated permissions: sets and locks Must tasks and Frequency for Tenants, controls Notification Cadence for Tenants, can require Photo Evidence, and is the only Member of that Home who can generate invite links. Can own multiple Homes (a Portfolio).
 - **Tenant** — A Member of a Landlord Home. Inherits Must/Should classification and Frequency set by the Landlord; cannot override either, and cannot invite other Members. Completes tasks like a Household Member otherwise.
 - **Portfolio** — The set of Homes owned by one Landlord, viewed together in the Portfolio Dashboard.
+- **Portfolio Dashboard** — The Landlord's single view of task status per Home across their Portfolio (FR-20).
 - **Task** — A unit of household work belonging to a Home, with a Must/Should classification and a Frequency.
 - **Must task** — A non-negotiable task. App-recommended by default; adjustable by Household Members and Landlords; locked for Tenants.
 - **Should task** — A flexible, desirable-but-optional task.
@@ -39,7 +50,7 @@ One core mechanic — create a Home, invite others into it — serves four kinds
 - **Completion** — A Member marking a Task instance done via self-checkoff. Trust-based by default (no peer verification).
 - **Photo Evidence** — An optional, Landlord-required attachment proving completion of a specific Must task, scoped to task types where completion is objectively visible without capturing sensitive content. Auto-approved on upload; remains visible for Landlord review.
 - **Notification Cadence** — How strictly/often a Tenant is reminded about a due or overdue task; configured by the Landlord, independent of the task's Frequency.
-- **AI Assistant** — The in-app assistant providing (a) contextual quick-answers via a "?" affordance on any task, (b) full conversational chat, and (c) AI-generated onboarding guides tailored to a Home's unit type.
+- **AI Assistant** — The in-app assistant providing (a) contextual quick-answers via a "?" affordance on any task, (b) full conversational chat, and (c) AI-generated onboarding guides tailored to that Home.
 
 ## 3. Target User
 
@@ -64,6 +75,7 @@ For Trinn 1 the Household is this product's primary user, per the brief's §Who 
 ### 3.3 Key User Journeys
 
 - **UJ-1. Mari and Peter close the loop on a shared home without talking about it.**
+  - **In Trinn 1:** Peter opens the app himself, without push. He uses "?", checks the tasks off, and Mari sees them done (FR-7, FR-9, FR-14, FR-17). Push (FR-10) and the full chat (FR-15) are Trinn 2.
   - **Persona + context:** Mari (24) and Peter share a home (samboer or kollektiv). Both are Household Members with equal standing.
   - **Entry state:** Peter, authenticated, receives a push notification earlier in the day that the floor needs vacuuming and the bathroom needs cleaning.
   - **Path:** Peter opens the app, taps into the "?" on the bathroom task when unsure which cleaner suits tiles versus mirrors, gets an immediate answer, completes both tasks, and self-checks them off. The app recalculates their next due dates. Later, Mari — tired from work — opens the app and sees both tasks already marked done.
@@ -72,14 +84,16 @@ For Trinn 1 the Household is this product's primary user, per the brief's §Who 
   - **Edge case:** If Peter had been uncertain about *how* to do a step mid-task, the same "?" affordance escalates into a full AI chat for follow-up questions.
 
 - **UJ-2. Johan manages a property portfolio without visiting every unit.**
+  - **In Trinn 1:** Johan creates a Landlord Home, invites Tenants with a link and adjusts the Must tasks (FR-1 to FR-5, FR-8). The portfolio dashboard, broadcast and onboarding guide are Trinn 2.
   - **Persona + context:** Johan owns several apartment buildings, each with multiple units, each set up as its own Home with Tenants.
   - **Entry state:** Johan, authenticated, opens the app to his portfolio dashboard.
-  - **Path:** He sees aggregated maintenance/cleaning status per building and unit, notices one kollektiv is behind on cleaning, and sends a targeted reminder message straight to that Home's Tenants. Separately, he pre-provisions a new Home for a unit he's taking over next week — creating the Home, generating an invite link for the incoming Tenants, and triggering the AI-generated onboarding guide tailored to that unit type. He reviews the app's suggested Must tasks for the new Home and adjusts a few to match his judgment.
+  - **Path:** He sees aggregated maintenance/cleaning status per building and unit, notices one kollektiv is behind on cleaning, and sends a targeted reminder message straight to that Home's Tenants. Separately, he pre-provisions a new Home for a unit he's taking over next week — creating the Home, generating an invite link for the incoming Tenants, and triggering the AI-generated onboarding guide tailored to that Home. He reviews the app's suggested Must tasks for the new Home and adjusts a few to match his judgment.
   - **Climax:** Johan gets portfolio-wide visibility and can intervene precisely, without a site visit.
   - **Resolution:** The lagging Home receives Johan's message; the new Home is ready for Tenants before they've even moved in.
   - **Edge case:** If a Tenant later disputes a locked Must task, Johan (not the Tenant) is the only one who can change it.
 
 - **UJ-3. Martin gets a task-specific nudge, not a group scolding.**
+  - **In Trinn 1:** Martin sees Must tasks before Should tasks and checks the task off. The targeted reminder and the photo are Trinn 2.
   - **Persona + context:** Martin is a Tenant in the kollektiv Johan flagged, and has been falling behind specifically on cleaning.
   - **Entry state:** Martin, authenticated, is the only member of his Home who has not completed a shared cleaning task that others already finished.
   - **Path:** Because the app tracks completion per person per task instance, the reminder targets Martin specifically rather than broadcasting to the whole Home. He opens the task, sees Must tasks listed ahead of Should tasks, completes the cleaning, and — because Johan has required Photo Evidence for this Must task — photographs the cleaned drain (sluk) and uploads it from his phone.
@@ -87,7 +101,7 @@ For Trinn 1 the Household is this product's primary user, per the brief's §Who 
   - **Resolution:** The photo remains available for Johan to review afterward if he chooses; Martin's task list updates and his next reminder follows Johan's configured cadence.
   - **Edge case:** Photo Evidence is only requested for task types where completion is objectively visible without capturing sensitive or private content (for example, a drain, not a bedroom).
 
-- **UJ-4. Sara keeps her own place on track, solo.** Sara, living alone, gets the same experience as Mari in UJ-1 — the same recommended Must/Should tasks, the same app-proposed frequencies, the same "?" and AI chat when she's unsure how to do something — except there is no housemate to share completions with: every task in her Home is hers alone to complete. Realized by the same FRs as UJ-1 (FR-4 through FR-9, FR-14/FR-15, FR-17, FR-21); no fairness or shared-completion mechanic (FR-7, FR-11) applies, since her Home has exactly one Household Member.
+- **UJ-4. Sara keeps her own place on track, solo.** Sara, living alone, gets the same experience as Mari in UJ-1 — the same recommended Must/Should tasks, the same app-proposed frequencies, the same "?" and AI chat when she's unsure how to do something — except there is no housemate to share completions with: every task in her Home is hers alone to complete. Realized by the same FRs as UJ-1 (FR-4 through FR-9, FR-14/FR-15, FR-17, FR-21); no fairness or shared-completion mechanic (FR-7, FR-11) applies, since her Home has exactly one Household Member. Fully in Trinn 1, except push.
 
 ## 4. Features
 
@@ -105,7 +119,7 @@ A user can create a Home. If created as a Household Home, the creator becomes a 
 - A newly created Landlord Home has exactly one Landlord and zero or more Tenants.
 - Creating a Home does not require prior membership in any other Home.
 - A Landlord-created Home supports full configuration (Must tasks, Frequency) with zero Tenants present.
-- `[REVISED 2026-11-09]` A user may create any number of Landlord Homes, and a Household Home only while they are not a Household Member or Tenant of another Home — the same one-Home limit as joining through an invite (Story 1.4). A Landlord can therefore create their own Household Home, and a Household Member or Tenant can create a Landlord Home.
+- A user may create any number of Landlord Homes, and a Household Home only while they are not a Household Member or Tenant of another Home (the same one-Home limit as joining through an invite). A Landlord can therefore create their own Household Home, and a Household Member or Tenant can create a Landlord Home.
 
 #### FR-2: Invite members via link
 Who can generate a Home's invite link depends on Home type: in a Household Home, any Household Member can generate one; in a Landlord Home, only the Landlord can — Tenants cannot invite anyone. A user following the link can register and is linked to that Home. Realizes UJ-1, UJ-2.
@@ -114,15 +128,17 @@ Who can generate a Home's invite link depends on Home type: in a Household Home,
 - An invite link resolves to registration when used by a user without an existing account, and to a "join Home" action for an existing account.
 - Each invite link is scoped to exactly one Home and one intended Role (Household Member, or Tenant under a specific Landlord).
 - A Tenant's attempt to generate an invite link is rejected server-side.
+- An invite link is valid for 7 days and can be used once. An expired or already used link shows a clear message and links nobody to the Home.
 
 #### FR-3: Assign and enforce Member Roles
 Each Member of a Home has exactly one Role: Household Member, Landlord, or Tenant. Role determines permission tier for Must/Should and Frequency settings (see 4.2, 4.3). Realizes UJ-2, UJ-3.
 
 **Consequences (testable):**
-- A Home has either (a) only Household Members, or (b) exactly one Landlord plus one or more Tenants — never a mix of Household Member with Landlord/Tenant in the same Home. `[REVISED 2026-11-08]` — "one or more Tenants" reads "zero or more Tenants", matching FR-1: a Landlord Home exists before its first Tenant joins (Story 1.3; `domain/homes.fr3_violations`). Found in the Epic 1 retrospective (S4).
+- A Home has either (a) only Household Members, or (b) exactly one Landlord plus zero or more Tenants (a Landlord Home exists before its first Tenant joins) — never a mix of Household Member with Landlord/Tenant in the same Home.
 - Tenant-role write attempts on Landlord-locked fields are rejected at the permission layer, not just hidden in the UI.
+- A user cannot read or change data in a Home they are not a current Member of: every Home-scoped request is rejected server-side.
 
-#### FR-23: Leave a Home and remove Members `[ADDED 2026-11-08 — Sprint Change Proposal 2026-11-08]`
+#### FR-23: Leave a Home and remove Members
 A Household Member or Tenant can leave their Home. A Landlord can remove a Tenant from a Landlord Home. A Landlord cannot leave their own Landlord Home, and a Household Member cannot remove another Household Member. Realizes UJ-1, UJ-2.
 
 **Consequences (testable):**
@@ -144,6 +160,7 @@ The app suggests a Must or Should classification for each task based on task typ
 
 **Consequences (testable):**
 - Every task has a classification at creation time — either the app's recommendation or an explicit override — never unclassified.
+- Given the catalog task type "Rens sluket" the recommended classification is Must; given "Avkalk vannkokeren" it is Should.
 
 #### FR-5: Adjust classification (Household Members and Landlords only)
 Household Members and Landlords can change a task's Must/Should classification. Tenants cannot. Realizes UJ-2, UJ-3.
@@ -178,10 +195,9 @@ The app proposes a recurrence Frequency for irregular tasks. Household Members a
 **Consequences (testable):**
 - Every recurring task has a Frequency value at creation — app-recommended or explicitly overridden.
 - A Tenant's attempt to change Frequency on a Landlord Home's task is rejected.
+- A Frequency is chosen from fixed intervals: 7, 14, 30, 42, 60, 90, 182 or 365 days. The recommended tasks are reviewed once per Home in Task Setup.
 
-`[REVISED 2026-11-09]` Story 2.1 (decisions by Eirik): a Frequency is chosen from fixed intervals (7, 14, 30, 42, 60, 90, 182 and 365 days, «Hver uke» … «Hvert år»), because a free number of days is hard to read and type on a phone; the server stores days, so the list can grow later. The recommended tasks are reviewed once per Home in Task Setup (a second setup gets 409); later changes to classification and Frequency are Story 2.3. See `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`.
-
-#### FR-24: Add and archive Tasks `[ADDED 2026-11-09 — Sprint Change Proposal 2026-11-09]`
+#### FR-24: Add and archive Tasks
 After Task Setup, a Household Member or Landlord can add a Task — a catalog task type the Home does not currently have, or a custom Task with its own name — and archive a Task the Home no longer needs. Tenants cannot. Realizes UJ-1, UJ-2, UJ-4.
 
 **Consequences (testable):**
@@ -209,10 +225,10 @@ The system sends a push notification to relevant Members when a task instance be
 - A Member with at least one due or overdue task receives one push notification per day from the daily morning due-check (scheduled around 07:00–08:00 Norwegian time; the platform may start it up to 59 minutes late), covering all of that Member's due and overdue tasks.
 
 #### FR-11: Fairness-based targeted notification
-When completion attribution (FR-7) shows a Member has rarely or never performed completions for a recurring shared task relative to other Members, the system can target a reminder specifically to that Member — independent of the task's current shared completion status. Realizes UJ-3.
+When completion attribution (FR-7) shows a Member has not performed any of a recurring shared task's recent completions, the system targets a reminder specifically to that Member instead of the whole Home. Realizes UJ-3.
 
 **Consequences (testable):**
-- Given a recurring shared task where Member A has completed it the last several times and Member B has not completed it at all in that period, a targeted reminder is sent to Member B specifically rather than broadcast to the whole Home.
+- Given a recurring shared task in a Home with at least two current Members and at least three completed instances: while the task is open and due or overdue, if Member B has none of the last 3 completions, B receives a targeted reminder and no other Member receives one from this rule. At most one such reminder is sent per task instance. The number 3 is a constant that can be changed without changing this requirement.
 
 #### FR-12: Landlord ad-hoc broadcast message
 A Landlord can send a free-form reminder message to all Tenants of a specific Home. Realizes UJ-2, UJ-3.
@@ -242,6 +258,9 @@ Any task offers a "?" affordance that returns an immediate, task-specific answer
 - Tapping "?" on a task returns an answer without leaving the task view.
 - Every AI-generated answer displays a visible disclaimer that the AI can be wrong and that the user should exercise caution, particularly with chemical products (for example, cleaning agents).
 - With no AI API key configured, the quick-answer still returns an answer in the same structure from mock data, so the feature can be run and tested without external accounts (FR-22).
+- If the AI call fails or takes longer than 10 seconds, "?" shows an error message (status "error") and can be retried; the task view and completion keep working.
+- Only the task's name, its catalog type and the user's own question are sent to the AI service — no names, e-mail addresses or Home names. The UI says the question goes to an external AI service.
+- A user can make at most 20 AI calls per day (quick answers and chat together). Beyond that, "?" says so plainly until the next day. The limit also applies to the mock answers, so it can be tested offline.
 
 #### FR-15: Escalate to full AI chat
 From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions. Realizes UJ-1.
@@ -249,15 +268,16 @@ From the quick-answer, a user can open a full conversational chat with the AI as
 **Consequences (testable):**
 - The chat retains the originating task as context for at least the first follow-up question.
 - The chat carries the same AI-can-be-wrong / chemical-caution disclaimer as the quick-answer (FR-14), visible at least once per session.
+- The chat follows the same timeout, data and daily-limit rules as the quick-answer (FR-14).
 
 **Feature-specific NFRs:**
 - The AI assistant can answer chemical-related how-to questions (for example, which cleaner suits which surface); every such answer surfaces the disclaimer above rather than being scoped out. No numeric accuracy bound is set for this round — the disclaimer is the product's chosen mitigation, not a claim of verified correctness.
 
 #### FR-16: AI-generated onboarding guide
-When a Landlord provisions a Home and invites Tenants, the system generates an onboarding guide explaining how the app works, tailored to that Home's unit type. Realizes UJ-2.
+When a Landlord provisions a Home and invites Tenants, the system generates an onboarding guide explaining how the app works, tailored to that Home. Realizes UJ-2.
 
 **Consequences (testable):**
-- A new Tenant accepting an invite receives or can access a guide referencing their specific Home/unit type, not a generic document identical across all Homes.
+- A new Tenant accepting an invite can open a guide that names the Home and lists its active Must tasks with their frequencies, so two Homes with different tasks never get the same text.
 
 ### 4.6 Completion and Photo Evidence
 
@@ -289,7 +309,7 @@ Uploaded Photo Evidence auto-approves the task completion immediately; the photo
 - A Tenant uploading required Photo Evidence sees the task marked complete without waiting on Landlord action.
 - The Landlord can retrieve the current photo for a task instance after the fact.
 - Only the most recent photo for a given task is retained — completing the task again with a new photo discards the previous one.
-- Photo access is restricted to the Home's Landlord and the product's own support staff — no other Tenant, other Landlord, or third party can view it.
+- Photo access is restricted to the Home's Landlord — no other Tenant, other Landlord, or third party can view it.
 
 **Feature-specific NFRs:**
 - Photo Evidence storage and access must respect the privacy scoping described in FR-18 — see §Privacy Constraints.
@@ -331,7 +351,7 @@ The application runs on a developer's or reviewer's own machine using a local Do
 
 **Consequences (testable):**
 - Following the README, `docker compose up` starts a local PostgreSQL database, and one further command applies the migrations and loads seed data.
-- With no `GEMINI_API_KEY` set the AI assistant uses mock answers in the same `{status, answer, disclaimer}` structure; with no VAPID keys set (Trinn 2) push uses a mock sender.
+- With no AI key configured the AI assistant uses mock answers in the same `{status, answer, disclaimer}` structure; with no push keys configured (Trinn 2) push uses a mock sender.
 - `.env.example` lists every environment variable, with no secrets, and the README describes setup from the first story onward.
 - The automated test suite runs without network access and without any key.
 
@@ -342,6 +362,7 @@ The application runs on a developer's or reviewer's own machine using a local Do
 - An in-app review/rating feature, deferred to v2+ — reviews/ratings are currently a hypothesis for measuring product success (brief §Success Criteria), not a scoped feature.
 - Verification or audit of Household Member (non-Landlord) task completion — a permanent non-goal, not a v1 limitation to be lifted later: that tier stays trust-based by design.
 - Photo Evidence required by default on any task — exclusively an opt-in, per-task Landlord setting, never a system-wide requirement.
+- Account deletion is not built in this course version; the team aims to add it. The user row would be anonymised (past activity is already shown as «Tidligere medlem»); the Landlord case is undecided, because FR-3 requires exactly one Landlord and FR-23 forbids a Landlord leaving. Estimated at about one day.
 - Broader home-management scope beyond cleaning/maintenance tasks — utilities, inventory, and similar — deferred to v2+, per brief Vision.
 
 ## 6. MVP Scope
@@ -360,12 +381,19 @@ The MVP is delivered in two stages, so that a complete app exists even if Trinn 
 
 ### Trinn 2 — added once Trinn 1 is stable
 
-- Push notifications: due/overdue, targeted-to-individual, Landlord broadcast, Landlord-configured cadence — FR-10 to FR-13
-- AI assistant: full chat escalation and AI-generated tailored onboarding guide — FR-15, FR-16
-- Landlord-required Photo Evidence with auto-approval and review access — FR-18, FR-19
-- Landlord portfolio dashboard across multiple Homes — FR-20
+The cut line was decided on 2026-11-12 (Open Question 1).
 
-`[NOTE FOR PM]` — This PRD's journey work surfaced four features beyond the brief's original scope (portfolio dashboard, Photo Evidence, targeted notifications, AI onboarding guide). They are all placed in Trinn 2; see Open Question 1.
+**Must (built first):**
+- Push notifications: due/overdue, Landlord broadcast, Landlord-configured cadence — FR-10, FR-12, FR-13
+- Landlord-required Photo Evidence with auto-approval and review access — FR-18, FR-19
+
+**If time permits, cut from the bottom up** (the first line is cut first):
+- Landlord portfolio dashboard across multiple Homes — FR-20
+- AI-generated tailored onboarding guide — FR-16
+- Fairness-based targeted notification — FR-11
+- AI assistant: full chat escalation — FR-15 (cut last, since Trinn 1 already has the FR-14 quick answer)
+
+`[NOTE FOR PM]` — The journey work surfaced four features beyond the brief's original scope (portfolio dashboard, Photo Evidence, targeted notifications, AI onboarding guide); all are in Trinn 2, ordered as above.
 
 ## 7. Success Metrics
 
@@ -378,11 +406,15 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 - **SM-4**: When one Member completes a shared task, every Member of that Home sees it as complete, and the completion records who did it. Validates FR-7, FR-17.
 - **SM-5**: A user can create a Home without belonging to any other Home and becomes its Household Member or Landlord. Only permitted roles can generate invite links; a Tenant's attempt is rejected, and an expired or used link shows a clear message. Validates FR-1, FR-2.
 - **SM-6**: A user with a Membership in one Home cannot read or change another Home's data. Validates FR-3.
-- **SM-7**: The "?" quick answer shows an answer with a visible disclaimer, and works with mock answers when no API key is set. Validates FR-14, FR-22.
+- **SM-7**: The "?" quick answer shows an answer with a visible disclaimer, and works with mock answers when no API key is set. A failed or slow call (over 10 seconds) shows an error and can be retried without blocking completion; the 21st call in a day is refused with a clear message; only the task's name, catalog type and the user's question are sent. Validates FR-14, FR-22.
 - **SM-8**: A reviewer can run the app locally from the README using Docker, without the team's accounts or keys, and the automated tests pass. Validates FR-22.
 
 **Primary (Trinn 2)**
-- **SM-9**: A Landlord broadcast reaches all Tenants of the targeted Home (FR-12); the due-check never sends a duplicate notification for the same task instance and window (FR-10); Photo Evidence cannot be required on task types that are not flagged eligible (FR-18); the portfolio dashboard lists the Homes with overdue Must tasks (FR-20).
+- **SM-9a**: A Landlord broadcast reaches all Tenants of the targeted Home. Validates FR-12.
+- **SM-9b**: The due-check never sends a duplicate notification for the same task instance and window. Validates FR-10.
+- **SM-9c**: Photo Evidence cannot be required on task types that are not flagged eligible in the task catalog. Validates FR-18.
+- **SM-9d**: The portfolio dashboard lists the Homes with overdue Must tasks. Validates FR-20.
+- **SM-15**: Given a recurring shared task, at least two current Members and at least three completed instances, a Member with none of the last 3 completions gets one targeted reminder while the task is open and due, and no other Member gets one from this rule. Validates FR-11.
 
 **Directional signals** (tracked qualitatively, not measured in the course)
 - **SM-10**: Fewer irregular tasks going overdue or forgotten over time.
@@ -397,26 +429,25 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 
 ## 8. Open Questions
 
-1. `[PARTLY RESOLVED 2026-10-11]` The four journey-derived additions (portfolio dashboard, photo evidence, targeted notifications, AI onboarding guide) are now placed in Trinn 2 (see §6), so Trinn 1 is a complete app without them. The question that remains is whether Trinn 2 itself will fit before the mid-December deadline; if scope must shrink there, a provisional cut order (lowest-value-first, pending team validation): (1) FR-20 Portfolio Dashboard — nice-to-have oversight, not blocking the core loop for a single Landlord; (2) FR-16 AI onboarding guide — a Landlord can substitute a manual message short-term; (3) FR-11 fairness-based targeting — degrades gracefully to broadcast-only reminders (FR-10/FR-12); FR-18/19 Photo Evidence is deliberately last, since it's the most distinctive Landlord-Tenant trust mechanism named in the brief's differentiation case.
+1. `[RESOLVED 2026-11-12]` Trinn 2 is ordered by priority (§6). **Must:** FR-10, FR-12, FR-13, FR-18/19. **If time permits, cut from the bottom up:** FR-20 (cut first), FR-16, FR-11, FR-15 (cut last). Decided by Eirik on 2026-11-12 after the teacher's PRD feedback; Hannah and Steffen were unavailable and can object in the PR. FR-13 is Must because it shares the daily due-check with FR-10. Photo Evidence stays Must because it is the most distinctive Landlord–Tenant mechanism in the brief.
 2. `[RESOLVED 2026-11-01]` FR-10: daily morning batch. Tasks have due dates, not due times, and UJ-1 already describes the notification arriving "earlier in the day". Vercel Cron on the free plan runs at most once a day, with up to 59 minutes' delay; a missed run means no reminders that day, an accepted risk for a course project. FR-12 broadcasts are unaffected (sent immediately, AD-14).
-3. `[RESOLVED 2026-11-07]` FR-3: can a Landlord also be a Household Member of their own separate personal Home — that is, can one user hold both Roles across different Homes — or is a user's Role fixed account-wide? **Resolution:** yes. Role lives on the Membership (AD-1), so one user can hold different Roles in different Homes. As built (Stories 1.3–1.4): a Household Member or Tenant belongs to at most one Home; a Landlord may own several Landlord Homes and also join one Household Home through an invite; a Household Member cannot create a Landlord Home (accepted in the Epic 1 retrospective, R1). Recorded 2026-11-08 (Epic 1 retrospective, S3). `[REVISED 2026-11-09]` The creation rule now matches the joining rule (FR-1): anyone may create Landlord Homes, and a Household Home only without another Household Member or Tenant Membership. This closes R1 (issue #30, Story 1.9).
-4. FR-11: what threshold defines "rarely or never performed completions" for fairness-based targeting (for example, zero completions in the last N instances)? Needs a concrete rule before implementation.
+3. `[RESOLVED 2026-11-07]` FR-3: can one user hold both Roles across different Homes? **Resolution:** yes. Role lives on the Membership (AD-1). A Landlord can own several Landlord Homes; a Household Member or Tenant belongs to at most one Home; anyone can create Landlord Homes, and a Household Home only without another Household Member or Tenant Membership (FR-1).
+4. `[RESOLVED 2026-11-12]` FR-11: the threshold is "none of the last 3 completions", with at least two current Members and at least three completed instances, while the task is open and due (see FR-11). The number 3 is a constant in the code.
 
-## 9. Assumptions Index
+## 9. Privacy Constraints
 
-- §3 — the JTBD and journeys are grounded in the team's own lived experience, not formal user research; treat as founder intuition to validate, not confirmed findings.
-- §Privacy Constraints — the Photo Evidence content-safety enforcement mechanism (curated allowlist vs. Landlord judgment) is undecided, deferred to architecture.
-- §6 `[NOTE FOR PM]` — the four journey-derived features beyond the brief's original list are assumed to remain in scope for v1 pending team confirmation given the timeline; see Open Question 1.
+- Photo Evidence (FR-18/19) is restricted by design to task types where completion is objectively visible without capturing sensitive or private content (for example, a cleaned drain, not a general room photo). This is a product-level scoping rule, not merely a UX suggestion. It is enforced by a curated, system-controlled allowlist: the flag `photo_evidence_eligible` in the task catalog, which no user can change. Custom Tasks can never require Photo Evidence (FR-24).
+- Photo retention: each photo is automatically replaced the next time the same task is completed — the system never accumulates a photo history for a task. Access is restricted to the Home's Landlord only.
+- Tenant data (task history, Photo Evidence, completion records) is visible to that Tenant's Landlord by design (this is the product's core value proposition for the Landlord segment) but must not be visible to other Tenants or other Landlords outside the relevant Home.
+- Account data: an account stores an e-mail address, a display name and a password hash. Other Members of a Home see only the display name, never the e-mail address. The only user-related data sent to an external service is the minimal AI call described in FR-14. Account deletion is described in §5.
 
-## Privacy Constraints
-
-- Photo Evidence (FR-18/19) is restricted by design to task types where completion is objectively visible without capturing sensitive or private content (for example, a cleaned drain, not a general room photo). This is a product-level scoping rule, not merely a UX suggestion — Landlords should not be able to configure Photo Evidence for task types that would incidentally capture private spaces or belongings. `[ASSUMPTION: the enforcement mechanism (a curated, system-controlled allowlist of eligible task types vs. Landlord judgment with no system check) is not yet decided — deferred to architecture.]`
-- Photo retention: each photo is automatically replaced the next time the same task is completed — the system never accumulates a photo history for a task. Access is restricted to the Home's Landlord and the product's own support staff only.
-- Tenant data (task history, Photo Evidence, completion records) is visible to that Tenant's Landlord by design (this is the product's core value proposition for the Landlord segment) but should not be visible to other Tenants or other Landlords outside the relevant Home.
-
-## Cross-Cutting NFRs
+## 10. Cross-Cutting NFRs
 
 - **Permission enforcement:** Role-based restrictions (Tenant cannot alter Landlord-locked Must/Frequency settings; only Household Members/Landlords can adjust classification) must be enforced server-side, not only hidden in the UI (see FR-3, FR-5, FR-8).
-- **Notification reliability:** Push notifications (FR-10 to FR-13) must be delivered reliably enough that a Household Member or Tenant can trust the absence of a notification to mean "nothing due" — a missed notification undermines the product's core value proposition (avoiding forgotten tasks).
+- **Notification reliability:** Each due-check run records, per Member, whether a notification was sent, and failed sends are logged. Delivery is promised no further than the daily batch (Open Question 2, accepted risk); a missed batch means no reminders that day. Applies to FR-10 to FR-13.
 - **Runnable without external accounts:** The app, its seed data and its automated tests must run on a reviewer's own machine without any account or key from the team; external services (AI, push, file storage) have mock modes that are used when no key is set (FR-22).
 - **Responsiveness:** All core flows must remain fully usable at common phone, tablet, and desktop breakpoints (FR-21) — this is not a "nice to have" polish pass but a stated v1 requirement.
+
+## 11. Assumptions Index
+
+- §3 — the JTBD and journeys are grounded in the team's own lived experience, not formal user research; treat as founder intuition to validate, not confirmed findings.

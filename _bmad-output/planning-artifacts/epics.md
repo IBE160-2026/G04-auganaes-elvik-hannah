@@ -20,6 +20,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
 
+> **Revision 2026-11-12:** The teacher's PRD feedback (see `sprint-change-proposal-2026-11-12.md`): Trinn 2 is split into Must and If time permits with a cut order, the FR-11 rule is concrete (Story 3.3), AI failure, daily limit and call content are acceptance criteria (Stories 5.1 and 5.2), and "unit type" is replaced by the Home's name and active Must tasks (Story 5.3). No story is added or renumbered.
+
 ### Known open points (from the readiness check, 2026-10-11)
 
 These do not block Trinn 1 but must be resolved before the stories they touch are built.
@@ -35,11 +37,14 @@ Trinn 1 is the minimal core flow that must be finished and stable first, so a co
 | Stage | Stories |
 |---|---|
 | **Trinn 1** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 5.1 |
-| **Trinn 2** | 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 5.2, 5.3, 6.1 |
+| **Trinn 2, Must** | 3.1, 3.2, 3.4, 3.5, 4.1, 4.2, 4.3 (FR-10, FR-12, FR-13, FR-18, FR-19) |
+| **Trinn 2, if time permits** | 6.1 (FR-20), 5.3 (FR-16), 3.3 (FR-11), 5.2 (FR-15) |
+
+The cut order for the last row is from left to right: 6.1 is cut first and 5.2 last (PRD Open Question 1, decided 2026-11-12). Story 3.1 belongs to the Must group because push cannot work without it.
 
 Epic 5 is split between the stages: the quick-answer (5.1) is Trinn 1, the chat (5.2) and onboarding guide (5.3) are Trinn 2. The Tenant locks in Stories 1.4, 2.3 and 1.5 are Trinn 1 on purpose: they are the product's differentiator and its most testable rules, even though the household is the primary user for Trinn 1.
 
-Note on numbering: the PRD, Architecture, and UX documents all use the hyphenated form `FR-1`...`FR-22` as the canonical requirement IDs (also used in the Architecture's `binds:` frontmatter and Capability → Architecture Map). This document keeps that exact numbering rather than renumbering to `FR1` to preserve traceability across documents.
+Note on numbering: the PRD, Architecture, and UX documents all use the hyphenated form `FR-1`...`FR-24` as the canonical requirement IDs (also used in the Architecture's `binds:` frontmatter and Capability → Architecture Map). This document keeps that exact numbering rather than renumbering to `FR1` to preserve traceability across documents.
 
 ## Requirements Inventory
 
@@ -47,11 +52,11 @@ Note on numbering: the PRD, Architecture, and UX documents all use the hyphenate
 
 FR-1: Create a Home (creation rule revised 2026-11-09, Story 1.9). A user can create a Home. If created as a Household Home, the creator becomes a Household Member with the same standing as any later invitee — no persistent creator privilege. If created as a Landlord Home, the creator becomes its Landlord.
 
-FR-2: Invite members via link. Who can generate a Home's invite link depends on Home type: in a Household Home, any Household Member can generate one; in a Landlord Home, only the Landlord can — Tenants cannot invite anyone.
+FR-2: Invite members via link. Who can generate a Home's invite link depends on Home type: in a Household Home, any Household Member can generate one; in a Landlord Home, only the Landlord can — Tenants cannot invite anyone. A link is valid for 7 days and can be used once; an expired or used link shows a clear message.
 
-FR-3: Assign and enforce Member Roles. Each Member of a Home has exactly one Role: Household Member, Landlord, or Tenant. Role determines permission tier for Must/Should and Frequency settings.
+FR-3: Assign and enforce Member Roles. Each Member of a Home has exactly one Role: Household Member, Landlord, or Tenant. Role determines permission tier for Must/Should and Frequency settings. A user cannot read or change data in a Home they are not a current Member of.
 
-FR-4: Recommend Must/Should classification. The app suggests a Must or Should classification for each task based on task type (for example, mold or damage risk defaults to Must).
+FR-4: Recommend Must/Should classification. The app suggests a Must or Should classification for each task based on task type (for example, mold or damage risk defaults to Must; "Rens sluket" is Must, "Avkalk vannkokeren" is Should).
 
 FR-5: Adjust classification (Household Members and Landlords only). Household Members and Landlords can change a task's Must/Should classification. Tenants cannot.
 
@@ -65,17 +70,17 @@ FR-9: Auto-reschedule on completion. Marking a task instance complete automatica
 
 FR-10: Due/overdue push notifications. The system sends a push notification to relevant Members when a task instance becomes due or overdue.
 
-FR-11: Fairness-based targeted notification. When completion attribution (FR-7) shows a Member has rarely or never performed completions for a recurring shared task relative to other Members, the system can target a reminder specifically to that Member.
+FR-11: Fairness-based targeted notification. When completion attribution (FR-7) shows a Member has none of a recurring shared task's last 3 completions (at least two current Members, at least three completed instances), the system targets a reminder to that Member only, while the task is open and due, at most once per task instance.
 
 FR-12: Landlord ad-hoc broadcast message. A Landlord can send a free-form reminder message to all Tenants of a specific Home.
 
 FR-13: Landlord-controlled notification cadence. A Landlord can configure how strictly/often Tenants of a Home are reminded about due/overdue Must tasks, independent of the task's Frequency.
 
-FR-14: Contextual quick-answer. Any task offers a "?" affordance that returns an immediate, task-specific answer to a how-to question, always with a visible AI-can-be-wrong / chemical-caution disclaimer.
+FR-14: Contextual quick-answer. Any task offers a "?" affordance that returns an immediate, task-specific answer to a how-to question, always with a visible AI-can-be-wrong / chemical-caution disclaimer. A failed or slow call (over 10 seconds) shows an error and can be retried; at most 20 AI calls per user per day; only the task's name, catalog type and the user's question are sent.
 
-FR-15: Escalate to full AI chat. From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions, retaining the originating task as context for at least the first follow-up.
+FR-15: Escalate to full AI chat. From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions, retaining the originating task as context for at least the first follow-up, under the same timeout, data and daily-limit rules as FR-14.
 
-FR-16: AI-generated onboarding guide. When a Landlord provisions a Home and invites Tenants, the system generates an onboarding guide explaining how the app works, tailored to that Home's unit type.
+FR-16: AI-generated onboarding guide. When a Landlord provisions a Home and invites Tenants, the system generates an onboarding guide explaining how the app works, tailored to that Home: it names the Home and lists its active Must tasks with their frequencies.
 
 FR-17: Self-checkoff completion. Any Member can mark a task instance complete with a single action; no confirmation from another Member is required.
 
@@ -252,7 +257,7 @@ A Landlord can flag a specific Must task (restricted to system-eligible task typ
 **Stage:** Trinn 2
 
 ### Epic 5: AI Assistant
-Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat for follow-up questions, and a new Tenant receives an AI-generated onboarding guide tailored to their Home's unit type when they join. Implements the single server-mediated AI service (AD-4) wrapping all Gemini calls behind one structured response shape.
+Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat for follow-up questions, and a new Tenant receives an AI-generated onboarding guide tailored to their Home when they join. Implements the single server-mediated AI service (AD-4) wrapping all Gemini calls behind one structured response shape.
 **FRs covered:** FR-14, FR-15, FR-16
 **Stage:** FR-14 (Story 5.1) is Trinn 1; FR-15 and FR-16 (Stories 5.2, 5.3) are Trinn 2
 
@@ -1042,6 +1047,14 @@ So that completion feels fair rather than me nagging my housemates.
 **When** the due-check job runs
 **Then** a targeted nudge notification is sent to Member B specifically, not broadcast to the whole Home (FR-11, AD-9)
 
+**Given** a recurring shared task in a Home with only one current Member, or with fewer than three completed instances
+**When** the due-check job runs
+**Then** the fairness nudge does not fire (PRD FR-11: at least two current Members and three completed instances)
+
+**Given** a task instance that is already completed
+**When** the due-check job runs
+**Then** no fairness nudge is sent for it — the nudge only fires while the instance is open and due or overdue, and at most once per task instance (SM-15)
+
 **Given** a recurring shared task where no Member has completed any of the last 3 instances
 **When** the due-check job runs
 **Then** the fairness nudge does not fire — the regular due/overdue notification still applies instead
@@ -1228,7 +1241,7 @@ So that I can review after the fact without the system becoming a privacy liabil
 
 ## Epic 5: AI Assistant
 
-Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat, and a new Tenant receives an AI-generated onboarding guide tailored to their Home's unit type when they join.
+Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat, and a new Tenant receives an AI-generated onboarding guide tailored to their Home when they join.
 
 ### Story 5.1: Contextual Quick-Answer ("?")
 
@@ -1272,6 +1285,24 @@ So that I can get unstuck right when I need it.
 **When** a Member taps "?"
 **Then** the mock provider returns a canned, task-specific answer in the same structure with the disclaimer, and the UI marks it as demo mode — the feature can be run and tested without any external account (FR-22, AD-15)
 
+*Added 2026-11-12 (Sprint Change Proposal, teacher's PRD feedback; FR-14, AD-4, SM-7):*
+
+**Given** the AI call fails or takes longer than 10 seconds
+**When** the popover is open
+**Then** it shows an error message (`status: "error"`) and a retry action, and the task can still be completed; the timeout is a constant, not a literal in the route
+
+**Given** a user has made 20 AI calls today (quick answers and chat together)
+**When** they tap "?" again
+**Then** the popover says plainly that the daily limit is reached and when it resets; the limit counts mock answers too and is stored per user and day in a new table `ai_usage` (Alembic migration), so it is testable offline
+
+**Given** any call to the AI provider
+**When** the request is built
+**Then** it contains only the task's name, its catalog type and the user's own question — no user names, e-mail addresses or Home names — and a test asserts the payload
+
+**Given** the "?" popover
+**When** it shows an answer
+**Then** a short line next to the disclaimer says that the question is sent to an external AI service (Google Gemini)
+
 **Given** the backend AI service
 **When** it is built in this story
 **Then** it sits behind a provider interface with a Gemini provider and a mock provider, the real Gemini provider is used only when `GEMINI_API_KEY` is set, and the automated tests always use the mock provider (AD-4, AD-15)
@@ -1296,6 +1327,10 @@ So that I can ask follow-up questions about the same task.
 
 **Given** AI Chat
 **When** it calls the backend
+**Then** it follows the same timeout (10 seconds), daily limit (20 calls per user, shared with the quick-answer) and call-content rules as Story 5.1 (FR-15)
+
+**Given** AI Chat
+**When** it calls the backend
 **Then** it uses the same shared AI service (AD-4) as the quick-answer — not a separate implementation
 
 ### Story 5.3: AI-Generated Onboarding Guide for New Tenants
@@ -1303,7 +1338,7 @@ So that I can ask follow-up questions about the same task.
 **Stage:** Trinn 2
 
 As a new Tenant joining a Home,
-I want a short guide tailored to this specific Home/unit type,
+I want a short guide tailored to this specific Home,
 So that I understand how the app and my obligations work without asking my Landlord to explain everything.
 
 **Acceptance Criteria:**
@@ -1314,7 +1349,7 @@ So that I understand how the app and my obligations work without asking my Landl
 
 **Given** a new Tenant accepts an invite
 **When** they first open Task Overview
-**Then** the guide surfaces as a one-time dismissible card at the top of the list — referencing their specific Home/unit type, not a generic document identical across all Homes
+**Then** the guide surfaces as a one-time dismissible card at the top of the list — naming the Home and listing its active Must tasks with their frequencies, so two Homes with different tasks never get the same text
 
 **Given** the Tenant dismisses the card
 **When** they want to see it again later
