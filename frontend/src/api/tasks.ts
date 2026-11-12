@@ -86,12 +86,19 @@ const DUE_FORMAT_WITH_YEAR = new Intl.DateTimeFormat('nb-NO', {
 });
 
 /**
- * «9. desember» from "2026-12-09", with the year when it is not this year. Built from the parts
- * as a local date: new Date('2026-12-09') is UTC midnight, the day before west of Greenwich.
+ * «9. desember» from "2026-12-09", with the year when it is not the server's current year. Built
+ * from the parts as a local date: new Date('2026-12-09') is UTC midnight, the day before west of
+ * Greenwich. The current year is an argument, never read from the browser's clock.
  */
-export function formatDueOn(dueOn: string, today: Date = new Date()): string {
+export function formatDueOn(dueOn: string, serverYear: number): string {
   const year = Number(dueOn.split('-')[0]);
-  return formatDate(dueOn, year !== today.getFullYear());
+  return formatDate(dueOn, year !== serverYear);
+}
+
+/** The year of the server's «today»: the due date minus the server's day count (no clock read). */
+function serverYearOf(task: Pick<Task, 'due_on' | 'days_until_due'>): number {
+  const [year, month, day] = task.due_on.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day - task.days_until_due)).getUTCFullYear();
 }
 
 /**
@@ -133,14 +140,14 @@ function inDays(days: number): string {
  * «Forfalt — frist var 26. september», «Snart forfall — i morgen», «Neste gang: 9. desember».
  * The words follow the server's status and day count, so they always agree with the colour.
  */
-export function dueText(task: Pick<Task, 'due_on' | 'due_status' | 'days_until_due'>, today?: Date): string {
+export function dueText(task: Pick<Task, 'due_on' | 'due_status' | 'days_until_due'>): string {
   switch (task.due_status) {
     case 'overdue':
-      return `Forfalt — frist var ${formatDueOn(task.due_on, today)}`;
+      return `Forfalt — frist var ${formatDueOn(task.due_on, serverYearOf(task))}`;
     case 'due_soon':
       return `Snart forfall — ${inDays(task.days_until_due)}`;
     case 'later':
-      return `Neste gang: ${formatDueOn(task.due_on, today)}`;
+      return `Neste gang: ${formatDueOn(task.due_on, serverYearOf(task))}`;
   }
 }
 

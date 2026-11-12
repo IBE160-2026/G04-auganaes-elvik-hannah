@@ -149,6 +149,12 @@ export function tasksKey(homeId: string, userId: string | undefined) {
   return ['tasks', homeId, userId] as const;
 }
 
+/** The tasks query key for the signed-in user and this Home, with that user's id (Epic 2 retro). */
+function useTasksScope(homeId: string) {
+  const userId = useSession()?.user.id;
+  return { userId, key: tasksKey(homeId, userId) };
+}
+
 export function useTasks(homeId: string) {
   const session = useSession();
   return useQuery({
@@ -195,8 +201,7 @@ export function useSetUpTasks(homeId: string) {
  */
 export function useAdjustTask(homeId: string) {
   const queryClient = useQueryClient();
-  const session = useSession();
-  const key = tasksKey(homeId, session?.user.id);
+  const { key } = useTasksScope(homeId);
   return useMutation({
     mutationFn: ({ taskId, changes }: { taskId: string; changes: TaskChanges }) =>
       adjustTask(homeId, taskId, changes),
@@ -219,9 +224,7 @@ export function useAdjustTask(homeId: string) {
  */
 export function useAddTask(homeId: string) {
   const queryClient = useQueryClient();
-  const session = useSession();
-  const userId = session?.user.id;
-  const key = tasksKey(homeId, userId);
+  const { userId, key } = useTasksScope(homeId);
   return useMutation({
     mutationFn: (task: NewTask) => addTask(homeId, task),
     onSuccess: async (task: Task) => {
@@ -244,9 +247,7 @@ export function useAddTask(homeId: string) {
  */
 export function useArchiveTask(homeId: string) {
   const queryClient = useQueryClient();
-  const session = useSession();
-  const userId = session?.user.id;
-  const key = tasksKey(homeId, userId);
+  const { userId, key } = useTasksScope(homeId);
   return useMutation({
     mutationFn: (task: Pick<Task, 'id' | 'name'>) => archiveTask(homeId, task.id),
     onSuccess: async (_data, task) => {
@@ -268,8 +269,7 @@ export function useArchiveTask(homeId: string) {
  */
 export function useAskTask(homeId: string) {
   const queryClient = useQueryClient();
-  const session = useSession();
-  const key = tasksKey(homeId, session?.user.id);
+  const { key } = useTasksScope(homeId);
   return useMutation({
     mutationFn: ({ taskId, question }: { taskId: string; question?: string }) =>
       askTask(homeId, taskId, question),
@@ -306,10 +306,9 @@ export function isTransient(error: unknown): boolean {
  */
 export function useCompleteTask(homeId: string) {
   const queryClient = useQueryClient();
-  const session = useSession();
-  const key = tasksKey(homeId, session?.user.id);
+  const { userId, key } = useTasksScope(homeId);
   return useMutation({
-    mutationKey: completeTaskKey(homeId, session?.user.id),
+    mutationKey: completeTaskKey(homeId, userId),
     mutationFn: (task: Task) => completeTask(homeId, task),
     retry: (failureCount, error) => isTransient(error) && failureCount < COMPLETE_RETRIES,
     onSuccess: async (task: Task) => {

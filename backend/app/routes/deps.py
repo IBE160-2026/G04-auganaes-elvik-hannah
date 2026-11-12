@@ -23,6 +23,10 @@ class ErrorOut(BaseModel):
     detail: str
 
 
+# The 404 text for a Task that is not in the Home (or is archived), shared by every Task route.
+TASK_NOT_FOUND = "Fant ikke oppgaven."
+
+
 # Story 1.5: any Member of the Home, whatever their Role.
 AnyMember = Annotated[Membership, Depends(require_role(*ROLES))]
 # Story 1.4: a Household Member or the Landlord.

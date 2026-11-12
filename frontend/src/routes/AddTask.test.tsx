@@ -36,11 +36,6 @@ function server() {
   });
 }
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(2026, 10, 10, 12));
-});
-afterEach(() => vi.useRealTimers());
 afterEach(resetApi);
 
 describe('Add Task', () => {

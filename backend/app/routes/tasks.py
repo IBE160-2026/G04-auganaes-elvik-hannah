@@ -30,12 +30,18 @@ from app.clock import utc_now
 from app.domain import task_types, tasks
 from app.domain.task_types import Classification, Frequency
 from app.permissions.current_user import CurrentUser
-from app.routes.deps import AnyMember, ErrorOut, SessionDep, TaskAdjuster, TaskSetter
+from app.routes.deps import (
+    TASK_NOT_FOUND,
+    AnyMember,
+    ErrorOut,
+    SessionDep,
+    TaskAdjuster,
+    TaskSetter,
+)
 
 router = APIRouter(tags=["tasks"])
 
 ALREADY_SET_UP = "Oppgavene i dette hjemmet er allerede satt opp."
-TASK_NOT_FOUND = "Fant ikke oppgaven."
 
 
 class TaskTypeOut(BaseModel):

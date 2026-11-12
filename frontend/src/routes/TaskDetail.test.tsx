@@ -33,13 +33,6 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
-// The fixtures' due dates are in 2026; formatDueOn adds the year in any other year.
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(2026, 10, 10, 12));
-});
-
-afterEach(() => vi.useRealTimers());
 afterEach(resetApi);
 
 describe('Task Detail', () => {
