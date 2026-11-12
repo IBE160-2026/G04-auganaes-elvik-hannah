@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-11-11'
 status: 'done'
 route: 'dispatch'
-baseline_commit: '4bcea9792a42027378a74788adb2d0e6a22aa62c'
+baseline_commit: '6aade20431f12a9b9850d085b2ee0e0965a03cc3'
 review_loop_iteration: 0
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
