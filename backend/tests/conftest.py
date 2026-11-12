@@ -57,6 +57,13 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(socket.socket, "connect_ex", _guarded_connect_ex)
 
 
+@pytest.fixture(autouse=True)
+def mock_ai(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Story 5.1 (AD-15): the tests always use the mock AI provider, whatever the shell has set."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+
+
 @pytest.fixture
 def engine() -> Iterator[Engine]:
     # One shared connection, so every session sees the same in-memory database.

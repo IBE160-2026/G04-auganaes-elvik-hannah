@@ -4,10 +4,13 @@ import pytest
 
 from app.config import (
     DEFAULT_DATABASE_URL,
+    DEFAULT_GEMINI_MODEL,
     DEV_JWT_SECRET,
     MIN_JWT_SECRET_BYTES,
     get_cookie_secure,
     get_database_url,
+    get_gemini_api_key,
+    get_gemini_model,
     get_jwt_secret,
     get_migration_url,
     get_settings,
@@ -23,6 +26,8 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "VERCEL",
         "JWT_SECRET",
         "AUTH_COOKIE_SECURE",
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -179,3 +184,19 @@ def test_cookie_secure_only_on_vercel_or_opt_in(
         monkeypatch.setenv("AUTH_COOKIE_SECURE", flag)
 
     assert get_cookie_secure() is expected
+
+
+def test_gemini_key_is_unset_when_missing_or_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert get_gemini_api_key() is None
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    assert get_gemini_api_key() is None
+    monkeypatch.setenv("GEMINI_API_KEY", "hemmelig")
+    assert get_gemini_api_key() == "hemmelig"
+
+
+def test_gemini_model_defaults_and_can_be_overridden(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert get_gemini_model() == DEFAULT_GEMINI_MODEL != ""
+    monkeypatch.setenv("GEMINI_MODEL", "")
+    assert get_gemini_model() == DEFAULT_GEMINI_MODEL
+    monkeypatch.setenv("GEMINI_MODEL", "annen-modell")
+    assert get_gemini_model() == "annen-modell"

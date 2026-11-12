@@ -15,6 +15,9 @@ LIBPQ_SCHEMES = ("postgresql://", "postgres://")
 DEV_JWT_SECRET = "husly-lokal-utvikling-ikke-hemmelig-0123456789"
 MIN_JWT_SECRET_BYTES = 32
 
+# Story 5.1: the model used when GEMINI_MODEL is not set.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -88,6 +91,15 @@ def get_cookie_secure() -> bool:
     if _env("VERCEL"):
         return True
     return (_env("AUTH_COOKIE_SECURE") or "").lower() == "true"
+
+
+def get_gemini_api_key() -> str | None:
+    """Story 5.1 (AD-4, AD-15): the Gemini key. Unset means the mock provider answers."""
+    return _env("GEMINI_API_KEY")
+
+
+def get_gemini_model() -> str:
+    return _env("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
 
 
 def get_settings() -> Settings:
