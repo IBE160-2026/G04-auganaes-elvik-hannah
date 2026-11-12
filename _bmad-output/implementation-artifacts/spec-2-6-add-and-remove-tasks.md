@@ -2,7 +2,7 @@
 title: 'Story 2.6: Add and Remove Tasks'
 type: 'feature'
 created: '2026-11-12'
-status: 'in-review'
+status: 'done'
 baseline_commit: '60c287a2584e2cabe32f017989d34f4245a778e8'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -110,7 +110,8 @@ context:
 - Notices (`La til`/`Fjernet`): set before the tasks refetch. Task Detail's guard redirects to the overview as soon as the refetch drops the Task, so setting the notice afterwards could land after the overview mounted.
 - Frontend: Add Task's remount-on-list-change idea was dropped: the form derives which catalog types are missing on every render and drops a choice another Member's add made unavailable, so a typed name and a shown error survive a refetch. `ConfirmAction` got an optional `confirmAriaLabel` so the confirm button names the Task.
 - Empty list: the header link is hidden while the list is empty and the empty state carries the one «Legg til oppgave» link, so the page never has two links with the same name.
-- Verification: pytest 629, Vitest 417, ruff, ESLint and build all pass. Chrome smoke: see the review step.
+- Verification after review: pytest 630, Vitest 423, ruff, ESLint and build all pass.
+- Chrome smoke 2026-11-12 on a throwaway DB `husly_smoke26` (backend :8001, Vite :5174 with a temporary config, all removed afterwards; `husly` untouched), signed in as Mari from the seed: the header shows «Legg til oppgave»; the seed Home already has all eight catalog types, so only «Egen oppgave» is offered and preselected. «rens sluket» gives «Hjemmet har allerede en oppgave som heter «rens sluket».» at the name field with a red border and «Prøv igjen»; editing the name clears the error and the button reads «Legg til» again. «Vask gardiner», Må, saved: the overview opens with «La til «Vask gardiner».», the Task is listed with the Må tasks and «Neste gang: 12. desember» (today + 30). On its Detail page «Fjern oppgaven» turns into the explanation with «Ja, fjern oppgaven» (danger colour) and «Avbryt»; confirming lands on the overview with «Fjernet «Vask gardiner».» and the Task gone. DB: the row has `archived_at` set, `task_type` null and its one instance kept. Not exercised in the browser: a Tenant's view, the screen-reader announcements and the keyboard order (covered by the Vitest tests).
 
 ## Spec Change Log
 
