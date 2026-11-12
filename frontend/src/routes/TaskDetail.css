@@ -170,3 +170,9 @@
   line-height: var(--line-height-meta);
   color: var(--color-ink-secondary);
 }
+
+/* Story 2.4: the completion note, read-only. */
+.task-detail__done {
+  color: var(--color-success);
+  font-weight: var(--font-weight-bold);
+}

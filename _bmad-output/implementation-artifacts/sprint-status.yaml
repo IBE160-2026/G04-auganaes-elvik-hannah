@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-11-2026 20:56
+last_updated: 12-11-2026 17:33
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -41,6 +41,7 @@ story_location: _bmad-output/implementation-artifacts
 #   1-7 kommer før 1-2 slik at innlogging kan testes på PR-previews (correct-course 2026-11-01).
 #   1-8 (forlat hjem / fjern leietaker) kommer før 2-1 (correct-course 2026-11-08, retrospektiv R2).
 #   1-9 (én regel for å opprette hjem, issue #30) kommer før 2-2; 2-6 (legge til og fjerne oppgaver, issue #31) kommer etter 2-5 (correct-course 2026-11-09).
+#   2-5 bygges og lukkes sammen med 2-4 i samme PR (spec for Story 2.4, beslutning 2, 2026-11-11); status følger 2-4.
 development_status:
   epic-1: done
   1-1-project-scaffold-design-tokens-responsive-app-shell: done
@@ -58,8 +59,8 @@ development_status:
   2-1-task-setup-at-home-creation: done
   2-2-must-first-task-overview: done
   2-3-adjust-task-classification-frequency: done
-  2-4-self-checkoff-completion-with-shared-status-attribution: backlog
-  2-5-auto-reschedule-on-completion: backlog
+  2-4-self-checkoff-completion-with-shared-status-attribution: review
+  2-5-auto-reschedule-on-completion: review
   2-6-add-and-remove-tasks: backlog
   epic-2-retrospective: optional
 

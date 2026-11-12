@@ -8,10 +8,17 @@ route only translates; every rule lives in domain/tasks.
 Story 2.3 (FR-5, FR-8): PATCH /homes/{home_id}/tasks/{task_id} changes one Task's Må/Bør and/or
 Frequency, for a Household Member or the Landlord (tasks.ADJUST_ROLES). require_role runs first,
 so a Tenant gets 403 whatever the body or task_id; a Task outside the Home is 404.
+
+Story 2.4 (FR-7, FR-9, AD-3): POST /homes/{home_id}/tasks/{task_id}/instances/{instance_id}/
+completion completes the open instance, for any Member. Every TaskOut carries the open
+instance's id and, while that instance is due «later» (decision 1), the latest completion: who
+did it is said from the viewer's side (you / member + name / former_member), so the frontend
+never compares ids or reads the clock.
 """
 
 import uuid
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -63,8 +70,24 @@ class AdjustTaskRequest(BaseModel):
     frequency_days: Frequency | None = None
 
 
+class CompletionOut(BaseModel):
+    # The completion's UTC calendar date, YYYY-MM-DD.
+    completed_on: date
+    # The server's UTC today minus completed_on: 0 «i dag», 1 «i går».
+    days_since: int
+    # Whether completed_on is in the server's UTC year; the date gets its year otherwise.
+    completed_this_year: bool
+    # From the viewer's side: their own completion, a current Member of this Home, or someone
+    # without a Membership in this Home now (AD-16, «tidligere medlem»).
+    by: Literal["you", "member", "former_member"]
+    # The completer's name, only when by is "member".
+    name: str | None
+
+
 class TaskOut(BaseModel):
     id: uuid.UUID
+    # The open instance; the checkbox completes this one.
+    instance_id: uuid.UUID
     task_type: str
     name: str
     classification: Classification
@@ -76,6 +99,8 @@ class TaskOut(BaseModel):
     # due_on minus the same UTC today; negative when overdue. The due text reads this, never the
     # browser's clock, so the words and due_status always agree.
     days_until_due: int
+    # The latest completion while the open instance is due «later», else null (decision 1).
+    completion: CompletionOut | None
 
 
 class TasksOut(BaseModel):
@@ -83,22 +108,48 @@ class TasksOut(BaseModel):
     tasks: list[TaskOut]
 
 
-def task_out(row: tasks.TaskWithDue, today: date) -> TaskOut:
+def completion_out(
+    completion: tasks.Completion, today: date, viewer_id: uuid.UUID
+) -> CompletionOut:
+    completed_on = completion.completed_at.date()
+    by: Literal["you", "member", "former_member"]
+    if completion.user_id == viewer_id:
+        by = "you"
+    elif completion.is_member:
+        by = "member"
+    else:
+        by = "former_member"
+    return CompletionOut(
+        completed_on=completed_on,
+        days_since=(today - completed_on).days,
+        completed_this_year=completed_on.year == today.year,
+        by=by,
+        name=completion.name if by == "member" else None,
+    )
+
+
+def task_out(row: tasks.TaskWithDue, today: date, viewer_id: uuid.UUID) -> TaskOut:
+    status_ = tasks.due_status(row.due_on, today)
+    completion = None
+    if row.last_completion is not None and status_ == "later":
+        completion = completion_out(row.last_completion, today, viewer_id)
     return TaskOut(
         id=row.task.id,
+        instance_id=row.instance_id,
         task_type=row.task.task_type,
         name=row.task.name,
         classification=row.task.classification,
         frequency_days=row.task.frequency_days,
         due_on=row.due_on,
-        due_status=tasks.due_status(row.due_on, today),
+        due_status=status_,
         days_until_due=(row.due_on - today).days,
+        completion=completion,
     )
 
 
-def tasks_out(rows: list[tasks.TaskWithDue]) -> TasksOut:
+def tasks_out(rows: list[tasks.TaskWithDue], viewer_id: uuid.UUID) -> TasksOut:
     today = utc_now().date()
-    return TasksOut(tasks=[task_out(row, today) for row in rows])
+    return TasksOut(tasks=[task_out(row, today, viewer_id) for row in rows])
 
 
 @router.get("/task-types")
@@ -135,7 +186,7 @@ def set_up_tasks(body: SetUpTasksRequest, setter: TaskSetter, session: SessionDe
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from None
     except tasks.TasksAlreadySetUp:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_SET_UP) from None
-    return tasks_out(created)
+    return tasks_out(created, setter.user_id)
 
 
 @router.get(
@@ -148,7 +199,7 @@ def set_up_tasks(body: SetUpTasksRequest, setter: TaskSetter, session: SessionDe
     },
 )
 def list_tasks(member: AnyMember, session: SessionDep) -> TasksOut:
-    return tasks_out(tasks.tasks_of(session, member.home_id))
+    return tasks_out(tasks.tasks_of(session, member.home_id), member.user_id)
 
 
 @router.patch(
@@ -179,4 +230,28 @@ def adjust_task(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND) from None
     except (tasks.NothingToChange, tasks.InvalidTaskChoices) as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from None
-    return task_out(row, utc_now().date())
+    return task_out(row, utc_now().date(), adjuster.user_id)
+
+
+@router.post(
+    "/homes/{home_id}/tasks/{task_id}/instances/{instance_id}/completion",
+    responses={
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorOut,
+            "description": "Not a Member of this Home, or no such Home",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorOut,
+            "description": "No such Task in this Home, or no such instance of the Task",
+        },
+    },
+)
+def complete_task(
+    task_id: uuid.UUID, instance_id: uuid.UUID, member: AnyMember, session: SessionDep
+) -> TaskOut:
+    """Completes the instance (idempotent: an already completed one changes nothing), 200."""
+    try:
+        row = tasks.complete_task_instance(session, member, task_id, instance_id)
+    except tasks.TaskNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND) from None
+    return task_out(row, utc_now().date(), member.user_id)

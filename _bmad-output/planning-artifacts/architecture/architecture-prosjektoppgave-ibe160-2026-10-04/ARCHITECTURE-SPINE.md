@@ -225,7 +225,7 @@ erDiagram
   TASK_TYPE |o--o{ TASK : categorizes
   TASK ||--o| PHOTO_EVIDENCE : "may require (current only)"
   TASK ||--o{ TASK_INSTANCE : generates
-  TASK_INSTANCE }o--o{ MEMBER_COMPLETION : "attributed to"
+  USER ||--o{ TASK_INSTANCE : "completed (attribution)"
   PHOTO_EVIDENCE }o--|| TASK_INSTANCE : "produced by (most recent)"
   HOME ||--o{ NOTIFICATION_CADENCE_SETTING : "configures (Landlord Homes)"
 ```
@@ -239,6 +239,8 @@ erDiagram
 `[REVISED 2026-11-09 — Sprint Change Proposal 2026-11-09]` — FR-24 (Story 2.6): a `TASK` gains a nullable `archived_at` (UTC). `task_type` becomes nullable: a custom Task has no catalog key and keeps its own name, classification and Frequency. The unique `(home_id, task_type)` and a new unique `(home_id, lower(name))` apply to active Tasks only, as partial unique indexes `WHERE archived_at IS NULL`, so a catalog task type or a name can be added again after archiving. Archiving never deletes: an archived Task and its instances, completions and Photo Evidence stay, as AD-16 keeps history. Every read that drives behaviour — Task Overview, the due-check (AD-8), fairness (AD-9), Photo Evidence requirements (AD-6) and the Portfolio (FR-20) — reads active Tasks only. `HomeOut.has_tasks` keeps meaning "Task Setup has run" (any Task, archived or not), so archiving every Task does not reopen setup.
 
 `[REVISED 2026-11-11 — Story 2.3 spec, team decision 1]` — Changing a Task's Frequency (FR-8, `PATCH /api/homes/{home_id}/tasks/{task_id}`, `domain/tasks.adjust_task`) also moves the open `TASK_INSTANCE` in the same transaction: its `due_on` becomes `due_on − old Frequency + new Frequency` (same start point, new interval), so it may become overdue at once. A classification-only change, or a Frequency equal to the stored one, leaves the date alone. The Task row is locked (`FOR UPDATE`) during the change. The reschedule on completion (Story 2.5) counts from the completion date with the stored Frequency.
+
+`[REVISED 2026-11-11 — Story 2.4 spec, team decisions 1–6]` — Completion (AD-3, FR-7, FR-9, FR-17) is two nullable columns on `TASK_INSTANCE`, not a separate `MEMBER_COMPLETION` table: `completed_at` (UTC, when the server received it) and `completed_by_user_id` (FK `users`, AD-16), set together (`ck_task_instances_completion`). The unique `(task_id, due_on)` is replaced by a partial unique index `uq_task_instances_open_task_id` on `task_id WHERE completed_at IS NULL`: a Task has at most one open instance, and a completed instance may share the next one's date. A Task's next due date is its open instance. `complete_task_instance` (in `domain/tasks`) locks the Task row, then the instance, records the completion and adds the next open instance due on the completion's UTC date + the stored Frequency, so Story 2.5 is built together with 2.4. It is addressed by instance id and idempotent (an already completed instance is returned unchanged). Attribution is sent from the viewer's side (`you` / `member` + name / `former_member`, by Membership in this Home now). AD-9 (Trinn 2) counts `completed_by_user_id` over a Task's last 3 completed instances.
 
 ### Source tree
 

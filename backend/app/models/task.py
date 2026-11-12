@@ -2,8 +2,14 @@
 
 A Task copies its name from the catalog entry it was made from (task_type is the catalog key),
 so a later custom task needs only a nullable task_type, and a new catalog version never rewrites
-existing Tasks. A TaskInstance is one dated occurrence; «next due» is a Task's earliest instance.
-Story 2.4 adds the completion fields.
+existing Tasks. A TaskInstance is one dated occurrence.
+
+Story 2.4 (FR-7, FR-9, AD-3): a TaskInstance is open until completed; completed_at and
+completed_by_user_id are set together by domain/tasks.complete_task_instance, which also adds the
+next open instance. A Task has at most one open instance (uq_task_instances_open_task_id), and
+«next due» is that instance's date. Attribution references the User, not the Membership, so a
+completion outlives its completer's Membership (AD-16). Two instances of a Task may share a date
+(a completed one and the next open one when completed on setup day).
 """
 
 import uuid
@@ -14,8 +20,10 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKeyConstraint,
+    Index,
     PrimaryKeyConstraint,
     UniqueConstraint,
+    text,
 )
 from sqlmodel import Field, SQLModel
 
@@ -52,7 +60,27 @@ class TaskInstance(SQLModel, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_task_instances"),
         ForeignKeyConstraint(["task_id"], ["tasks.id"], name="fk_task_instances_task_id_tasks"),
-        UniqueConstraint("task_id", "due_on", name="uq_task_instances_task_id_due_on"),
+        ForeignKeyConstraint(
+            ["completed_by_user_id"],
+            ["users.id"],
+            name="fk_task_instances_completed_by_user_id_users",
+        ),
+        # Alembic check ignores CHECK constraints and index WHERE clauses; tests/test_tasks.py and
+        # the CI probes cover these two.
+        CheckConstraint(
+            "(completed_at IS NULL) = (completed_by_user_id IS NULL)",
+            name="ck_task_instances_completion",
+        ),
+        # Lookups by task_id, and a Task's latest completion (domain/tasks._rows).
+        Index("ix_task_instances_task_id_completed_at", "task_id", "completed_at"),
+        # At most one open instance per Task.
+        Index(
+            "uq_task_instances_open_task_id",
+            "task_id",
+            unique=True,
+            postgresql_where=text("completed_at IS NULL"),
+            sqlite_where=text("completed_at IS NULL"),
+        ),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
@@ -63,3 +91,8 @@ class TaskInstance(SQLModel, table=True):
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+    # When the server received the completion (UTC); null while the instance is open.
+    completed_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    completed_by_user_id: uuid.UUID | None = None

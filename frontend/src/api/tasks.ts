@@ -4,6 +4,8 @@
 // Story 2.2 (FR-6, decisions 1 and 8): the due text, from the server's due_status and
 // days_until_due, never from the browser's clock.
 // Story 2.3 (FR-5, FR-8): adjusting a Task's Må/Bør and Frequency on Task Detail.
+// Story 2.4 (FR-7, FR-17, AD-3): completing a Task's open instance, and the completion note from
+// the server's completion (who, how many days ago, this year or not), never the browser's clock.
 import { api } from './client';
 import { ApiError, GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
@@ -16,6 +18,7 @@ export type TaskChanges = components['schemas']['AdjustTaskRequest'];
 export type Classification = Task['classification'];
 export type Frequency = Task['frequency_days'];
 export type DueStatus = Task['due_status'];
+export type Completion = components['schemas']['CompletionOut'];
 
 export const TASK_MESSAGES = {
   loadFailed: 'Vi fikk ikke hentet oppgavene.',
@@ -34,7 +37,13 @@ export const TASK_MESSAGES = {
   saveFailed: GENERIC_ERROR,
   // UX-DR30: the label on a Tenant's locked fields.
   lockedByLandlord: 'Satt av utleier',
+  // Story 2.4: a tick the server refused (not a network error or 5xx, which are retried).
+  completeFailed: (name: string) => `Vi fikk ikke krysset av «${name}». Prøv igjen.`,
 } as const;
+
+// Story 2.4 (UX-DR32): the checkbox names the action and the Task; a completed one says so.
+export const checkboxLabel = (name: string) => `Merk «${name}» som fullført`;
+export const completedLabel = (name: string) => `«${name}» er fullført`;
 
 // Text first; the badge colour only reinforces it.
 export const CLASSIFICATION_LABELS: Record<Classification, string> = {
@@ -71,9 +80,37 @@ const DUE_FORMAT_WITH_YEAR = new Intl.DateTimeFormat('nb-NO', {
  * as a local date: new Date('2026-12-09') is UTC midnight, the day before west of Greenwich.
  */
 export function formatDueOn(dueOn: string, today: Date = new Date()): string {
-  const [year, month, day] = dueOn.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return (year === today.getFullYear() ? DUE_FORMAT : DUE_FORMAT_WITH_YEAR).format(date);
+  const year = Number(dueOn.split('-')[0]);
+  return formatDate(dueOn, year !== today.getFullYear());
+}
+
+/**
+ * Story 2.4 (decision 4): «Fullført i dag», «Fullført i går», «Fullført 3. november» (with the
+ * year when not this year), plus « av Peter» for another current Member or « av tidligere
+ * medlem». One's own completion never has a name. All from the server's fields.
+ */
+export function completionText(completion: Completion): string {
+  const when =
+    completion.days_since <= 0
+      ? 'i dag'
+      : completion.days_since === 1
+        ? 'i går'
+        : formatDate(completion.completed_on, !completion.completed_this_year);
+  const by =
+    completion.by === 'member' && completion.name
+      ? ` av ${completion.name}`
+      : completion.by === 'former_member'
+        ? ' av tidligere medlem'
+        : '';
+  return `Fullført ${when}${by}`;
+}
+
+/** The note for a tick still on its way to the server: one's own, today. */
+export const PENDING_COMPLETION_TEXT = 'Fullført i dag';
+
+function formatDate(isoDate: string, withYear: boolean): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return (withYear ? DUE_FORMAT_WITH_YEAR : DUE_FORMAT).format(new Date(year, month - 1, day));
 }
 
 function inDays(days: number): string {
@@ -140,6 +177,23 @@ export async function adjustTask(homeId: string, taskId: string, changes: TaskCh
   });
   if (!data) {
     throw toApiError(response, error, { passThrough: [404, 422], fallback: TASK_MESSAGES.saveFailed });
+  }
+  return data;
+}
+
+/**
+ * Story 2.4: completes the Task's open instance and returns the Task as the list shows it. The
+ * call is idempotent on the server, so a retry after a lost response changes nothing. A network
+ * failure throws as fetch does (not an ApiError), so the caller can tell it from a refusal.
+ * A 403 is the global handler's.
+ */
+export async function completeTask(homeId: string, task: Pick<Task, 'id' | 'instance_id' | 'name'>): Promise<Task> {
+  const { data, error, response } = await api.POST(
+    '/api/homes/{home_id}/tasks/{task_id}/instances/{instance_id}/completion',
+    { params: { path: { home_id: homeId, task_id: task.id, instance_id: task.instance_id } } },
+  );
+  if (!data) {
+    throw toApiError(response, error, { passThrough: [], fallback: TASK_MESSAGES.completeFailed(task.name) });
   }
   return data;
 }

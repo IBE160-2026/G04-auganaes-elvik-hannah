@@ -5,16 +5,20 @@
 // focusable read-only fields «Satt av utleier». Who may edit is the server's can_adjust_tasks.
 // Guards as on the Task Overview: a foreign or unknown Home goes to "/", a Home without Tasks to
 // its overview (which routes on), and a loaded list without this Task back to the overview.
+// Story 2.4 (decision 6): Detail shows the completion note read-only under «Status», with a
+// tick still on its way merged in as on the overview; completing from here comes with Epic 4.
 import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
 import type { Home } from '../api/homes';
-import { useAdjustTask, useHomes, useTasks } from '../api/queries';
+import { useAdjustTask, useHomes, useTasksWithPending, type TaskView } from '../api/queries';
 import {
   CLASSIFICATION_LABELS,
   FREQUENCIES,
   FREQUENCY_LABELS,
+  PENDING_COMPLETION_TEXT,
   TASK_MESSAGES,
+  completionText,
   dueText,
   type Classification,
   type Frequency,
@@ -41,10 +45,10 @@ export function TaskDetail() {
 }
 
 function TaskLoader({ home, taskId }: { home: Home; taskId: string | undefined }) {
-  const tasks = useTasks(home.id);
+  const { tasks, views } = useTasksWithPending(home.id);
 
-  if (tasks.data) {
-    const task = tasks.data.find((t) => t.id === taskId);
+  if (views) {
+    const task = views.find((t) => t.id === taskId);
     // Gone (archived later, Story 2.6) or a typo: back to the list.
     if (!task) return <Navigate to={`/hjem/${home.id}`} replace />;
     return <Detail key={task.id} home={home} task={task} />;
@@ -72,8 +76,9 @@ function TaskLoader({ home, taskId }: { home: Home; taskId: string | undefined }
   return <p role="status">Laster …</p>;
 }
 
-function Detail({ home, task }: { home: Home; task: Task }) {
+function Detail({ home, task }: { home: Home; task: TaskView }) {
   const titleRef = useFocusOnMount<HTMLHeadingElement>();
+  const note = task.pending ? PENDING_COMPLETION_TEXT : task.completion && completionText(task.completion);
   return (
     <div className="task-detail">
       <h1 ref={titleRef} tabIndex={-1} className="task-detail__title">
@@ -85,6 +90,12 @@ function Detail({ home, task }: { home: Home; task: Task }) {
           <dt>Frist</dt>
           <dd className={`task-detail__due task-detail__due--${task.due_status}`}>{dueText(task)}</dd>
         </div>
+        {note && (
+          <div>
+            <dt>Status</dt>
+            <dd className="task-detail__done">{note}</dd>
+          </div>
+        )}
       </dl>
       <BackLink home={home} />
     </div>
