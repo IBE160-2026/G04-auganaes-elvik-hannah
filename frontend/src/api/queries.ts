@@ -25,11 +25,15 @@ import {
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
+  addTask,
   adjustTask,
+  archiveTask,
   completeTask,
   fetchTasks,
   fetchTaskTypes,
   setUpTasks,
+  TASK_MESSAGES,
+  type NewTask,
   type Task,
   type TaskChanges,
   type TaskChoice,
@@ -198,6 +202,56 @@ export function useAdjustTask(homeId: string) {
     onSuccess: (task: Task) => {
       queryClient.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? task : t)));
       void queryClient.invalidateQueries({ queryKey: key });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 404) void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/**
+ * Story 2.6: adds one Task. On success the one-time notice «La til «X».» is left for the
+ * overview and the list is refetched (the new Task's place comes from the server's order); the
+ * caller then navigates, so the list already shows it. A 409 or 422 refetches too, since the
+ * cause may be a list that is behind (another Member added the same Task). A 403 is the global
+ * handler's.
+ */
+export function useAddTask(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const userId = session?.user.id;
+  const key = tasksKey(homeId, userId);
+  return useMutation({
+    mutationFn: (task: NewTask) => addTask(homeId, task),
+    onSuccess: async (task: Task) => {
+      queryClient.setQueryData(noticeKey(userId), TASK_MESSAGES.added(task.name));
+      await queryClient.refetchQueries({ queryKey: key });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 422)) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    },
+  });
+}
+
+/**
+ * Story 2.6: archives a Task, leaves «Fjernet «X».» for the overview and refetches the list.
+ * Task Detail's guard sends the user to the overview once the Task is gone from the list, and the
+ * caller navigates there too; both end on the same page. A 404 (gone already) refetches. A 403
+ * is the global handler's.
+ */
+export function useArchiveTask(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const userId = session?.user.id;
+  const key = tasksKey(homeId, userId);
+  return useMutation({
+    mutationFn: (task: Pick<Task, 'id' | 'name'>) => archiveTask(homeId, task.id),
+    onSuccess: async (_data, task) => {
+      // First, so the notice is there when the guard or the caller lands on the overview.
+      queryClient.setQueryData(noticeKey(userId), TASK_MESSAGES.removed(task.name));
+      await queryClient.refetchQueries({ queryKey: key });
     },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 404) void queryClient.invalidateQueries({ queryKey: key });

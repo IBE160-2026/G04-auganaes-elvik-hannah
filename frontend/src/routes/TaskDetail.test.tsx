@@ -1,7 +1,8 @@
 // Story 2.2 (decision 6): Task Detail, one test per case of the matrix row.
 // Story 2.3 (FR-5, FR-8, UX-DR30): adjusting Må/Bør and Frequency, and a Tenant's locked view.
 // Story 2.4 (decision 6): Detail shows the completion note read-only; it has no checkbox.
-import { render, screen, waitFor } from '@testing-library/react';
+// Story 2.6 (FR-24): «Fjern oppgaven» with an inline confirmation.
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { GENERIC_ERROR } from '../api/errors';
@@ -411,5 +412,104 @@ describe('Adjust a Task (Story 2.3)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: OVERDUE.name })).toBeInTheDocument();
     expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Fullført i dag')).toBeInTheDocument();
+  });
+});
+
+describe('Task Detail, remove (Story 2.6)', () => {
+  function serverWith(archive: ReturnType<ReturnType<typeof taskServer>['archive']>) {
+    const tasks = taskServer();
+    return fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: tasks.list,
+      [`DELETE ${taskPath(OLAS_HOME, MUST)}`]: archive,
+    });
+  }
+
+  it('confirms inline, archives, and lands on the overview with «Fjernet «X».» once', async () => {
+    const tasks = taskServer();
+    const api = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: tasks.list,
+      [`DELETE ${taskPath(OLAS_HOME, MUST)}`]: tasks.archive(),
+    });
+    renderAt(detailPath(MUST.id));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    expect(screen.getByText(TASK_MESSAGES.removeExplanation)).toBeInTheDocument();
+    const confirm = screen.getByRole('button', { name: 'Ja, fjern oppgaven «Rens sluket»' });
+    expect(confirm).toHaveFocus();
+    expect(api.calls('DELETE', taskPath(OLAS_HOME, MUST))).toHaveLength(0);
+    await userEvent.click(confirm);
+
+    expect(await screen.findByText('Fjernet «Rens sluket».')).toBeInTheDocument();
+    expect(window.location.pathname).toBe(OVERVIEW);
+    expect(screen.queryByRole('link', { name: /^Rens sluket/ })).not.toBeInTheDocument();
+    expect(api.calls('DELETE', taskPath(OLAS_HOME, MUST))).toHaveLength(1);
+
+    // Consumed: not shown again when the overview is opened later.
+    await userEvent.click(screen.getByRole('link', { name: 'Medlemmer og invitasjon' }));
+    await screen.findByRole('heading', { level: 1, name: /Medlemmer/ });
+    const nav = screen.getByRole('navigation', { name: 'Hovedmeny' });
+    await userEvent.click(within(nav).getByRole('link', { name: 'Oppgaver' }));
+    expect(await screen.findByRole('heading', { level: 1, name: OLAS_HOME.name })).toBeInTheDocument();
+    expect(screen.queryByText('Fjernet «Rens sluket».')).not.toBeInTheDocument();
+  });
+
+  it('sends nothing on «Avbryt»', async () => {
+    const api = serverWith(taskServer().archive());
+    renderAt(detailPath(MUST.id));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+
+    expect(screen.getByRole('button', { name: 'Fjern oppgaven «Rens sluket»' })).toHaveFocus();
+    expect(api.calls('DELETE', taskPath(OLAS_HOME, MUST))).toHaveLength(0);
+    expect(window.location.pathname).toBe(detailPath(MUST.id));
+  });
+
+  it('shows an inline error and retries when the archive fails', async () => {
+    const failing = taskServer().archive(500);
+    serverWith(failing);
+    renderAt(detailPath(MUST.id));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ja, fjern oppgaven «Rens sluket»' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(TASK_MESSAGES.archiveFailed);
+    expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(detailPath(MUST.id));
+  });
+
+  it('folds the confirmation and shows no message when the archive is refused with 403', async () => {
+    serverWith(taskServer().archive(403));
+    renderAt(detailPath(MUST.id));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ja, fjern oppgaven «Rens sluket»' }));
+
+    expect(await screen.findByRole('button', { name: 'Fjern oppgaven «Rens sluket»' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.archiveFailed)).not.toBeInTheDocument();
+  });
+
+  it('shows no error and refetches the list when the Task is already gone (404)', async () => {
+    const api = serverWith(taskServer().archive(404));
+    renderAt(detailPath(MUST.id));
+    await screen.findByRole('heading', { level: 1, name: MUST.name });
+    const before = api.calls('GET', tasksPath(OLAS_HOME)).length;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fjern oppgaven «Rens sluket»' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ja, fjern oppgaven «Rens sluket»' }));
+
+    await waitFor(() => expect(api.calls('GET', tasksPath(OLAS_HOME)).length).toBeGreaterThan(before));
+    expect(screen.queryByText(TASK_MESSAGES.archiveFailed)).not.toBeInTheDocument();
+  });
+
+  it('shows no «Fjern oppgaven» to a Tenant', async () => {
+    fakeApi(signedInWith([OLAS_TENANCY]));
+    renderAt(`/hjem/${OLAS_TENANCY.id}/oppgaver/${MUST.id}`);
+
+    expect(await screen.findByRole('heading', { level: 1, name: MUST.name })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Fjern oppgaven/ })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 // Story 2.2 (FR-6, FR-21, UX-DR19/20/36/41): the Task Overview at /hjem/<id>, one test per
 // frontend row of the spec's matrix and per acceptance criterion.
 // Story 2.4 (FR-7, FR-17, UX-DR32/42): the checkbox on each card, its retries and roll-back.
+// Story 2.6 (FR-24): «Legg til oppgave» and the list of a Home whose every Task is archived.
 import { focusManager, onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -13,6 +14,7 @@ import {
   OLA,
   OLAS_HOME,
   OLAS_TASKS,
+  OLAS_TENANCY,
   completionPath,
   fakeApi,
   homesResponse,
@@ -125,6 +127,8 @@ describe('Task Overview', () => {
     const box = (name: string) => screen.getByRole('checkbox', { name: `Merk «${name}» som fullført` });
     const order = [
       screen.getByRole('link', { name: 'Medlemmer og invitasjon' }),
+      // Story 2.6: a Household Member or the Landlord also gets «Legg til oppgave».
+      screen.getByRole('link', { name: 'Legg til oppgave' }),
       screen.getByRole('button', { name: 'Oppdater' }),
       box('Rens sluket'),
       must,
@@ -642,5 +646,43 @@ describe('Self-checkoff (Story 2.4)', () => {
     expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1);
     expect(await box(GULV.name)).not.toBeChecked();
     expect(screen.queryByText(/Vi fikk ikke krysset av/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Task Overview, add and an empty list (Story 2.6)', () => {
+  it('shows «Legg til oppgave» in the header to whoever may adjust Tasks, and not to a Tenant', async () => {
+    fakeApi(signedInWith());
+    const { unmount } = renderAt(PAGE);
+
+    const link = await screen.findByRole('link', { name: 'Legg til oppgave' });
+    expect(link).toHaveAttribute('href', `${PAGE}/legg-til-oppgave`);
+    unmount();
+    resetApi();
+
+    fakeApi(signedInWith([OLAS_TENANCY]));
+    renderAt(`/hjem/${OLAS_TENANCY.id}`);
+    expect(await screen.findByRole('link', { name: 'Medlemmer og invitasjon' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /^Rens sluket/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
+  });
+
+  it('shows «Ingen oppgaver i hjemmet ennå.» with one «Legg til oppgave» when every Task is archived', async () => {
+    fakeApi({ ...signedInWith(), [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks: [] }) });
+    renderAt(PAGE);
+
+    expect(await screen.findByText(TASK_MESSAGES.noTasks)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Legg til oppgave' })).toHaveLength(1);
+    expect(screen.queryByText(TASK_MESSAGES.nothingDueHousehold)).not.toBeInTheDocument();
+    // Setup is not offered again: the guard keeps the user here.
+    expect(window.location.pathname).toBe(PAGE);
+  });
+
+  it('tells a Tenant the Landlord has not set up Tasks, with no way to add', async () => {
+    fakeApi({ ...signedInWith([OLAS_TENANCY]), [`GET ${tasksPath(OLAS_TENANCY)}`]: () => json(200, { tasks: [] }) });
+    renderAt(`/hjem/${OLAS_TENANCY.id}`);
+
+    expect(await screen.findByText(TASK_MESSAGES.tenantWaiting)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.noTasks)).not.toBeInTheDocument();
   });
 });

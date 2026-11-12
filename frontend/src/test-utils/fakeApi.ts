@@ -6,9 +6,10 @@
 // Story 2.3: Homes carry can_adjust_tasks; OLAS_TENANCY is a Tenant's Home; adjustHandler
 // answers PATCH /api/homes/<id>/tasks/<taskId>.
 // Story 2.4: tasks carry instance_id and completion; completeHandler answers the completion POST.
+// Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
-import type { Completion, Task, TaskTypes } from '../api/tasks';
+import type { Completion, NewTask, Task, TaskTypes } from '../api/tasks';
 
 export type Handler = (request: Request) => Response | Promise<Response>;
 
@@ -192,6 +193,7 @@ export type CompleteOutcome = 200 | 403 | 404 | 500 | 'network';
  */
 export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Completion = DONE_BY_YOU_TODAY) {
   let stored = [...tasks];
+  let added = 0;
   const list: Handler = () => json(200, { tasks: stored });
   function complete(task: Task, outcomes: CompleteOutcome[] = [200], gate?: Promise<void>): Handler {
     let calls = 0;
@@ -208,7 +210,52 @@ export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Comp
       return json(200, done);
     };
   }
-  return { list, complete };
+  type AddOutcome = 201 | 403 | 409 | 422 | 500;
+  /**
+   * Story 2.6: the add POST. A 201 appends the new Task (so a later GET lists it, Must first) and
+   * records the body in `bodies`; the others answer as the server would, with `message` for 409
+   * and 422.
+   */
+  function add(outcome: AddOutcome = 201, bodies: unknown[] = [], message = 'Navnet er opptatt.'): Handler {
+    return async (request) => {
+      const body = (await request.json()) as NewTask;
+      bodies.push(body);
+      if (outcome === 403) return json(403, { detail: 'Du har ikke tilgang til dette hjemmet.' });
+      if (outcome === 409 || outcome === 422) return json(outcome, { detail: message });
+      if (outcome === 500) return json(500, { detail: 'Internal Server Error' });
+      const entry = TASK_TYPES.task_types.find((t) => t.key === body.task_type);
+      added += 1;
+      const created: Task = {
+        id: `00000000-0000-4000-8000-0000000000d${added}`,
+        instance_id: `00000000-0000-4000-8000-0000000000e${added}`,
+        task_type: body.task_type ?? null,
+        name: entry ? entry.name : (body.name ?? '').trim(),
+        classification: body.classification,
+        frequency_days: body.frequency_days,
+        due_on: '2026-12-10',
+        due_status: 'later',
+        days_until_due: 30,
+        completion: null,
+      };
+      // Must first, otherwise in the order they came (the real server also sorts by due date).
+      stored = [...stored, created].sort(
+        (a, b) => Number(a.classification === 'should') - Number(b.classification === 'should'),
+      );
+      return json(201, created);
+    };
+  }
+  /** Story 2.6: the archive DELETE; 204 removes the Task from later GETs (also when repeated). */
+  function archive(outcome: 204 | 403 | 404 | 500 = 204): Handler {
+    return async (request) => {
+      if (outcome === 403) return json(403, { detail: 'Du har ikke tilgang til dette hjemmet.' });
+      if (outcome === 404) return json(404, { detail: 'Fant ikke oppgaven.' });
+      if (outcome === 500) return json(500, { detail: 'Internal Server Error' });
+      const id = new URL(request.url).pathname.split('/').pop();
+      stored = stored.filter((t) => t.id !== id);
+      return new Response(null, { status: 204 });
+    };
+  }
+  return { list, complete, add, archive };
 }
 
 export const TASK_TYPES: TaskTypes = {

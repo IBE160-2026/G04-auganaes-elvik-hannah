@@ -15,6 +15,8 @@ type ConfirmActionProps = {
   explanation: string;
   /** The confirm button's text, e.g. «Ja, forlat hjemmet». */
   confirmLabel: string;
+  /** The confirm button's accessible name when the text alone is not enough (Story 2.6). */
+  confirmAriaLabel?: string;
   /** `close` folds the confirmation back to the first button and focuses it (e.g. after a 403). */
   onConfirm: (close: () => void) => void;
   /** Called on «Avbryt», e.g. to clear a failed attempt. */
@@ -29,6 +31,7 @@ export function ConfirmAction({
   ariaLabel,
   explanation,
   confirmLabel,
+  confirmAriaLabel,
   onConfirm,
   onCancel,
   pending = false,
@@ -88,6 +91,7 @@ export function ConfirmAction({
           ref={confirmRef}
           type="button"
           className="confirm-action__confirm"
+          aria-label={pending || error ? undefined : confirmAriaLabel}
           aria-describedby={explanationId}
           aria-disabled={pending || undefined}
           aria-busy={pending || undefined}

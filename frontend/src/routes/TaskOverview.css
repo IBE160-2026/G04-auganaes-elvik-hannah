@@ -87,6 +87,14 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Story 2.6: the text and the «Legg til oppgave» link of an empty list. */
+.task-overview__empty--actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
 .task-overview__list {
   display: flex;
   flex-direction: column;
