@@ -17,6 +17,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-09 | One rule for creating Homes (FR-1, Q3); FR-24 added (add and archive Tasks); FR-8 fixed intervals | `sprint-change-proposal-2026-11-09.md` |
 | 2026-11-12 | Teacher's PRD feedback: Trinn 2 cut line decided (Q1), FR-11 rule (Q4), AI failure, limit and data (FR-14/15), FR-2 and FR-3 rules, FR-16 without "unit type", clean requirement text, account privacy, FR-1 to FR-24 count, SM-9 split, SM-15 | `sprint-change-proposal-2026-11-12.md` |
 | 2026-11-12 | Story 5.1 built: FR-14 states what counts toward the 20 AI calls, the UTC day and reset time, the question rules and who may use "?"; FR-22 mentions demo marking; account data lists the daily call count | `spec-5-1-contextual-quick-answer.md` |
+| 2026-11-12 | Story 5.1 follow-up: FR-14 limits the AI to the task and housework | `spec-5-1-contextual-quick-answer.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -262,6 +263,7 @@ Any task offers a "?" affordance that returns an immediate, task-specific answer
 - If the AI call fails or takes longer than 10 seconds, "?" shows an error message (status "error") and can be retried; the task view and completion keep working.
 - Only the task's name, its catalog type and the user's own question are sent to the AI service — no names, e-mail addresses or Home names. The UI says the question goes to an external AI service.
 - A user can make at most 20 AI calls per day (quick answers and chat together). The day is a UTC day. Every call that reaches the AI provider counts, also when it fails or times out, so a retry after an error uses up one of the 20; a refused call does not count. Beyond the limit, "?" says so plainly and tells when the count restarts (00:00 UTC, shown in the user's local time). The limit also applies to the mock answers, so it can be tested offline.
+- The AI answers only questions about the task and housework (cleaning, maintenance, equipment and cleaning products in the home); a question about which cleaner suits a surface is always in scope, and any other question gets a short answer that the assistant only helps with housework.
 - Tapping "?" asks at once with a default question about the task; the user can also type their own question of at most 300 characters. Every Role, including Tenants, can use "?".
 
 #### FR-15: Escalate to full AI chat
