@@ -1,22 +1,30 @@
-"""Story 2.1 (FR-4, FR-8, AD-2, AD-6) and Story 2.3 (FR-5, FR-8): domain/tasks, one test per
-backend row of the matrices.
+"""Story 2.1 (FR-4, FR-8, AD-2, AD-6), Story 2.3 (FR-5, FR-8) and Story 2.4 (FR-7, FR-9, AD-3,
+AD-16; Story 2.5 closed with it): domain/tasks, one test per backend row of the matrices.
 """
 
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
+from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.clock import utc_now
 from app.domain import homes, tasks
 from app.domain.task_types import TASK_TYPES
+from app.models.home import Home
 from app.models.membership import Membership
 from app.models.task import Task, TaskInstance
+from app.models.user import User
 from tests.helpers import count, new_user
 
 TODAY = date(2026, 11, 9)
+
+
+def at(day: date, hour: int = 12) -> datetime:
+    """A UTC moment on `day`."""
+    return datetime(day.year, day.month, day.day, hour, tzinfo=UTC)
 
 
 def all_choices() -> list[tasks.TaskChoice]:
@@ -205,16 +213,24 @@ def test_tasks_are_listed_must_first_then_by_due_date_then_name(session: Session
     ]
 
 
-def test_next_due_is_the_earliest_instance(session: Session) -> None:
+def test_next_due_is_the_open_instance_not_an_earlier_completed_one(session: Session) -> None:
+    # Story 2.4 (deferred-work.md): before 2.4 this was the earliest instance.
     member = household(session)
     [row] = tasks.set_up_tasks(
         session, member, [tasks.TaskChoice("gulv", "should", 14)], today=TODAY
     )
-    session.add(TaskInstance(task_id=row.task.id, due_on=TODAY + timedelta(days=28)))
+    session.add(
+        TaskInstance(
+            task_id=row.task.id,
+            due_on=TODAY - timedelta(days=14),
+            completed_at=at(TODAY - timedelta(days=10)),
+            completed_by_user_id=member.user_id,
+        )
+    )
     session.commit()
 
     [listed] = tasks.tasks_of(session, member.home_id)
-    assert listed.due_on == TODAY + timedelta(days=14)
+    assert (listed.due_on, listed.instance_id) == (TODAY + timedelta(days=14), row.instance_id)
 
 
 @pytest.mark.parametrize(
@@ -288,13 +304,44 @@ def test_check_constraints(
         session.commit()
 
 
-def test_one_instance_per_task_and_date(session: Session) -> None:
+def test_a_second_open_instance_is_refused(session: Session) -> None:
+    # Story 2.4: uq_task_instances_open_task_id, at most one open instance per Task.
     member = household(session)
     [row] = tasks.set_up_tasks(
         session, member, [tasks.TaskChoice("gulv", "should", 7)], today=TODAY
     )
-    session.add(TaskInstance(task_id=row.task.id, due_on=row.due_on))
-    with pytest.raises(IntegrityError):
+    session.add(TaskInstance(task_id=row.task.id, due_on=row.due_on + timedelta(days=7)))
+    with pytest.raises(IntegrityError, match="task_instances.task_id"):
+        session.commit()
+
+
+def test_a_completed_instance_may_share_the_open_ones_date(session: Session) -> None:
+    member = household(session)
+    [row] = tasks.set_up_tasks(
+        session, member, [tasks.TaskChoice("gulv", "should", 7)], today=TODAY
+    )
+    session.add(
+        TaskInstance(
+            task_id=row.task.id,
+            due_on=row.due_on,
+            completed_at=at(TODAY),
+            completed_by_user_id=member.user_id,
+        )
+    )
+    session.commit()
+    assert due_dates(session, row.task.id) == [row.due_on, row.due_on]
+
+
+@pytest.mark.parametrize("missing", ["completed_at", "completed_by_user_id"])
+def test_completion_fields_are_both_set_or_both_null(session: Session, missing: str) -> None:
+    member = household(session)
+    [row] = tasks.set_up_tasks(
+        session, member, [tasks.TaskChoice("gulv", "should", 7)], today=TODAY
+    )
+    fields = {"completed_at": at(TODAY), "completed_by_user_id": member.user_id}
+    del fields[missing]
+    session.add(TaskInstance(task_id=row.task.id, due_on=TODAY, **fields))
+    with pytest.raises(IntegrityError, match="ck_task_instances_completion"):
         session.commit()
 
 
@@ -396,17 +443,25 @@ def test_resending_a_new_frequency_does_not_move_the_date_twice(session: Session
     assert row.due_on == TODAY + timedelta(days=60)
 
 
-def test_only_the_earliest_instance_moves(session: Session) -> None:
+def test_only_the_open_instance_moves(session: Session) -> None:
+    # Story 2.4 (deferred-work.md): a completed instance keeps its date.
     member = household(session)
     task = one_task(session, member, 30)
-    later = TODAY + timedelta(days=200)
-    session.add(TaskInstance(task_id=task.id, due_on=later))
+    earlier = TODAY - timedelta(days=30)
+    session.add(
+        TaskInstance(
+            task_id=task.id,
+            due_on=earlier,
+            completed_at=at(TODAY - timedelta(days=2)),
+            completed_by_user_id=member.user_id,
+        )
+    )
     session.commit()
 
     row = tasks.adjust_task(session, member, task.id, frequency_days=7)
 
     assert row.due_on == TODAY + timedelta(days=7)
-    assert due_dates(session, task.id) == [TODAY + timedelta(days=7), later]
+    assert due_dates(session, task.id) == [earlier, TODAY + timedelta(days=7)]
 
 
 def test_other_tasks_and_homes_are_untouched(session: Session) -> None:
@@ -499,3 +554,277 @@ def test_a_tenant_may_not_adjust(session: Session) -> None:
 def test_who_may_adjust(role: str, allowed: bool) -> None:
     assert tasks.can_adjust_tasks(role) is allowed
     assert tasks.ADJUST_ROLES == tasks.SETUP_ROLES
+
+
+# Story 2.4 (FR-7, FR-9, AD-3, AD-16, issue #43): complete_task_instance. Story 2.5's ACs point
+# at the tests marked "2.5".
+
+NOV_11 = date(2026, 11, 11)
+
+
+def household_with_jonas(session: Session) -> tuple[Membership, Membership]:
+    mari = household(session)
+    jonas = new_user(session, "Jonas")
+    home = session.get(Home, mari.home_id)
+    assert home is not None
+    homes.add_member(session, home, jonas)
+    return mari, membership_of(session, mari.home_id, jonas.id)
+
+
+def instances(session: Session, task_id: uuid.UUID) -> list[TaskInstance]:
+    return list(
+        session.exec(
+            select(TaskInstance)
+            .where(TaskInstance.task_id == task_id)
+            .order_by(col(TaskInstance.created_at), col(TaskInstance.due_on))
+        ).all()
+    )
+
+
+def open_row(session: Session, member: Membership, task: Task) -> tasks.TaskWithDue:
+    return next(r for r in tasks.tasks_of(session, member.home_id) if r.task.id == task.id)
+
+
+def test_complete_records_who_and_when_and_adds_the_next_instance(session: Session) -> None:
+    """Matrix «Complete» and 2.5: Jonas ticks «Rens sluket» (30 d) on 2026-11-11."""
+    _, jonas = household_with_jonas(session)
+    task = one_task(session, jonas, 30, today=date(2026, 10, 20))
+    first = open_row(session, jonas, task)
+
+    row = tasks.complete_task_instance(session, jonas, task.id, first.instance_id, now=at(NOV_11))
+
+    done = session.get(TaskInstance, first.instance_id)
+    assert done is not None
+    assert (done.completed_by_user_id, done.completed_at is not None) == (jonas.user_id, True)
+    assert row.due_on == date(2026, 12, 11)
+    assert row.instance_id != first.instance_id
+    assert row.last_completion is not None
+    assert (row.last_completion.user_id, row.last_completion.name) == (jonas.user_id, "Jonas")
+    assert row.last_completion.completed_at == at(NOV_11)
+    assert row.last_completion.is_member
+
+
+def test_late_completion_counts_from_the_completion_date(session: Session) -> None:
+    """Matrix «Late completion» (2.5): due 11-09, completed 11-11, 30 d → next due 12-11."""
+    mari = household(session)
+    task = one_task(session, mari, 30, today=date(2026, 10, 10))
+    first = open_row(session, mari, task)
+    assert first.due_on == date(2026, 11, 9)
+
+    row = tasks.complete_task_instance(session, mari, task.id, first.instance_id, now=at(NOV_11))
+
+    assert row.due_on == date(2026, 12, 11)
+
+
+def test_completion_on_setup_day_gives_the_next_instance_the_same_date(session: Session) -> None:
+    """Matrix «Same day as setup» (2.5): the next instance sits beside the completed one."""
+    mari = household(session)
+    task = one_task(session, mari, 30, today=NOV_11)
+    first = open_row(session, mari, task)
+
+    row = tasks.complete_task_instance(session, mari, task.id, first.instance_id, now=at(NOV_11))
+
+    assert row.due_on == date(2026, 12, 11)
+    assert due_dates(session, task.id) == [date(2026, 12, 11), date(2026, 12, 11)]
+
+
+def test_the_utc_date_counts_not_the_local_one(session: Session) -> None:
+    # 00:30 Norwegian time on 11-12 is 23:30 UTC on 11-11: counted as 11-11 (accepted).
+    mari = household(session)
+    task = one_task(session, mari, 30, today=NOV_11)
+    first = open_row(session, mari, task)
+    late = datetime(2026, 11, 11, 23, 30, tzinfo=UTC)
+
+    row = tasks.complete_task_instance(session, mari, task.id, first.instance_id, now=late)
+
+    assert row.due_on == date(2026, 12, 11)
+
+
+def test_now_defaults_to_the_servers_utc_time(session: Session) -> None:
+    mari = household(session)
+    task = one_task(session, mari, 30)
+    first = open_row(session, mari, task)
+
+    row = tasks.complete_task_instance(session, mari, task.id, first.instance_id)
+
+    assert row.due_on == utc_now().date() + timedelta(days=30)
+
+
+def test_a_retry_double_tap_or_second_member_changes_nothing(session: Session) -> None:
+    """Matrix «Retry / race / double tap» (2.5): one next instance, still Jonas."""
+    mari, jonas = household_with_jonas(session)
+    task = one_task(session, mari, 30, today=date(2026, 10, 20))
+    first = open_row(session, mari, task)
+    done = tasks.complete_task_instance(session, jonas, task.id, first.instance_id, now=at(NOV_11))
+
+    for member, day in ((jonas, NOV_11), (mari, date(2026, 11, 12))):
+        again = tasks.complete_task_instance(
+            session, member, task.id, first.instance_id, now=at(day)
+        )
+        assert again == done
+
+    assert len(instances(session, task.id)) == 2
+    stored = session.get(TaskInstance, first.instance_id)
+    assert stored is not None and stored.completed_by_user_id == jonas.user_id
+
+
+def test_a_stale_instance_id_returns_the_current_state(session: Session) -> None:
+    """Matrix «Stale old instance id»: the Task is due again; nothing is completed."""
+    mari = household(session)
+    task = one_task(session, mari, 7, today=date(2026, 10, 1))
+    first = open_row(session, mari, task)
+    tasks.complete_task_instance(
+        session, mari, task.id, first.instance_id, now=at(date(2026, 10, 2))
+    )
+    current = open_row(session, mari, task)
+
+    row = tasks.complete_task_instance(session, mari, task.id, first.instance_id, now=at(NOV_11))
+
+    assert row == current
+    assert row.due_on == date(2026, 10, 9)
+    assert len(instances(session, task.id)) == 2
+
+
+def test_the_latest_completion_is_the_one_listed(session: Session) -> None:
+    mari, jonas = household_with_jonas(session)
+    task = one_task(session, mari, 7, today=date(2026, 10, 1))
+    first = open_row(session, mari, task)
+    tasks.complete_task_instance(
+        session, mari, task.id, first.instance_id, now=at(date(2026, 10, 5))
+    )
+    second = open_row(session, mari, task)
+
+    row = tasks.complete_task_instance(session, jonas, task.id, second.instance_id, now=at(NOV_11))
+
+    assert row.last_completion is not None and row.last_completion.name == "Jonas"
+    assert row.due_on == date(2026, 11, 18)
+
+
+def test_a_departed_completer_is_no_longer_a_member_and_the_completion_stays(
+    session: Session,
+) -> None:
+    """Matrix «Departed»: Jonas leaves; then he is only a Member (Landlord) elsewhere."""
+    mari, jonas = household_with_jonas(session)
+    task = one_task(session, mari, 30, today=date(2026, 10, 20))
+    first = open_row(session, mari, task)
+    tasks.complete_task_instance(session, jonas, task.id, first.instance_id, now=at(NOV_11))
+
+    homes.leave(session, jonas)
+    after_leaving = open_row(session, mari, task)
+    jonas_user = session.get(User, jonas.user_id)
+    assert jonas_user is not None
+    homes.create_home(session, jonas_user, name="Jonas sin utleie", type="landlord")
+    elsewhere = open_row(session, mari, task)
+
+    for row in (after_leaving, elsewhere):
+        assert row.last_completion is not None
+        assert (row.last_completion.user_id, row.last_completion.is_member) == (
+            jonas.user_id,
+            False,
+        )
+    stored = session.get(TaskInstance, first.instance_id)
+    assert stored is not None and stored.completed_by_user_id == jonas.user_id
+
+
+def test_a_frequency_change_after_completion_moves_only_the_open_instance(
+    session: Session,
+) -> None:
+    """Matrix «Adjust after completion»: the response keeps the completion."""
+    mari = household(session)
+    task = one_task(session, mari, 30, today=date(2026, 10, 20))
+    first = open_row(session, mari, task)
+    tasks.complete_task_instance(session, mari, task.id, first.instance_id, now=at(NOV_11))
+
+    row = tasks.adjust_task(session, mari, task.id, frequency_days=60)
+
+    assert row.due_on == date(2027, 1, 10)
+    assert row.last_completion is not None and row.last_completion.user_id == mari.user_id
+    completed = session.get(TaskInstance, first.instance_id)
+    assert completed is not None and completed.due_on == date(2026, 11, 19)
+
+
+def test_a_tenant_may_complete(session: Session) -> None:
+    """Matrix «Tenant»: the photo rule comes with Epic 4."""
+    landlord, tenant = landlord_and_tenant(session)
+    task = one_task(session, landlord, 30, today=date(2026, 10, 20))
+    first = open_row(session, landlord, task)
+
+    row = tasks.complete_task_instance(session, tenant, task.id, first.instance_id, now=at(NOV_11))
+
+    assert row.last_completion is not None
+    assert (row.last_completion.user_id, row.last_completion.name) == (tenant.user_id, "Anders")
+
+
+def test_foreign_task_or_instance_is_not_found_and_writes_nothing(session: Session) -> None:
+    """Matrix «Foreign ids»: another Home's Task, or another Task's instance."""
+    mari = household(session)
+    other = household(session)
+    foreign = one_task(session, other)
+    foreign_row = open_row(session, other, foreign)
+    listed = tasks.set_up_tasks(
+        session,
+        mari,
+        [tasks.TaskChoice("gulv", "should", 7), tasks.TaskChoice("stekeovn", "should", 90)],
+        today=TODAY,
+    )
+    gulv, stekeovn = sorted(listed, key=lambda r: r.task.task_type)
+    before = written(session)
+
+    cases = [
+        (foreign.id, foreign_row.instance_id),
+        (uuid.uuid4(), gulv.instance_id),
+        (gulv.task.id, stekeovn.instance_id),
+        (gulv.task.id, foreign_row.instance_id),
+        (gulv.task.id, uuid.uuid4()),
+    ]
+    for task_id, instance_id in cases:
+        with pytest.raises(tasks.TaskNotFound):
+            tasks.complete_task_instance(session, mari, task_id, instance_id, now=at(NOV_11))
+
+    assert written(session) == before
+    assert all(i.completed_at is None for i in session.exec(select(TaskInstance)).all())
+
+
+def test_a_parallel_next_instance_is_answered_with_the_current_state(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The IntegrityError rule: on Postgres the Task lock serialises; here the race is faked."""
+    mari = household(session)
+    task = one_task(session, mari, 30, today=date(2026, 10, 20))
+    first = open_row(session, mari, task)
+    real_commit = session.commit
+
+    def racing_commit() -> None:
+        session.rollback()
+        raise IntegrityError("INSERT", {}, Exception("uq_task_instances_open_task_id"))
+
+    monkeypatch.setattr(session, "commit", racing_commit)
+    row = tasks.complete_task_instance(session, mari, task.id, first.instance_id, now=at(NOV_11))
+    monkeypatch.setattr(session, "commit", real_commit)
+
+    assert row == open_row(session, mari, task)
+    assert len(instances(session, task.id)) == 1
+
+
+def test_the_list_is_read_in_three_queries_whatever_its_length(
+    session: Session,
+) -> None:
+    mari, jonas = household_with_jonas(session)
+    listed = tasks.set_up_tasks(session, mari, all_choices(), today=date(2026, 10, 1))
+    for row, member in zip(listed, [mari, jonas] * 4, strict=True):
+        tasks.complete_task_instance(session, member, row.task.id, row.instance_id, now=at(NOV_11))
+    home_id = mari.home_id
+    statements: list[str] = []
+
+    def record(*args: object) -> None:
+        statements.append(str(args[2]))
+
+    engine = session.get_bind()
+    event.listen(engine, "before_cursor_execute", record)
+    try:
+        rows = tasks.tasks_of(session, home_id)
+    finally:
+        event.remove(engine, "before_cursor_execute", record)
+
+    assert len(rows) == 8 and all(r.last_completion is not None for r in rows)
+    assert len(statements) == 3

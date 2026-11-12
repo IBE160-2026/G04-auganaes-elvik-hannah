@@ -62,6 +62,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Story 2.4 must change `domain/tasks.tasks_of` from the earliest instance to the earliest open (not completed) instance.
   evidence: `tasks_of` uses `min(TaskInstance.due_on)`; once 2.4 stores completions, a completed past instance stays the earliest and the list would show an old date as «Neste gang». The architecture revision note now says so.
+  outcome: Settled in Story 2.4 (2026-11-11): every Task read goes through `domain/tasks._rows`, which joins the one open instance (`completed_at IS NULL`, at most one per Task by `uq_task_instances_open_task_id`). Tested by `test_next_due_is_the_open_instance_not_an_earlier_completed_one`.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-9-one-rule-for-creating-homes.md`
   summary: The seed's `_seed_household` skips Jonas when he has any Membership instead of asking `homes.join_blocker`, so a Jonas who is only a Landlord elsewhere is left out although the app would let him join.
@@ -69,6 +70,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
   summary: Story 2.4 must switch `domain/tasks._open_instance` (the instance a Frequency change moves) to the earliest *open* instance together with `tasks_of`, so both always point at the same instance.
   evidence: Story 2.3 moves the earliest instance, which is the open one only until 2.4 adds completion. If only `tasks_of` changes, a Frequency change would move an already completed instance.
+  outcome: Settled in Story 2.4 (2026-11-11): `_open_instance` and `tasks_of` read the same open instance (`_is_open`), so a Frequency change never moves a completed one. Tested by `test_only_the_open_instance_moves` and `test_a_frequency_change_after_completion_moves_only_the_open_instance`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
   summary: After Story 2.5, moving the open instance on a Frequency change may hit `uq_task_instances_task_id_due_on` when another instance of the Task already has the new date; decide the behaviour (and test it) in 2.5.
   evidence: Story 2.3 spec review. Today every Task has one instance (seed and setup make one), so the shift cannot collide; once completion creates the next instance, a completed instance can share the date.
+  outcome: Settled in Story 2.4 (2026-11-11): the unique `(task_id, due_on)` is replaced by the partial unique index `uq_task_instances_open_task_id` (one open instance per Task), so dates no longer collide; a completed instance may share the open one's date. Tested by `test_a_completed_instance_may_share_the_open_ones_date` and probed on Postgres in CI.

@@ -29,6 +29,7 @@ const ALREADY_SET_UP = 'Oppgavene i dette hjemmet er allerede satt opp.';
 const CREATED: Task[] = [
   {
     id: '00000000-0000-4000-8000-0000000000d1',
+    instance_id: '00000000-0000-4000-8000-0000000000e1',
     task_type: 'vask-badet',
     name: 'Vask badet grundig',
     classification: 'must',
@@ -36,9 +37,11 @@ const CREATED: Task[] = [
     due_on: '2026-12-21',
     due_status: 'later',
     days_until_due: 42,
+    completion: null,
   },
   {
     id: '00000000-0000-4000-8000-0000000000d2',
+    instance_id: '00000000-0000-4000-8000-0000000000e2',
     task_type: 'stekeovn',
     name: 'Vask stekeovnen',
     classification: 'must',
@@ -46,6 +49,7 @@ const CREATED: Task[] = [
     due_on: '2027-01-08',
     due_status: 'later',
     days_until_due: 60,
+    completion: null,
   },
 ];
 

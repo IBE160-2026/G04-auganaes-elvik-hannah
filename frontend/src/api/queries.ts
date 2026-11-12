@@ -4,6 +4,7 @@ import {
   QueryCache,
   QueryClient,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
   type Query,
@@ -25,6 +26,7 @@ import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
   adjustTask,
+  completeTask,
   fetchTasks,
   fetchTaskTypes,
   setUpTasks,
@@ -201,6 +203,69 @@ export function useAdjustTask(homeId: string) {
       if (error instanceof ApiError && error.status === 404) void queryClient.invalidateQueries({ queryKey: key });
     },
   });
+}
+
+// Story 2.4: the key of every pending tick in this Home, read by useTasksWithPending.
+export function completeTaskKey(homeId: string, userId: string | undefined) {
+  return ['complete-task', homeId, userId] as const;
+}
+
+// Story 2.4: how many quiet retries a transient failure gets (backoff 1 s, 2 s, … capped at
+// 30 s, about two minutes in all); paused, not counted, while the browser is offline.
+export const COMPLETE_RETRIES = 8;
+
+/** A network error, 5xx, 408 or 429: worth sending again unchanged (the server is idempotent). */
+export function isTransient(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return true;
+  return error.status >= 500 || error.status === 408 || error.status === 429;
+}
+
+/**
+ * Story 2.4 (AD-3, decisions 3 and 5): completes a Task's open instance. The checked state comes
+ * from the pending mutation itself (useTasksWithPending), so nothing has to be rolled back by
+ * hand and no refetch can flip the card while the request is under way. Transient failures
+ * retry quietly; offline, TanStack pauses the mutation and sends it when the connection returns
+ * (in memory only: a reload loses it, README). On success, an in-flight refetch is cancelled
+ * (it may predate the completion) and the server's Task replaces the cached one in place; the
+ * list is not refetched, so cards do not jump under the user's finger. Any other failure refetches
+ * the list; the caller shows the message. A 403 is the global handler's.
+ */
+export function useCompleteTask(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const key = tasksKey(homeId, session?.user.id);
+  return useMutation({
+    mutationKey: completeTaskKey(homeId, session?.user.id),
+    mutationFn: (task: Task) => completeTask(homeId, task),
+    retry: (failureCount, error) => isTransient(error) && failureCount < COMPLETE_RETRIES,
+    onSuccess: async (task: Task) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? task : t)));
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 403) return;
+      void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/** A Task as the overview shows it: `pending` while the user's tick is on its way. */
+export type TaskView = Task & { pending: boolean };
+
+/**
+ * Story 2.4: the Home's tasks with every pending tick merged over the query data, so a refetch
+ * («Oppdater», pull, focus, reconnect) never unchecks a card while its request is under way.
+ */
+export function useTasksWithPending(homeId: string) {
+  const tasks = useTasks(homeId);
+  const session = useSession();
+  const pendingIds = useMutationState({
+    filters: { mutationKey: completeTaskKey(homeId, session?.user.id), status: 'pending' },
+    select: (mutation) => (mutation.state.variables as Task | undefined)?.id,
+  });
+  const pending = new Set(pendingIds);
+  const views: TaskView[] | undefined = tasks.data?.map((task) => ({ ...task, pending: pending.has(task.id) }));
+  return { tasks, views };
 }
 
 /**

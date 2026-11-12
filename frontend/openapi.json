@@ -903,6 +903,95 @@
           }
         }
       }
+    },
+    "/api/homes/{home_id}/tasks/{task_id}/instances/{instance_id}/completion": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Complete Task",
+        "description": "Completes the instance (idempotent: an already completed one changes nothing), 200.",
+        "operationId": "complete_task_api_homes__home_id__tasks__task_id__instances__instance_id__completion_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "instance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a Member of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such Task in this Home, or no such instance of the Task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -971,6 +1060,52 @@
           "user"
         ],
         "title": "AuthResponse"
+      },
+      "CompletionOut": {
+        "properties": {
+          "completed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Completed On"
+          },
+          "days_since": {
+            "type": "integer",
+            "title": "Days Since"
+          },
+          "completed_this_year": {
+            "type": "boolean",
+            "title": "Completed This Year"
+          },
+          "by": {
+            "type": "string",
+            "enum": [
+              "you",
+              "member",
+              "former_member"
+            ],
+            "title": "By"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "completed_on",
+          "days_since",
+          "completed_this_year",
+          "by",
+          "name"
+        ],
+        "title": "CompletionOut"
       },
       "CreateHomeRequest": {
         "properties": {
@@ -1461,6 +1596,11 @@
             "format": "uuid",
             "title": "Id"
           },
+          "instance_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Instance Id"
+          },
           "task_type": {
             "type": "string",
             "title": "Task Type"
@@ -1508,18 +1648,30 @@
           "days_until_due": {
             "type": "integer",
             "title": "Days Until Due"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompletionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
           "id",
+          "instance_id",
           "task_type",
           "name",
           "classification",
           "frequency_days",
           "due_on",
           "due_status",
-          "days_until_due"
+          "days_until_due",
+          "completion"
         ],
         "title": "TaskOut"
       },

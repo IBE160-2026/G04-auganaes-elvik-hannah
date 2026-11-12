@@ -317,6 +317,26 @@ export interface paths {
         patch: operations["adjust_task_api_homes__home_id__tasks__task_id__patch"];
         trace?: never;
     };
+    "/api/homes/{home_id}/tasks/{task_id}/instances/{instance_id}/completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Task
+         * @description Completes the instance (idempotent: an already completed one changes nothing), 200.
+         */
+        post: operations["complete_task_api_homes__home_id__tasks__task_id__instances__instance_id__completion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -339,6 +359,25 @@ export interface components {
              */
             token_type: "bearer";
             user: components["schemas"]["UserOut"];
+        };
+        /** CompletionOut */
+        CompletionOut: {
+            /**
+             * Completed On
+             * Format: date
+             */
+            completed_on: string;
+            /** Days Since */
+            days_since: number;
+            /** Completed This Year */
+            completed_this_year: boolean;
+            /**
+             * By
+             * @enum {string}
+             */
+            by: "you" | "member" | "former_member";
+            /** Name */
+            name: string | null;
         };
         /** CreateHomeRequest */
         CreateHomeRequest: {
@@ -523,6 +562,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Instance Id
+             * Format: uuid
+             */
+            instance_id: string;
             /** Task Type */
             task_type: string;
             /** Name */
@@ -549,6 +593,7 @@ export interface components {
             due_status: "overdue" | "due_soon" | "later";
             /** Days Until Due */
             days_until_due: number;
+            completion: components["schemas"]["CompletionOut"] | null;
         };
         /** TaskTypeOut */
         TaskTypeOut: {
@@ -1257,6 +1302,57 @@ export interface operations {
                 };
             };
             /** @description No such Task in this Home */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_task_api_homes__home_id__tasks__task_id__instances__instance_id__completion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                instance_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Not a Member of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home, or no such instance of the Task */
             404: {
                 headers: {
                     [name: string]: unknown;

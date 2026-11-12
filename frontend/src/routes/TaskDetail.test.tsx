@@ -1,5 +1,6 @@
 // Story 2.2 (decision 6): Task Detail, one test per case of the matrix row.
 // Story 2.3 (FR-5, FR-8, UX-DR30): adjusting Må/Bør and Frequency, and a Tenant's locked view.
+// Story 2.4 (decision 6): Detail shows the completion note read-only; it has no checkbox.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
@@ -7,15 +8,18 @@ import { GENERIC_ERROR } from '../api/errors';
 import type { Home } from '../api/homes';
 import { TASK_MESSAGES, type Task } from '../api/tasks';
 import {
+  DONE_BY_YOU_TODAY,
   OLAS_HOME,
   OLAS_TASKS,
   OLAS_TENANCY,
   adjustHandler,
+  completionPath,
   fakeApi,
   json,
   resetApi,
   signedInWith,
   taskPath,
+  taskServer,
   tasksPath,
 } from '../test-utils/fakeApi';
 
@@ -50,8 +54,9 @@ describe('Task Detail', () => {
     expect(screen.getByRole('radio', { name: 'Bør' })).toBeChecked();
     expect(screen.getByRole('combobox', { name: 'Hvor ofte' })).toHaveDisplayValue('Hver 2. uke');
     expect(screen.getByText('Forfalt — frist var 8. november')).toBeInTheDocument();
-    // The checkbox comes with Story 2.4.
+    // Story 2.4, decision 6: completing from Detail comes with Epic 4.
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByText('Status')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('link', { name: 'Tilbake til oppgavene' }));
     expect(await screen.findByRole('heading', { level: 1, name: OLAS_HOME.name })).toBeInTheDocument();
@@ -376,5 +381,35 @@ describe('Adjust a Task (Story 2.3)', () => {
     expect(classification).toHaveFocus();
     await userEvent.tab();
     expect(frequency).toHaveFocus();
+  });
+
+  it('shows the completion note read-only, without a checkbox (Story 2.4, decision 6)', async () => {
+    const done: Task = {
+      ...MUST,
+      completion: { ...DONE_BY_YOU_TODAY, days_since: 1, by: 'member', name: 'Jonas' },
+    };
+    fakeApi({ ...signedInWith(), [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks: [done, OVERDUE] }) });
+    renderAt(detailPath(MUST.id));
+
+    expect(await screen.findByText('Fullført i går av Jonas')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('shows a tick still on its way as «Fullført i dag» under «Status» (Story 2.4)', async () => {
+    const api = taskServer();
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, OVERDUE)}`]: api.complete(OVERDUE, [200], new Promise(() => {})),
+    });
+    renderAt(OVERVIEW);
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: `Merk «${OVERDUE.name}» som fullført` }));
+    await userEvent.click(screen.getByRole('link', { name: /^Støvsug og vask gulvene/ }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: OVERDUE.name })).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
+    expect(screen.getByText('Fullført i dag')).toBeInTheDocument();
   });
 });

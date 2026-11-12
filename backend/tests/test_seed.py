@@ -7,7 +7,12 @@ an earlier date so some are due soon or overdue; a Home the homes step skipped g
 
 Story 1.9 (issue #30): a Landlord Home may always be created, and a Landlord elsewhere may still
 create a Household Home.
+
+Story 2.4 (FR-7, FR-17): Jonas has completed «Avkalk vannkokeren» two days before seeding, only
+in the run that set the Household Home up and only if he is a Member; it adds one instance.
 """
+
+from datetime import timedelta
 
 import pytest
 from sqlalchemy.exc import OperationalError
@@ -40,8 +45,9 @@ def by_email(session: Session, email: str) -> User:
 
 MARI, JONAS, KARI, ANDERS = (user.email for user in EXAMPLE_USERS[:4])
 
-# What a full seed gives: users, Homes, Memberships, invite links, Tasks, TaskInstances.
-FULL = (4, 2, 4, 1, 16, 16)
+# What a full seed gives: users, Homes, Memberships, invite links, Tasks, TaskInstances (one
+# completed by Jonas plus its next instance, Story 2.4).
+FULL = (4, 2, 4, 1, 16, 17)
 MODELS = (User, Home, Membership, InviteLink, Task, TaskInstance)
 # The same without the tasks step.
 HOMES_ONLY = FULL[:4]
@@ -132,6 +138,29 @@ def test_fresh_db_gives_both_homes_every_catalog_task_some_due_soon_or_overdue(
     statuses = {tasks.due_status(row.due_on, today) for row in listed}
     assert "overdue" in statuses, "nothing overdue"
     assert "due_soon" in statuses, "nothing due soon"
+
+
+def test_fresh_db_has_jonas_completing_the_kettle_two_days_ago(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for step in seed.STEPS:
+        step(session)
+
+    listed = tasks.tasks_of(session, own_home(session, MARI, EXAMPLE_HOME_NAME).id)
+    done = [row for row in listed if row.last_completion is not None]
+    assert [row.task.task_type for row in done] == ["avkalk-vannkoker"]
+    [row] = done
+    assert row.last_completion is not None
+    jonas = by_email(session, JONAS)
+    assert (row.last_completion.user_id, row.last_completion.is_member) == (jonas.id, True)
+    today = utc_now().date()
+    assert row.last_completion.completed_at.date() == today - timedelta(days=2)
+    assert row.due_on == today + timedelta(days=58)
+    assert tasks.due_status(row.due_on, today) == "later"
+    assert f"{JONAS} krysset av «Avkalk vannkokeren»" in capsys.readouterr().out
+    # Nothing is completed in Kari's Home.
+    storgata = tasks.tasks_of(session, own_home(session, KARI, LANDLORD_HOME_NAME).id)
+    assert all(row.last_completion is None for row in storgata)
 
 
 def test_fresh_db_gives_mari_and_jonas_one_household_home(session: Session) -> None:
@@ -230,6 +259,12 @@ def test_jonas_in_another_home_is_skipped_with_a_reason(
     # Plus Kari's Home with Kari and Anders.
     assert count(session, Home) == 3 and count(session, Membership) == 4
     assert f"Hoppet over {JONAS}" in capsys.readouterr().out
+
+    # Story 2.4: Mari's Home gets its Tasks, but nothing is completed without Jonas.
+    seed_tasks(session)
+    mari_home = own_home(session, MARI, EXAMPLE_HOME_NAME)
+    assert all(row.last_completion is None for row in tasks.tasks_of(session, mari_home.id))
+    assert f"Hoppet over avkrysningen i «{EXAMPLE_HOME_NAME}»" in capsys.readouterr().out
 
 
 def test_mari_in_another_home_is_skipped_and_nothing_is_written(

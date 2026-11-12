@@ -2,15 +2,18 @@
 GET /api/homes/{home_id}/tasks and HomeOut's can_set_up_tasks / has_tasks.
 
 Story 2.3 (FR-5, FR-8): PATCH /api/homes/{home_id}/tasks/{task_id} and HomeOut.can_adjust_tasks.
+
+Story 2.4 (FR-7, FR-9, AD-3, AD-16): POST .../tasks/{task_id}/instances/{instance_id}/completion
+and TaskOut.instance_id / completion.
 """
 
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.clock import utc_now
 from app.domain import homes, tasks
@@ -87,6 +90,7 @@ def test_accept_as_is_is_201_with_the_same_body_as_get(client: TestClient, engin
     for task in body["tasks"]:
         assert set(task) == {
             "id",
+            "instance_id",
             "task_type",
             "name",
             "classification",
@@ -94,7 +98,9 @@ def test_accept_as_is_is_201_with_the_same_body_as_get(client: TestClient, engin
             "due_on",
             "due_status",
             "days_until_due",
+            "completion",
         }
+        assert task["completion"] is None
         assert date.fromisoformat(task["due_on"]) == today + timedelta(days=task["frequency_days"])
         assert task["days_until_due"] == task["frequency_days"]
         due_soon = task["frequency_days"] <= tasks.DUE_SOON_DAYS
@@ -259,8 +265,9 @@ def test_get_says_each_tasks_due_status_and_day_count_from_the_utc_date(
     set_up(client, auth, home_id, [ALL[0]])
     today = utc_now().date()
     with Session(engine) as session:
-        task = session.exec(select(Task)).one()
-        session.add(TaskInstance(task_id=task.id, due_on=today + timedelta(days=offset)))
+        instance = session.exec(select(TaskInstance)).one()
+        instance.due_on = today + timedelta(days=offset)
+        session.add(instance)
         session.commit()
 
     [task_out] = list_tasks(client, auth, home_id).json()["tasks"]
@@ -572,3 +579,230 @@ def test_home_out_says_who_may_adjust_tasks(client: TestClient) -> None:
     assert flag(jonas, household_id) is True
     created = client.post("/api/homes", json={"name": "Ny", "type": "landlord"}, headers=kari)
     assert created.json()["can_adjust_tasks"] is True
+
+
+# Story 2.4 (FR-7, FR-9, AD-3, AD-16, issue #43): completing a Task's open instance.
+
+
+def complete(client: TestClient, auth: dict[str, str], home_id: str, task_id: str, instance: str):
+    return client.post(
+        f"/api/homes/{home_id}/tasks/{task_id}/instances/{instance}/completion", headers=auth
+    )
+
+
+def complete_sluket(client: TestClient, auth: dict[str, str], home_id: str) -> dict:
+    task = sluket(client, auth, home_id)
+    response = complete(client, auth, home_id, task["id"], task["instance_id"])
+    assert response.status_code == 200
+    return response.json()
+
+
+def instance_count(engine: Engine, task_id: str) -> int:
+    with Session(engine) as session:
+        rows = session.exec(
+            select(TaskInstance).where(TaskInstance.task_id == uuid.UUID(task_id))
+        ).all()
+        return len(rows)
+
+
+def move_open_instance(engine: Engine, task_id: str, due_on: date) -> None:
+    with Session(engine) as session:
+        instance = session.exec(
+            select(TaskInstance).where(
+                TaskInstance.task_id == uuid.UUID(task_id),
+                col(TaskInstance.completed_at).is_(None),
+            )
+        ).one()
+        instance.due_on = due_on
+        session.add(instance)
+        session.commit()
+
+
+def test_jonas_completes_and_mari_sees_it_done_by_jonas(client: TestClient, engine: Engine) -> None:
+    """Matrix «Complete» and «Seen by another»; AC 1."""
+    mari, jonas, home_id = household_with_tasks(client)
+    before = sluket(client, jonas, home_id)
+    today = utc_now().date()
+
+    body = complete_sluket(client, jonas, home_id)
+
+    assert body["id"] == before["id"] and body["instance_id"] != before["instance_id"]
+    assert body["due_on"] == (today + timedelta(days=30)).isoformat()
+    assert (body["due_status"], body["days_until_due"]) == ("later", 30)
+    assert body["completion"] == {
+        "completed_on": today.isoformat(),
+        "days_since": 0,
+        "completed_this_year": True,
+        "by": "you",
+        "name": None,
+    }
+    # The response is the Task as the list shows it.
+    assert body == sluket(client, jonas, home_id)
+    assert sluket(client, mari, home_id)["completion"] == {
+        **body["completion"],
+        "by": "member",
+        "name": "Jonas",
+    }
+    assert instance_count(engine, body["id"]) == 2
+
+
+def test_a_retry_or_a_second_member_on_the_same_instance_changes_nothing(
+    client: TestClient, engine: Engine
+) -> None:
+    """Matrix «Retry / race / double tap» and «Stale old instance id»."""
+    mari, jonas, home_id = household_with_tasks(client)
+    first = sluket(client, jonas, home_id)
+    done = complete(client, jonas, home_id, first["id"], first["instance_id"]).json()
+
+    again = complete(client, jonas, home_id, first["id"], first["instance_id"])
+    by_mari = complete(client, mari, home_id, first["id"], first["instance_id"])
+
+    assert again.status_code == by_mari.status_code == 200
+    assert again.json() == done
+    assert by_mari.json()["completion"]["by"] == "member"
+    assert by_mari.json()["completion"]["name"] == "Jonas"
+    assert by_mari.json()["instance_id"] == done["instance_id"]
+    assert instance_count(engine, first["id"]) == 2
+
+
+def test_ones_own_completion_never_has_a_name_also_in_a_one_person_home(
+    client: TestClient,
+) -> None:
+    """Matrix «Own / one-person»; AC 4: Sara alone."""
+    sara = sign_up(client, "Sara")
+    home_id = create_home(client, sara)
+    set_up(client, sara, home_id, ALL)
+
+    body = complete_sluket(client, sara, home_id)
+
+    assert (body["completion"]["by"], body["completion"]["name"]) == ("you", None)
+    assert all(
+        t["completion"] is None or t["completion"]["name"] is None
+        for t in list_tasks(client, sara, home_id).json()["tasks"]
+    )
+
+
+def test_a_departed_completer_shows_as_former_member(client: TestClient) -> None:
+    """Matrix «Departed»: Jonas leaves; then he is only a Member (Landlord) elsewhere."""
+    mari, jonas, home_id = household_with_tasks(client)
+    complete_sluket(client, jonas, home_id)
+
+    assert client.delete(f"/api/homes/{home_id}/members/me", headers=jonas).status_code == 204
+    left = sluket(client, mari, home_id)["completion"]
+    create_home(client, jonas, "landlord")
+    elsewhere = sluket(client, mari, home_id)["completion"]
+
+    for completion in (left, elsewhere):
+        assert (completion["by"], completion["name"]) == ("former_member", None)
+
+
+@pytest.mark.parametrize(
+    ("days_until_due", "shown"),
+    [(tasks.DUE_SOON_DAYS + 1, True), (tasks.DUE_SOON_DAYS, False), (-1, False)],
+)
+def test_the_completion_is_shown_only_while_the_next_date_is_later(
+    client: TestClient, engine: Engine, days_until_due: int, shown: bool
+) -> None:
+    """Decision 1 (1b): once due soon or overdue, the card shows the due line again."""
+    mari, _, home_id = household_with_tasks(client)
+    body = complete_sluket(client, mari, home_id)
+    move_open_instance(engine, body["id"], utc_now().date() + timedelta(days=days_until_due))
+
+    task = sluket(client, mari, home_id)
+
+    assert (task["completion"] is not None) is shown
+
+
+def test_an_older_completion_says_how_long_ago_and_whether_this_year(
+    client: TestClient, engine: Engine
+) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    body = complete_sluket(client, mari, home_id)
+    today = utc_now().date()
+    last_year = date(today.year - 1, 12, 31)
+    with Session(engine) as session:
+        done = session.exec(
+            select(TaskInstance).where(
+                TaskInstance.task_id == uuid.UUID(body["id"]),
+                col(TaskInstance.completed_at).is_not(None),
+            )
+        ).one()
+        done.completed_at = datetime(last_year.year, 12, 31, 23, 59, tzinfo=UTC)
+        session.add(done)
+        session.commit()
+    move_open_instance(engine, body["id"], today + timedelta(days=30))
+
+    completion = sluket(client, mari, home_id)["completion"]
+
+    assert completion["completed_on"] == last_year.isoformat()
+    assert completion["days_since"] == (today - last_year).days
+    assert completion["completed_this_year"] is False
+
+
+def test_a_frequency_change_after_completion_keeps_the_completion(client: TestClient) -> None:
+    """Matrix «Adjust after completion»."""
+    mari, jonas, home_id = household_with_tasks(client)
+    body = complete_sluket(client, jonas, home_id)
+
+    response = adjust(client, mari, home_id, body["id"], {"frequency_days": 60})
+
+    assert response.json()["due_on"] == (utc_now().date() + timedelta(days=60)).isoformat()
+    assert response.json()["completion"] == {**body["completion"], "by": "member", "name": "Jonas"}
+
+
+def test_a_tenant_may_complete(client: TestClient) -> None:
+    """Matrix «Tenant»: 200 (the photo rule is Epic 4); the Landlord sees «av Anders»."""
+    kari, anders, home_id = landlord_with_tasks(client)
+
+    body = complete_sluket(client, anders, home_id)
+
+    assert body["completion"]["by"] == "you"
+    assert sluket(client, kari, home_id)["completion"]["name"] == "Anders"
+
+
+def test_another_homes_task_or_another_tasks_instance_is_404(
+    client: TestClient, engine: Engine
+) -> None:
+    """Matrix «Foreign ids»."""
+    mari, _, home_id = household_with_tasks(client)
+    kari, _, other_home = landlord_with_tasks(client)
+    foreign = sluket(client, kari, other_home)
+    mine = list_tasks(client, mari, home_id).json()["tasks"]
+    a, b = mine[0], mine[1]
+
+    cases = [
+        (foreign["id"], foreign["instance_id"]),
+        (str(uuid.uuid4()), a["instance_id"]),
+        (a["id"], b["instance_id"]),
+        (a["id"], foreign["instance_id"]),
+        (a["id"], str(uuid.uuid4())),
+    ]
+    for task_id, instance_id in cases:
+        response = complete(client, mari, home_id, task_id, instance_id)
+        assert response.status_code == 404
+        assert response.json() == {"detail": TASK_NOT_FOUND}
+    assert written(engine) == (16, 16)
+
+
+def test_completing_as_outsider_or_in_an_unknown_home_is_403(
+    client: TestClient, engine: Engine
+) -> None:
+    """Matrix «Not a Member»."""
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    outsider = sign_up(client, "Per")
+    create_home(client, outsider)
+
+    for target in (home_id, str(uuid.uuid4())):
+        response = complete(client, outsider, target, task["id"], task["instance_id"])
+        assert response.status_code == 403
+        assert response.json() == {"detail": FORBIDDEN}
+    assert instance_count(engine, task["id"]) == 1
+
+
+def test_completing_signed_out_is_401_and_bad_ids_are_422(client: TestClient) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+
+    assert complete(client, {}, home_id, task["id"], task["instance_id"]).status_code == 401
+    assert complete(client, mari, home_id, task["id"], "ikke-en-uuid").status_code == 422

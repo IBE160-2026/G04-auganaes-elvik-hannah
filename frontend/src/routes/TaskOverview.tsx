@@ -8,14 +8,26 @@
 // Tasks goes to Task Setup for whoever may set it up, and a Tenant sees the waiting text. Only
 // after the guards pass is the Home recorded as last used (decision 12).
 // The Story 1.8 leave notice («Du har forlatt «X».») is shown here, where "/" lands.
+// Story 2.4 (FR-7, FR-17, UX-DR32, UX-DR42): each card has a checkbox before its row link (two
+// focus stops). A tick completes the Task at once, with no confirmation and no undo; the card
+// shows the completion while its next date is «later» (server's completion field). Pending ticks
+// are merged over the list (useTasksWithPending), transient failures retry quietly, and a refused
+// tick rolls back that card with a visible message in its own aria-live line.
 import { useEffect, useRef, useState, type RefObject, type TouchEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
 import { ROLE_LABELS, type Home } from '../api/homes';
 import { recordLastHome } from '../api/lastHome';
-import { useHomes, useTasks } from '../api/queries';
+import { useCompleteTask, useHomes, useTasksWithPending, type TaskView } from '../api/queries';
 import { useSession } from '../api/session';
-import { TASK_MESSAGES, dueText, type Task } from '../api/tasks';
+import {
+  PENDING_COMPLETION_TEXT,
+  TASK_MESSAGES,
+  checkboxLabel,
+  completedLabel,
+  completionText,
+  dueText,
+} from '../api/tasks';
 import { Badge } from '../components/Badge';
 import { PendingNotice } from '../components/PendingNotice';
 import { HomesLoadError } from './HomesLoadError';
@@ -115,7 +127,7 @@ function isForbidden(error: Error | null): boolean {
 }
 
 function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh' | 'refreshing'>) {
-  const tasks = useTasks(home.id);
+  const { tasks, views } = useTasksWithPending(home.id);
   const [announcement, setAnnouncement] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [pulled, setPulled] = useState(false);
@@ -196,15 +208,22 @@ function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh
         <p className={`task-overview__pull${pulled ? ' task-overview__pull--ready' : ''}`} aria-hidden="true">
           Slipp for å oppdatere
         </p>
-        <TaskListBody home={home} tasks={tasks} />
+        <TaskListBody home={home} tasks={tasks} views={views} />
       </section>
     </>
   );
 }
 
-function TaskListBody({ home, tasks }: { home: Home; tasks: ReturnType<typeof useTasks> }) {
-  if (tasks.data) {
-    const nothingDue = tasks.data.every((task) => task.due_status === 'later');
+type TaskListBodyProps = {
+  home: Home;
+  tasks: ReturnType<typeof useTasksWithPending>['tasks'];
+  views: TaskView[] | undefined;
+};
+
+function TaskListBody({ home, tasks, views }: TaskListBodyProps) {
+  if (views) {
+    // A card ticked a moment ago is done, whatever its old due state.
+    const nothingDue = views.every((task) => task.pending || task.due_status === 'later');
     return (
       <>
         {nothingDue && (
@@ -213,7 +232,7 @@ function TaskListBody({ home, tasks }: { home: Home; tasks: ReturnType<typeof us
           </p>
         )}
         <ul className="task-overview__list">
-          {tasks.data.map((task) => (
+          {views.map((task) => (
             <li key={task.id}>
               <TaskRow home={home} task={task} />
             </li>
@@ -253,15 +272,66 @@ function TaskListBody({ home, tasks }: { home: Home; tasks: ReturnType<typeof us
   );
 }
 
-// The whole row is one link to Task Detail. The checkbox comes with Story 2.4 (decision 6).
-function TaskRow({ home, task }: { home: Home; task: Task }) {
+/** Story 2.4: the message for a refused tick, or null when another part of the app handles it. */
+function completeError(error: Error | null, name: string): string | null {
+  if (!error) return null;
+  // 403: the global handler refetches and the guards route.
+  if (error instanceof ApiError && error.status === 403) return null;
+  return TASK_MESSAGES.completeFailed(name);
+}
+
+// Story 2.4: the checkbox, then the row link to Task Detail (two focus stops).
+function TaskRow({ home, task }: { home: Home; task: TaskView }) {
+  const complete = useCompleteTask(home.id);
+  // Set at once, so a double tap before the next render sends one request.
+  const sending = useRef(false);
+  const done = task.pending || task.completion !== null;
+  const note = task.pending ? PENDING_COMPLETION_TEXT : task.completion && completionText(task.completion);
+  // Done meanwhile (another Member, or a later tick): nothing left to report.
+  const error = done ? null : completeError(complete.error, task.name);
+
+  // Decision 3 (no undo): a completed box stays checked. It is controlled, so ignoring the
+  // change is enough; React puts the DOM back to checked. (preventDefault on the click would
+  // leave the DOM unchecked: React's restore and the browser's both run.)
+  function tick() {
+    if (done || sending.current) return;
+    sending.current = true;
+    complete.mutate(task, {
+      onSettled: () => {
+        sending.current = false;
+      },
+    });
+  }
+
   return (
-    <Link to={`/hjem/${home.id}/oppgaver/${task.id}`} className="task-overview__row">
-      <span className="task-overview__row-top">
-        <span className="task-overview__name">{task.name}</span>
-        <Badge classification={task.classification} />
-      </span>
-      <span className={`task-overview__due task-overview__due--${task.due_status}`}>{dueText(task)}</span>
-    </Link>
+    <div className={`task-overview__card${done ? ' task-overview__card--done' : ''}`}>
+      <div className="task-overview__card-main">
+        {/* A label, so the whole 44×44 area ticks the box, not only the drawn box. */}
+        <label className="task-overview__check">
+          <input
+            type="checkbox"
+            checked={done}
+            aria-label={done ? completedLabel(task.name) : checkboxLabel(task.name)}
+            aria-disabled={done || undefined}
+            onChange={tick}
+          />
+        </label>
+        <Link to={`/hjem/${home.id}/oppgaver/${task.id}`} className="task-overview__row">
+          <span className="task-overview__row-top">
+            <span className="task-overview__name">{task.name}</span>
+            <Badge classification={task.classification} />
+          </span>
+          {note ? (
+            <span className="task-overview__done">{note}</span>
+          ) : (
+            <span className={`task-overview__due task-overview__due--${task.due_status}`}>{dueText(task)}</span>
+          )}
+        </Link>
+      </div>
+      {/* Always in the DOM, so a refused tick is announced; empty and hidden otherwise. */}
+      <p className="task-overview__card-error" aria-live="polite">
+        {error}
+      </p>
+    </div>
   );
 }

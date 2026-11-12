@@ -2,8 +2,9 @@
 title: 'Story 2.4: Self-Checkoff Completion with Shared Status & Attribution'
 type: 'feature'
 created: '2026-11-11'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
+baseline_commit: '4bcea9792a42027378a74788adb2d0e6a22aa62c'
 review_loop_iteration: 0
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
@@ -81,16 +82,16 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `backend/app/models/task.py` + migration + `ci.yml` probes
-- [ ] `backend/app/domain/tasks.py` -- one open-instance helper, `complete_task_instance`
-- [ ] `backend/app/routes/tasks.py` -- `TaskOut` fields, completion route
-- [ ] `backend/tests/test_tasks.py`, `test_tasks_routes.py`, `test_seed.py`, `app/seed/tasks.py` -- matrix rows, seed completion
-- [ ] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate
-- [ ] `frontend/src/api/{tasks,queries}.ts`, `test-utils/fakeApi.ts`
-- [ ] `frontend/src/routes/TaskOverview.{tsx,css,test.tsx}`, `TaskDetail.{tsx,test.tsx}` -- tests: focus order and labels; network error then success (stays checked, one saved POST); 500 retried; 404 rolls back only that card with a visible message; refetch during a pending POST keeps it checked; double tap = one request; completed box ignores click/Space; copy variants; Detail note
-- [ ] `README.md` -- «Prøv å krysse av oppgaver (Story 2.4)» incl. the offline limit
-- [ ] `_bmad-output/planning-artifacts/epics.md` (2.4, 2.5) and architecture revision note -- decisions, completion columns and one-open-instance index, AD-9 counts `completed_by_user_id` over a Task's last 3 completed instances; `sprint-status.yaml` 2.5 with 2.4
-- [ ] `_bmad-output/implementation-artifacts/deferred-work.md` -- outcomes for the two "earliest open" entries and the 2.5 date collision
+- [x] `backend/app/models/task.py` + migration + `ci.yml` probes
+- [x] `backend/app/domain/tasks.py` -- one open-instance helper, `complete_task_instance`
+- [x] `backend/app/routes/tasks.py` -- `TaskOut` fields, completion route
+- [x] `backend/tests/test_tasks.py`, `test_tasks_routes.py`, `test_seed.py`, `app/seed/tasks.py` -- matrix rows, seed completion
+- [x] `frontend/openapi.json`, `src/api/schema.d.ts` -- regenerate
+- [x] `frontend/src/api/{tasks,queries}.ts`, `test-utils/fakeApi.ts`
+- [x] `frontend/src/routes/TaskOverview.{tsx,css,test.tsx}`, `TaskDetail.{tsx,test.tsx}` -- tests: focus order and labels; network error then success (stays checked, one saved POST); 500 retried; 404 rolls back only that card with a visible message; refetch during a pending POST keeps it checked; double tap = one request; completed box ignores click/Space; copy variants; Detail note
+- [x] `README.md` -- «Prøv å krysse av oppgaver (Story 2.4)» incl. the offline limit
+- [x] `_bmad-output/planning-artifacts/epics.md` (2.4, 2.5) and architecture revision note -- decisions, completion columns and one-open-instance index, AD-9 counts `completed_by_user_id` over a Task's last 3 completed instances; `sprint-status.yaml` 2.5 with 2.4
+- [x] `_bmad-output/implementation-artifacts/deferred-work.md` -- outcomes for the two "earliest open" entries and the 2.5 date collision
 
 **Acceptance Criteria:**
 - Given Jonas ticks «Rens sluket», when Mari presses «Oppdater», then her card reads «Fullført i dag av Jonas» with a checked box.
@@ -100,11 +101,46 @@ context:
 
 ## Implementation Notes
 
+- Migration `c4e1d2a7b9f3`. `ck_task_instances_completion` is `(completed_at IS NULL) = (completed_by_user_id IS NULL)`. Ran upgrade, `downgrade -1`, upgrade, `alembic check`, `downgrade base` and upgrade, the seed twice, and every CI Python probe against a throwaway database (`husly_scratch_24`, dropped afterwards). The local `husly` database was not touched.
+- `_rows` reads the list in three queries whatever its length: Tasks joined to the open instance, the latest completion per Task (`max(completed_at)` subquery) with the User, and the completers' Memberships in this Home. `test_the_list_is_read_in_three_queries_whatever_its_length` checks it.
+- The seed picks the Task to complete by its values (Bør, 60 days), not by the key `avkalk-vannkoker`, because `test_task_types.py` forbids catalog keys in seed modules (AD-6). `kjokkenviftefilter` is also 60 days but is Må. The full seed now has 17 TaskInstances (`test_seed.FULL` and the CI count are updated).
+- Frontend: one `useMutation` per card (`useCompleteTask`), with `mutationKey` `['complete-task', homeId, userId]`. `useTasksWithPending` merges the pending ones over the query data as `TaskView.pending`. A pending card shows «Fullført i dag», because one's own completion has no name and happens today, so there is no optimistic `completed_on`.
+- Retries: transient failures (non-`ApiError`, 5xx, 408, 429) are retried at most `COMPLETE_RETRIES` = 8 times with TanStack's default backoff (about 2 minutes). Offline time does not count, because TanStack pauses. After the last retry the card rolls back with the message. The spec does not say how many retries; endless retries on a persistent 500 would leave a checked card that was never saved.
+- On success, an in-flight tasks refetch is cancelled (it may be older than the completion), and the server's Task replaces the cached one in place. The list is not refetched, so cards do not move under the user's finger. The Must-first order is updated on the next refetch (focus, «Oppdater»).
+- An inert completed box ignores the change in `onChange` and relies on the controlled `checked`. `preventDefault` on click was tried and left the DOM unchecked: React's restore and the browser's canceled-click restore both run.
+- Task Detail shows the note under «Status» and merges pending ticks the same way. The 2.2 tab order in README now names the checkbox.
+- Orchestrator check against the diff: the checkbox sat in a 44×44 `<span>`, so only the drawn box (`--space-5`) took a tap; changed to a `<label>` so the whole 44×44 area ticks it (Boundaries: ≥44×44 target). Re-ran pytest (565), Vitest (384), ruff, ESLint and build: all pass. Every matrix row has a covering test that ran.
+
 ## Spec Change Log
 
 ## Review Triage Log
 
 Spec review 2026-11-11 (one adversarial reviewer; 23 findings, evidence checked by the orchestrator): all taken in. Refetch during pending mutation (high), migration partial index unchecked in CI (high), lock order vs `adjust_task`, per-task rollback, retry 5xx, in-memory offline limit (team decision 5), hidden aria-live region, seed task choice, `IntegrityError` race, shared `_task_with_due`, named frontend tests, server receive time, Task Detail deviation (team decision 6), inert checkbox details, `nothingDue` and optimistic `completed_on`, `formatDueOn` clock, UTC midnight accepted, destructive downgrade, stale instance id row, per-Home membership, AD-9 note, 2.5 status, stale line refs.
+
+Code review 2026-11-11 (Blind Hunter B, Edge Case Hunter E, Verification Gap V; 23 findings, verified against the code by the orchestrator):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| Settled state after a successful tick never observed: `setQueryData`/`cancelQueries` in `useCompleteTask.onSuccess` can be deleted with all tests green (V, pre-verified) | medium | patch: distinguishable stored completion, GET count, stale GET in flight |
+| Partial index leaves completed instances without a `task_id` index; latest-completion subquery unindexed; model comment wrong (B) | medium | patch: plain index `(task_id, completed_at)` in model and migration |
+| 403 on the completion POST untested (V, B) | low | patch: test no card message + global refetch |
+| `isTransient` (408/429) untested (V) | low | patch: unit test |
+| Task Detail pending merge untested (B, V other) | low | patch: one Detail test |
+| ERD still draws MEMBER_COMPLETION (B) | low | patch: ERD line |
+| EXPERIENCE.md Task Detail row not marked REVISED for decision 6 (B) | low | patch: REVISED sentence |
+| README does not say the completion note counts UTC days (B) | low | patch: one sentence |
+| CI CHECK probe covers one direction only (B) | low | patch: reverse probe |
+| Retries-exhausted path has no UI test (V, B) | low | rejected: needs fake timers over ~2 min of backoff; the cap is the implementer's choice, the predicate is now unit-tested |
+| Stale tick (old instance id, Task already due again) unchecks silently with 200 (E, B) | low | rejected: needs a list ≥4 days stale without any refetch (mount/focus refetch); fix adds a server flag and UI branch; matrix row "Stale old instance id" chose 200, no message |
+| Error message lost if the card unmounts during a failing retry (E) | low | rejected: card still rolls back; rare; fix adds a second mutation-state read |
+| Route reads `utc_now()` after the domain: a tick at 23:59:59.9 UTC can read «i går» (E) | low | rejected: sub-second window; UTC midnight already accepted |
+| `IntegrityError` other than the partial index answered as 200 (E) | false | the only reachable constraint on that commit is the partial index: FK targets (Task, User from the Membership) exist and both completion fields are set together |
+| Migration fails if a Task already has two open instances (E) | false | before 2.4 every Task has exactly one instance: `set_up_tasks` creates one and nothing else creates or moves instances into a second row |
+| Seed `next()` raises StopIteration if the catalog loses its 60-day Bør (E) | low | rejected: loud failure on a catalog edit is correct; `test_seed` catches it |
+| Seed rerun after a failed completion never adds it (E) | low | rejected: the completion runs in the same seed transaction sequence right after setup; a partial failure is a crashed seed, rerun on a fresh DB |
+| Seeded completion predates the instance's `created_at` (B) | low | rejected: invisible to users; backdating `created_at` adds seed-only code |
+| Detail shows the old «Frist» beside «Fullført i dag» while pending (B) | low | rejected: only during the short pending window or offline; fix adds a branch |
+| `isTransient` retries programming errors (non-`ApiError`) (B) | low | rejected: such a bug still ends in rollback + message after the cap; narrowing to fetch's error shape is brittle across browsers |
 
 ## Verification
 

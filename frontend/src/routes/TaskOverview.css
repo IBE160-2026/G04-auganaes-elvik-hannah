@@ -96,16 +96,52 @@
   list-style: none;
 }
 
-/* The whole card is the link to Task Detail. */
-.task-overview__row {
+/* Story 2.4: a card holds the checkbox and the row link to Task Detail, side by side. */
+.task-overview__card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  min-height: var(--tap-min);
-  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   box-shadow: var(--shadow-card);
+}
+
+.task-overview__card-main {
+  display: flex;
+  align-items: stretch;
+}
+
+/* The checkbox's 44×44 tap target; the native box itself is drawn larger than the default. */
+.task-overview__check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  padding-left: var(--space-2);
+}
+
+.task-overview__check input {
+  width: var(--space-5);
+  height: var(--space-5);
+  margin: 0;
+  accent-color: var(--color-success);
+  cursor: pointer;
+}
+
+.task-overview__card--done .task-overview__check input {
+  cursor: default;
+}
+
+.task-overview__row {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
   color: var(--color-ink-primary);
   text-decoration: none;
   overflow-wrap: anywhere;
@@ -124,6 +160,31 @@
 
 .task-overview__name {
   font-weight: var(--font-weight-bold);
+}
+
+/* Story 2.4 (UX-DR32): completed = checked box, struck-through name, success note. */
+.task-overview__card--done .task-overview__name {
+  text-decoration: line-through;
+  color: var(--color-ink-secondary);
+}
+
+.task-overview__done {
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  color: var(--color-success);
+  font-weight: var(--font-weight-bold);
+}
+
+/* A refused tick, under the card; hidden while empty. */
+.task-overview__card-error {
+  padding: 0 var(--space-4) var(--space-3);
+  color: var(--color-danger);
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+}
+
+.task-overview__card-error:empty {
+  display: none;
 }
 
 .task-overview__due {
