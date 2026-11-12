@@ -17,6 +17,11 @@ from app.config import get_gemini_api_key, get_gemini_model
 AI_TIMEOUT_SECONDS = 10
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
+# Thinking is what made a first call take over 40 seconds on Vercel (Story 5.1 smoke test), far
+# past AI_TIMEOUT_SECONDS. LOW keeps answers fast. The field belongs to the Gemini 3 and 4
+# models; an older model (GEMINI_MODEL) would refuse it and every answer would be «error».
+GEMINI_THINKING_LEVEL = "LOW"
+
 SYSTEM_INSTRUCTION = (
     "Du er en hjelper i en app for husarbeid. Svar bare på norsk bokmål og aldri på andre "
     "språk, heller ikke delvis. Svar kort og konkret, gjerne i noen få steg. Hvis du nevner "
@@ -86,6 +91,7 @@ class GeminiProvider:
                 "responseMimeType": "application/json",
                 "responseSchema": RESPONSE_SCHEMA,
                 "temperature": 0.3,
+                "thinkingConfig": {"thinkingLevel": GEMINI_THINKING_LEVEL},
             },
         }
 

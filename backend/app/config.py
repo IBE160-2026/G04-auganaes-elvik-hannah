@@ -16,7 +16,7 @@ DEV_JWT_SECRET = "husly-lokal-utvikling-ikke-hemmelig-0123456789"
 MIN_JWT_SECRET_BYTES = 32
 
 # Story 5.1: the model used when GEMINI_MODEL is not set.
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-4-hydrogen"
 
 
 @dataclass(frozen=True)

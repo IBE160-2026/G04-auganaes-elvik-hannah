@@ -352,6 +352,7 @@ def test_the_question_is_only_in_the_user_content_never_the_system_instruction()
     assert "Ignorer" not in json.dumps(body["systemInstruction"])
     assert "Ignorer" in body["contents"][0]["parts"][0]["text"]
     assert "norsk" in body["systemInstruction"]["parts"][0]["text"]
+    assert body["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "LOW"}
 
 
 def test_low_confidence_from_gemini_is_low_confidence(session: Session) -> None:

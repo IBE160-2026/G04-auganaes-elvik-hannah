@@ -106,6 +106,7 @@ context:
 - The Gemini provider is only tested over `httpx.MockTransport`; no real call was made (no key), and the default model `gemini-2.5-flash` is not verified against a live key.
 - `conftest.mock_ai` (autouse) removes `GEMINI_API_KEY` and `GEMINI_MODEL`, so a developer's shell can never make a test call Gemini; the existing network guard backs that up.
 - Frontend: the popover panel uses `hidden`, so its live region is removed from the accessibility tree while closed. The answer arrives later and is announced; the skeleton text of the opening moment may not be. `useAskTask` is a mutation: reopening keeps `data`, and only an idle mutation asks.
+- Smoke test on the Vercel preview 2026-11-12 (first real Gemini calls, model `gemini-4-hydrogen` from Google AI Studio's own recommendation): HTTP 200, but one call took about 50 seconds against our 10-second deadline, so the user saw «Vi fikk ikke svar». Fix: `thinkingConfig: {thinkingLevel: "LOW"}` in the request and `gemini-4-hydrogen` as the default model. The field is only valid for Gemini 3 and newer models; `.env.example` says so. Whether LOW is enough to stay under 10 seconds is checked on the next preview deploy.
 - Task Detail's tab order now has «Spør KI» between the title and the fields; the Tenant tab-order test was updated for that.
 
 ## Spec Change Log
