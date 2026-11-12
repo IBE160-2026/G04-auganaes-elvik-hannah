@@ -65,3 +65,6 @@
 - [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Story 2.4: `tasks_of` og `_open_instance` må bruke tidligste åpne forekomst (deferred-work)
 - [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Merge `chore/status-etter-story-2-3`, deretter Story 2.4 med `bmad-build`
 - [ ] 2026-11-11 [story-2-3-justere-oppgaver](985-2026-11-11-20-19-25-story-2-3-justere-oppgaver.md) — Teste radlåsen i `adjust_task` med to samtidige PATCH mot Postgres (valgfritt, ikke automatisert)
+- [ ] 2026-11-12 [correct-course-prd-tilbakemelding](983-2026-11-12-18-35-00-correct-course-prd-tilbakemelding.md) — Hannah og Steffen leser PR #45 (særlig kuttlinjen for Trinn 2) og kan protestere
+- [ ] 2026-11-12 [correct-course-prd-tilbakemelding](983-2026-11-12-18-35-00-correct-course-prd-tilbakemelding.md) — Story 3.3 og 5.1 bygges etter de nye kriteriene (FR-11-regelen, `ai_usage`-migrasjon, timeout 10 s, 20 kall per dag)
+- [ ] 2026-11-12 [correct-course-prd-tilbakemelding](983-2026-11-12-18-35-00-correct-course-prd-tilbakemelding.md) — Svar på Bårds refleksjonsspørsmål 2 i `docs/ki-logg/`, og linje om økten i sammendragstabellen i `docs/ki-logg/README.md`
