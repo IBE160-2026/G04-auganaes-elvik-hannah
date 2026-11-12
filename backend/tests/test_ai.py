@@ -351,7 +351,13 @@ def test_the_question_is_only_in_the_user_content_never_the_system_instruction()
     )
     assert "Ignorer" not in json.dumps(body["systemInstruction"])
     assert "Ignorer" in body["contents"][0]["parts"][0]["text"]
-    assert "norsk" in body["systemInstruction"]["parts"][0]["text"]
+    instruction = body["systemInstruction"]["parts"][0]["text"]
+    assert "norsk" in instruction
+    # Story 5.1 follow-up: the answer stays on the Task and housework, and a question about which
+    # cleaner suits a surface is never scoped out (NFR4).
+    assert "bare på spørsmål om oppgaven" in instruction
+    assert "hvilket middel som passer" in instruction and "alltid innenfor" in instruction
+    assert "bare kan hjelpe med husarbeid" in instruction
     assert body["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "LOW"}
 
 

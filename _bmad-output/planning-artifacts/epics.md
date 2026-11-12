@@ -1313,6 +1313,10 @@ So that I can get unstuck right when I need it.
 **When** the popover opens
 **Then** it asks at once with a default question about the task, and a field lets the Member ask their own question of at most 300 characters
 
+**Given** a question that is not about the task or housework
+**When** the AI answers
+**Then** it says briefly that it only helps with housework and the task, while a question about which cleaner suits a surface is still answered
+
 **Given** the mock provider answered
 **When** the answer renders
 **Then** the popover says it is a demo answer, written in advance, that does not respond to the question typed
