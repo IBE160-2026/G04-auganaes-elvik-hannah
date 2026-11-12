@@ -6,6 +6,7 @@
 // Story 2.3 (FR-5, FR-8): adjusting a Task's Må/Bør and Frequency on Task Detail.
 // Story 2.4 (FR-7, FR-17, AD-3): completing a Task's open instance, and the completion note from
 // the server's completion (who, how many days ago, this year or not), never the browser's clock.
+// Story 2.6 (FR-24): adding a catalog or custom Task and archiving one.
 import { api } from './client';
 import { ApiError, GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
@@ -15,6 +16,7 @@ export type TaskTypes = components['schemas']['TaskTypesOut'];
 export type TaskType = components['schemas']['TaskTypeOut'];
 export type TaskChoice = components['schemas']['TaskChoiceIn'];
 export type TaskChanges = components['schemas']['AdjustTaskRequest'];
+export type NewTask = components['schemas']['AddTaskRequest'];
 export type Classification = Task['classification'];
 export type Frequency = Task['frequency_days'];
 export type DueStatus = Task['due_status'];
@@ -39,6 +41,14 @@ export const TASK_MESSAGES = {
   lockedByLandlord: 'Satt av utleier',
   // Story 2.4: a tick the server refused (not a network error or 5xx, which are retried).
   completeFailed: (name: string) => `Vi fikk ikke krysset av «${name}». Prøv igjen.`,
+  // Story 2.6: the one-time notices on the overview, and the messages of the two actions.
+  added: (name: string) => `La til «${name}».`,
+  removed: (name: string) => `Fjernet «${name}».`,
+  addFailed: GENERIC_ERROR,
+  archiveFailed: 'Vi fikk ikke fjernet oppgaven. Prøv igjen.',
+  chooseOne: 'Velg en oppgave.',
+  noTasks: 'Ingen oppgaver i hjemmet ennå.',
+  removeExplanation: 'Oppgaven forsvinner fra lista for alle i hjemmet. Det som er gjort, blir stående.',
 } as const;
 
 // Story 2.4 (UX-DR32): the checkbox names the action and the Task; a completed one says so.
@@ -196,4 +206,33 @@ export async function completeTask(homeId: string, task: Pick<Task, 'id' | 'inst
     throw toApiError(response, error, { passThrough: [], fallback: TASK_MESSAGES.completeFailed(task.name) });
   }
   return data;
+}
+
+/**
+ * Story 2.6: adds one Task and returns it. A 409 (setup has not run) or a 422 (a rule the form
+ * cannot always know, e.g. a name another Member just used) carries the server's Norwegian
+ * reason; anything else gets the generic message. A 403 is the global handler's.
+ */
+export async function addTask(homeId: string, body: NewTask): Promise<Task> {
+  const { data, error, response } = await api.POST('/api/homes/{home_id}/tasks', {
+    params: { path: { home_id: homeId } },
+    body,
+  });
+  if (!data) {
+    throw toApiError(response, error, { passThrough: [409, 422], fallback: TASK_MESSAGES.addFailed });
+  }
+  return data;
+}
+
+/**
+ * Story 2.6: archives the Task. Idempotent on the server (204 also when it was archived already),
+ * so a retry after a lost response is safe. A 404 (not in this Home) carries the server's reason.
+ */
+export async function archiveTask(homeId: string, taskId: string): Promise<void> {
+  const { error, response } = await api.DELETE('/api/homes/{home_id}/tasks/{task_id}', {
+    params: { path: { home_id: homeId, task_id: taskId } },
+  });
+  if (!response.ok) {
+    throw toApiError(response, error, { passThrough: [404], fallback: TASK_MESSAGES.archiveFailed });
+  }
 }

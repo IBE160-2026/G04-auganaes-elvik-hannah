@@ -7,11 +7,13 @@
 // its overview (which routes on), and a loaded list without this Task back to the overview.
 // Story 2.4 (decision 6): Detail shows the completion note read-only under «Status», with a
 // tick still on its way merged in as on the overview; completing from here comes with Epic 4.
+// Story 2.6 (FR-24): whoever may adjust Tasks also sees «Fjern oppgaven», an inline confirmation
+// that archives the Task and lands on the overview with «Fjernet «X».».
 import { useId, useState, type FormEvent } from 'react';
-import { Link, Navigate, useParams } from 'react-router';
+import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
 import type { Home } from '../api/homes';
-import { useAdjustTask, useHomes, useTasksWithPending, type TaskView } from '../api/queries';
+import { useAdjustTask, useArchiveTask, useHomes, useTasksWithPending, type TaskView } from '../api/queries';
 import {
   CLASSIFICATION_LABELS,
   FREQUENCIES,
@@ -25,6 +27,7 @@ import {
   type Task,
   type TaskChanges,
 } from '../api/tasks';
+import { ConfirmAction } from '../components/ConfirmAction';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
@@ -97,8 +100,38 @@ function Detail({ home, task }: { home: Home; task: TaskView }) {
           </div>
         )}
       </dl>
+      {home.can_adjust_tasks && <RemoveTask home={home} task={task} />}
       <BackLink home={home} />
     </div>
+  );
+}
+
+/** Story 2.6: «Fjern oppgaven» with an inline confirmation (EXPERIENCE.md, Remove Task). */
+function RemoveTask({ home, task }: { home: Home; task: Task }) {
+  const archive = useArchiveTask(home.id);
+  const navigate = useNavigate();
+  // 403: the global handler routes. 404: gone already; the refetch sends the user to the list.
+  const failed = archive.error instanceof ApiError && [403, 404].includes(archive.error.status);
+
+  return (
+    <ConfirmAction
+      label="Fjern oppgaven"
+      ariaLabel={`Fjern oppgaven «${task.name}»`}
+      explanation={TASK_MESSAGES.removeExplanation}
+      confirmLabel="Ja, fjern oppgaven"
+      confirmAriaLabel={`Ja, fjern oppgaven «${task.name}»`}
+      onConfirm={(close) =>
+        archive.mutate(task, {
+          onSuccess: () => navigate(`/hjem/${home.id}`, { replace: true }),
+          onError: (error) => {
+            if (error instanceof ApiError && error.status === 403) close();
+          },
+        })
+      }
+      onCancel={() => archive.reset()}
+      pending={archive.isPending}
+      error={archive.error && !failed ? TASK_MESSAGES.archiveFailed : null}
+    />
   );
 }
 

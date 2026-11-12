@@ -13,6 +13,9 @@
 // shows the completion while its next date is «later» (server's completion field). Pending ticks
 // are merged over the list (useTasksWithPending), transient failures retry quietly, and a refused
 // tick rolls back that card with a visible message in its own aria-live line.
+// Story 2.6 (FR-24): «Legg til oppgave» in the header for whoever may adjust Tasks (the server's
+// can_adjust_tasks); a Home whose every Task is archived shows «Ingen oppgaver i hjemmet ennå.»
+// with the same link, or the Tenant's waiting text, never the «nothing due» text.
 import { useEffect, useRef, useState, type RefObject, type TouchEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
@@ -85,13 +88,15 @@ type HeaderProps = {
   home: Home;
   titleRef: RefObject<HTMLHeadingElement | null>;
   canSwitch: boolean;
+  /** Story 2.6: show «Legg til oppgave» (the empty list has its own link). */
+  canAdd?: boolean;
   onRefresh?: () => void;
   refreshing?: boolean;
 };
 
 // Decision 11: Home name, the caller's Role, «Medlemmer og invitasjon», «Bytt hjem» with two or
 // more Homes, and «Oppdater» when there is a list to refresh.
-function Header({ home, titleRef, canSwitch, onRefresh, refreshing }: HeaderProps) {
+function Header({ home, titleRef, canSwitch, canAdd, onRefresh, refreshing }: HeaderProps) {
   return (
     <div className="task-overview__header">
       <h1 ref={titleRef} tabIndex={-1} className="task-overview__title">
@@ -102,6 +107,11 @@ function Header({ home, titleRef, canSwitch, onRefresh, refreshing }: HeaderProp
         <Link to={`/hjem/${home.id}/medlemmer`} className="task-overview__link">
           Medlemmer og invitasjon
         </Link>
+        {canAdd && (
+          <Link to={addTaskPath(home)} className="task-overview__link">
+            Legg til oppgave
+          </Link>
+        )}
         {canSwitch && (
           <Link to="/innstillinger#dine-hjem" className="task-overview__link">
             Bytt hjem
@@ -126,7 +136,9 @@ function isForbidden(error: Error | null): boolean {
   return error instanceof ApiError && error.status === 403;
 }
 
-function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh' | 'refreshing'>) {
+const addTaskPath = (home: Home) => `/hjem/${home.id}/legg-til-oppgave`;
+
+function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh' | 'refreshing' | 'canAdd'>) {
   const { tasks, views } = useTasksWithPending(home.id);
   const [announcement, setAnnouncement] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -183,6 +195,7 @@ function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh
         home={home}
         titleRef={titleRef}
         canSwitch={canSwitch}
+        canAdd={home.can_adjust_tasks && views?.length !== 0}
         onRefresh={() => void refresh()}
         refreshing={refreshing}
       />
@@ -221,6 +234,19 @@ type TaskListBodyProps = {
 };
 
 function TaskListBody({ home, tasks, views }: TaskListBodyProps) {
+  if (views?.length === 0) {
+    // Every Task archived: setup has run, so setup is not offered again (has_tasks).
+    return (
+      <div className="task-overview__empty task-overview__empty--actions">
+        <p>{home.can_adjust_tasks ? TASK_MESSAGES.noTasks : TASK_MESSAGES.tenantWaiting}</p>
+        {home.can_adjust_tasks && (
+          <Link to={addTaskPath(home)} className="task-overview__link">
+            Legg til oppgave
+          </Link>
+        )}
+      </div>
+    );
+  }
   if (views) {
     // A card ticked a moment ago is done, whatever its old due state.
     const nothingDue = views.every((task) => task.pending || task.due_status === 'later');
