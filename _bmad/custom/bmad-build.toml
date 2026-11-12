@@ -1,7 +1,8 @@
 # Team overrides for bmad-build (IBE160 G04). Keyed arrays merge by `id`, so each layer below
 # replaces the shipped layer with the same id. The only change from the shipped instructions is
 # the line pointing reviewers to the project's conventions (Epic 1 retrospective, finding P5,
-# action 7), so they stop filing KI-logg, korrigeringer.md and sprint-status as findings.
+# action 7), so they stop filing KI-logg, korrigeringer.md and sprint-status as findings, and,
+# since 2026-11-12, to the required PRD-drift check in the same file.
 
 [[workflow.review_layers]]
 id = "blind-hunter"
@@ -18,7 +19,7 @@ If you have zero findings, re-check and keep thinking; do not stop with an empty
 
 CONTENT: the unified diff at `{diff_file}`. Read that file — it is the content under review.
 
-Before reporting, read `_bmad/custom/review-conventions.md` at the root of the git repository (`git rev-parse --show-toplevel`). Do not report anything it lists as a deliberate project convention.
+Before reporting, read `_bmad/custom/review-conventions.md` at the root of the git repository (`git rev-parse --show-toplevel`). Do not report anything it lists as a deliberate project convention, and make the check it lists under «Required check» (do the requirements still say what the code does?), reporting each result as a finding that starts with `PRD-drift:`.
 
 Do not invoke any skill, and do not spawn subagents of your own — you are the reviewer. Return your findings as text in your final message; do not route them through any findings-reporting tool the host may offer.
 
@@ -36,7 +37,7 @@ claims_file (leave unread until your instructions call for it): {claims_file}
 
 Review content: the unified diff at `{diff_file}`. Read that file — it is the content under review.
 
-Before reporting, read `_bmad/custom/review-conventions.md` at the root of the git repository (`git rev-parse --show-toplevel`). Do not report anything it lists as a deliberate project convention.
+Before reporting, read `_bmad/custom/review-conventions.md` at the root of the git repository (`git rev-parse --show-toplevel`). Do not report anything it lists as a deliberate project convention, and make the check it lists under «Required check» (do the requirements still say what the code does?), reporting each result as a finding that starts with `PRD-drift:`.
 
 Do not invoke any skill, and do not spawn subagents of your own — you are the reviewer. If the instruction file is unreadable, report that exact failure and stop. Return your findings as text in your final message; do not route them through any findings-reporting tool the host may offer.
 
@@ -52,7 +53,7 @@ Read `{skill-root}/review-prompts/verification-gap.md` completely and follow it 
 
 Review content: the unified diff at `{diff_file}`. Read that file — it is the content under review.
 
-Before reporting, read `_bmad/custom/review-conventions.md` at the root of the git repository (`git rev-parse --show-toplevel`). Do not report anything it lists as a deliberate project convention.
+Before reporting, read `_bmad/custom/review-conventions.md` at the root of the git repository (`git rev-parse --show-toplevel`). Do not report anything it lists as a deliberate project convention, and make the check it lists under «Required check» (do the requirements still say what the code does?), reporting each result as a finding that starts with `PRD-drift:`.
 
 Do not invoke any skill, and do not spawn subagents of your own — you are the reviewer. If the instruction file is unreadable, report that exact failure and stop. Return your findings as text in your final message; do not route them through any findings-reporting tool the host may offer.
 

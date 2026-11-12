@@ -11,3 +11,25 @@ Source: Epic 1 retrospective (`_bmad-output/implementation-artifacts/epic-1-retr
 - **The spec's own Review Triage Log and Spec Change Log** are filled in by the orchestrator during and after review.
 - **Session logs** (`.logs/<user>/`) are committed separately with the message `Logg: <title>`.
 - **README and `.env.example`** are updated in the same PR as the change that needs it (CLAUDE.md). If the diff changes how to run the app and README is unchanged, that *is* a finding.
+
+## Required check: do the requirements still say what the code does?
+
+Every review makes this check, whatever the story (CLAUDE.md, «Kvalitetssikring»; teacher's PRD feedback of 2026-11-12, question 2). It is the one place where the *absence* of a change in the diff is a finding. The code and the requirements must not drift apart.
+
+Where to look (read them yourself; they are not in the diff unless the change edited them):
+
+- The PRD: `_bmad-output/planning-artifacts/prds/prd-prosjektoppgave-ibe160-2026-09-29/prd.md` (FR-/SM- IDs, glossary, Privacy Constraints, Cross-Cutting NFRs).
+- The story's acceptance criteria in `_bmad-output/planning-artifacts/epics.md` (the story's `FR:` line names the requirements).
+- The architecture decisions in `_bmad-output/planning-artifacts/architecture/architecture-prosjektoppgave-ibe160-2026-10-04/ARCHITECTURE-SPINE.md` (the AD-IDs the story names).
+
+What to do:
+
+1. List the behaviour the diff adds or changes: rules, limits and numbers, who may do what, what is kept or deleted, status codes and messages the user sees, data sent to an external service.
+2. Read the PRD requirements (and epics acceptance criteria and AD-IDs) that name this behaviour.
+3. Report a finding, starting the line with `PRD-drift:`, when:
+   - a requirement says something the code no longer does, or the code does something a requirement forbids or contradicts (name the FR/SM/AC and quote the few words that conflict);
+   - the diff adds or changes behaviour that no FR, SM, acceptance criterion or AD states, so a reader of the requirements would not know it (a number, a role rule, a retention rule, an error behaviour);
+   - the diff edits a requirement without a row in the PRD's Revision log, or puts code details (function names, HTTP codes, file paths, environment variable names, story numbers) into requirement text.
+4. Do not report: UI layout and exact copy that EXPERIENCE.md or the story already covers, implementation choices that stay below the requirement (class names, queries, test helpers), and anything a listed convention above covers.
+
+How the orchestrator routes a `PRD-drift:` finding: if the code is right and the text is stale or silent, fix the text (a clean requirement plus one row in the Revision log that links the story's spec, and the same wording in `epics.md`); if the code deviates from a requirement by mistake, fix the code; if the requirement itself would change, that is an intent_gap, not a patch, and goes to the human (`bmad-correct-course`).

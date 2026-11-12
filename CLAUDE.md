@@ -11,6 +11,7 @@ Alt arbeid vurderes etter sensorveiledningen i [`docs/sensorveiledning.md`](docs
 - **Én branch og én PR per story.** Branch-navn: `story/<epic>-<nr>-<kort-navn>`. PR-beskrivelsen lenker til storyen og beskriver hvordan endringen er testet og hva som ble rettet i KI-forslaget.
 - **Sporbarhet.** Kode, tester og PR-er refererer til FR-/story-ID fra PRD og `epics.md`. Avvik fra planen forklares i PR eller i planleggingsdokumentet.
 - **Kvalitetssikring.** Hver story skal ha automatiske tester av meningsfull logikk, f.eks. rolleregler og forfallsberegning. Feil som blir funnet i KI-generert kode, noteres i PR-en og i [`docs/ki-logg/korrigeringer.md`](docs/ki-logg/korrigeringer.md).
+- **Kravene skal stemme med koden.** Hver review sjekker om PRD, epics og arkitektur fortsatt sier det koden gjør (se `_bmad/custom/review-conventions.md`, «Required check»). Funn merkes `PRD-drift:`. Er koden riktig og teksten gammel, rettes teksten (rene krav og én rad i PRD-ens Revision log); er det selve kravet som endres, tar vi det med `bmad-correct-course`.
 - **Kjørbar for sensor.** Appen skal kunne kjøres lokalt etter README, uten gruppens kontoer eller nøkler (lokal database, seed-data og mock-modus for KI og push). README og `.env.example` oppdateres i samme PR som endringen som krever det.
 - **Rent repo.** Ingen hemmeligheter, `.env`, `node_modules`, `venv` eller byggeartefakter. Ingen død kode eller utkommenterte rester fra forkastede forsøk.
 
