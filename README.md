@@ -18,6 +18,7 @@ Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og
 - [KI-logg](docs/ki-logg/README.md): prompts fra alle KI-økter, koblet til commits
 - [Eksempler på styring og korrigering av KI](docs/ki-logg/korrigeringer.md)
 - [Sensorveiledning, del 1](docs/sensorveiledning.md): kriteriene vi jobber etter
+- [Teste en PR på Vercel-preview](docs/vercel-preview.md): sjekkliste for forhåndsvisning med Neon-gren, migrering og testscenarier
 
 ## Kjøre appen lokalt
 
