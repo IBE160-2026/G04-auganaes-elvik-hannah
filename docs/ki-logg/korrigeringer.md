@@ -120,3 +120,5 @@ Vi har bedt KI om uavhengige gjennomganger av sitt eget arbeid før dokumentene 
 ## Ekstern tilbakemelding
 
 Faglærers tilbakemelding på brief (06.10) pekte på stort omfang, utestbare suksesskriterier og at sensor ikke kan kjøre appen lokalt. Se [`tilbakemelding-product-brief.md`](../../_bmad-output/planning-artifacts/briefs/brief-prosjektoppgave-ibe160-2026-09-12/tilbakemelding-product-brief.md). Hvordan vi følger dette opp, dokumenteres i oppdateringene av brief, PRD, arkitektur og epics.
+
+Faglærers PRD-tilbakemelding (12.11) er fulgt opp i [`sprint-change-proposal-2026-11-12.md`](../../_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-12.md). Svaret på refleksjonsspørsmål 2 står i [`refleksjon-prd-tilbakemelding-2026-11-12.md`](refleksjon-prd-tilbakemelding-2026-11-12.md).
