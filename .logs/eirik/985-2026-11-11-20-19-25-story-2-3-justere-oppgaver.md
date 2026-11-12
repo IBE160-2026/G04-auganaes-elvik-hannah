@@ -76,6 +76,11 @@ Fullføre PR #41: veiledning til preview-testen på Vercel, `bmad-walkthrough`, 
   - CLAUDE.md: neste er Story 2.4, med en merknad om `_open_instance` og en sjekk av git etter subagenter
   - rad i KI-loggens README
 
+- **Klargjort for Story 2.4:**
+  - PR #42 er merget (`fb4f199`).
+  - Issue **#43** er laget.
+  - Den lokale branchen `story/2-4-self-checkoff` er laget fra `main` (ikke pushet). Eirik kjører 2.4 i en ny terminal.
+
 ### Åpne punkter
-- Merge `chore/status-etter-story-2-3`, og deretter Story 2.4 med `bmad-build`.
+- Story 2.4 med `bmad-build` i en ny økt, på branchen `story/2-4-self-checkoff` (issue #43). Øktfila `docs/ki-logg/okter/2026-11-11_eirik_2aa2818b.md` står som endret og committes sammen med 2.4-arbeidet.
 - Valgfritt: teste låsen med to samtidige `PATCH` mot Postgres (ikke testet automatisk).

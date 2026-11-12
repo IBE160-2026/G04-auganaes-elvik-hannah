@@ -84,6 +84,7 @@ jobs:
       # Story 1.3: plus the example Home with Mari and Jonas as its two Members.
       # Story 1.4: plus Kari's Landlord Home, which Anders joined through one invite link.
       # Story 2.1: plus eight Tasks in each Home, each with one TaskInstance.
+      # Story 2.4: plus Jonas's one completion, which adds the next instance (17 instances).
       - name: Seed er idempotent (fire brukere, to hjem, fire medlemskap, én lenke, 16 oppgaver)
         run: |
           uv run python - <<'EOF'
@@ -99,7 +100,7 @@ jobs:
               instances = c.execute(text("SELECT count(*) FROM task_instances")).scalar_one()
           assert n == len(EXAMPLE_USERS) == 4, n
           assert (homes, members, links) == (2, 4, 1), (homes, members, links)
-          assert (tasks, instances) == (16, 16), (tasks, instances)
+          assert (tasks, instances) == (16, 17), (tasks, instances)
           EOF
       # Story 1.5 (FR-3, decision 2): the same "never mixed" check as the tests, on Postgres.
       - name: Ingen hjem blander roller (FR-3)
@@ -139,6 +140,30 @@ jobs:
               ("ck_tasks_frequency_days",
                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
                "created_at) SELECT :h, h.id, 'x', 'x', 'must', 0, now() FROM homes h LIMIT 1"),
+              # Story 2.4: completed_at and completed_by_user_id are set together.
+              ("ck_task_instances_completion",
+               "INSERT INTO task_instances (id, task_id, due_on, created_at, completed_at) "
+               "SELECT :h, t.id, current_date, now(), now() FROM tasks t LIMIT 1"),
+              ("ck_task_instances_completion",
+               "INSERT INTO task_instances (id, task_id, due_on, created_at, "
+               "completed_by_user_id) SELECT :h, t.id, current_date, now(), m.user_id "
+               "FROM tasks t JOIN memberships m ON m.home_id = t.home_id LIMIT 1"),
+              # Story 2.4: alembic check ignores the index's WHERE, so prove a second open
+              # instance of a Task is refused.
+              ("uq_task_instances_open_task_id",
+               "INSERT INTO task_instances (id, task_id, due_on, created_at) "
+               "SELECT :h, i.task_id, i.due_on + 1, now() FROM task_instances i "
+               "WHERE i.completed_at IS NULL LIMIT 1"),
+              # Story 2.6: the same for the partial unique indexes on active Tasks: a second
+              # active Task of a catalog type, or with the same name in other case, is refused.
+              ("uq_tasks_active_home_id_task_type",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "created_at) SELECT :h, t.home_id, t.task_type, 'Annet navn', 'should', 7, now() "
+               "FROM tasks t WHERE t.archived_at IS NULL AND t.task_type IS NOT NULL LIMIT 1"),
+              ("uq_tasks_active_home_id_lower_name",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "created_at) SELECT :h, t.home_id, NULL, upper(t.name), 'should', 7, now() "
+               "FROM tasks t WHERE t.archived_at IS NULL LIMIT 1"),
           ]
           with create_engine(get_database_url()).connect() as c:
               for name, sql in cases:
@@ -150,6 +175,49 @@ jobs:
                       raise AssertionError(f"{name} slapp gjennom")
                   finally:
                       c.rollback()
+          EOF
+      # Story 2.4: the partial index covers open instances only; a completed one may share the
+      # open one's date (completed on setup day).
+      - name: Fullført forekomst kan ha samme dato som den åpne
+        run: |
+          uv run python - <<'EOF'
+          import uuid
+          from sqlalchemy import create_engine, text
+          from app.config import get_database_url
+          with create_engine(get_database_url()).connect() as c:
+              inserted = c.execute(
+                  text(
+                      "INSERT INTO task_instances (id, task_id, due_on, created_at, completed_at, "
+                      "completed_by_user_id) SELECT :h, i.task_id, i.due_on, now(), now(), "
+                      "m.user_id FROM task_instances i JOIN tasks t ON t.id = i.task_id "
+                      "JOIN memberships m ON m.home_id = t.home_id "
+                      "WHERE i.completed_at IS NULL LIMIT 1"
+                  ),
+                  {"h": uuid.uuid4()},
+              )
+              assert inserted.rowcount == 1, inserted.rowcount
+              c.rollback()
+          EOF
+      # Story 2.6: the indexes cover active Tasks only; an archived Task may share the type and
+      # name of an active one (a catalog type added again after archiving).
+      - name: Arkivert oppgave kan ha samme type og navn som en aktiv
+        run: |
+          uv run python - <<'EOF'
+          import uuid
+          from sqlalchemy import create_engine, text
+          from app.config import get_database_url
+          with create_engine(get_database_url()).connect() as c:
+              inserted = c.execute(
+                  text(
+                      "INSERT INTO tasks (id, home_id, task_type, name, classification, "
+                      "frequency_days, created_at, archived_at) SELECT :h, t.home_id, t.task_type, "
+                      "t.name, 'should', 7, now(), now() FROM tasks t "
+                      "WHERE t.archived_at IS NULL AND t.task_type IS NOT NULL LIMIT 1"
+                  ),
+                  {"h": uuid.uuid4()},
+              )
+              assert inserted.rowcount == 1, inserted.rowcount
+              c.rollback()
           EOF
       # Story 1.6: the real DB-down path (Alembic -> psycopg -> OperationalError) gives exit 1.
       - name: Seed uten database gir exit 1 og hint

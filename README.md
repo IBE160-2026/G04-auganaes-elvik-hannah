@@ -130,7 +130,7 @@ Seed-kommandoen lager disse eksempelbrukerne:
 **Prøv oppgaveoversikten (Story 2.2):** Steg 3 og 4 forutsetter en nyseedet database, siden de lager et nytt hjem.
 
 1. Logg inn som Mari. `/` åpner oppgaveoversikten for hjemmet hennes. Alle **Må**-oppgaver står over alle **Bør**-oppgaver, også når en Bør-oppgave er forfalt. Mens seed-dataene er ferske, står «Rens sluket» (Må) med «Snart forfall» i gult og fet skrift, og «Støvsug og vask gulvene» (Bør) med «Forfalt — frist var …» i rødt. Antall dager («i dag», «i morgen», «om N dager») og hvilke oppgaver som er forfalt, flytter seg med datoen, siden oppgavene er satt opp relativt til dagen seed-en ble kjørt. «Snart forfall» betyr innen 3 dager, og det er serveren som avgjør det (`due_status` i `GET /api/homes/{home_id}/tasks`).
-2. Trykk på en oppgave for å se detaljene. Der kan du endre **Må**/**Bør** og **Hvor ofte** (se Story 2.3 under). Trykk **Oppdater** øverst (eller dra lista ned på mobil) for å hente oppgavene på nytt; skjermleseren sier «Oppdatert». Bruk Tab: fokus går fra overskriften via **Medlemmer og invitasjon** og **Oppdater** gjennom oppgavene ovenfra og ned, og til slutt fanelinja. **Husly** øverst er en lenke til `/`.
+2. Trykk på en oppgave for å se detaljene. Der kan du endre **Må**/**Bør** og **Hvor ofte** (se Story 2.3 under). Trykk **Oppdater** øverst (eller dra lista ned på mobil) for å hente oppgavene på nytt; skjermleseren sier «Oppdatert». Bruk Tab: fokus går fra overskriften via **Medlemmer og invitasjon**, **Legg til oppgave** (for husstandsmedlemmer og utleiere, se Story 2.6 under) og **Oppdater** gjennom oppgavene ovenfra og ned (først avkrysningsboksen, så selve oppgaven, se Story 2.4 under), og til slutt fanelinja. **Husly** øverst er en lenke til `/`.
 3. Logg inn som Kari, gå til **Innstillinger**, trykk **Opprett nytt hjem**, velg **Husstand** og sett opp oppgavene. Hun har nå to hjem, og oppgaveoversikten viser **Bytt hjem**.
 4. Trykk **Bytt hjem** og velg «Storgata 12» under **Dine hjem**. Last siden på nytt og gå til `/` (eller trykk **Husly**): appen åpner «Storgata 12», fordi det er sist brukte hjem. Dette huskes i nettleseren (`localStorage`), per bruker og per enhet, ikke på serveren.
 
@@ -145,6 +145,25 @@ Seed-kommandoen lager disse eksempelbrukerne:
    3. Hent id-en til «Storgata 12» med `GET /api/homes` og en oppgave-id med `GET /api/homes/{home_id}/tasks`.
    4. Kjør `PATCH /api/homes/{home_id}/tasks/{task_id}` med for eksempel `{"classification": "should"}`. Svaret er 403.
 5. Går du fra siden uten å lagre, forkastes endringen uten advarsel.
+
+**Prøv å krysse av oppgaver (Story 2.4):** Forutsetter en nyseedet database, siden stegene endrer oppgavene. Med Story 2.4 er også Story 2.5 (ny frist etter avkrysning) bygget.
+
+1. Logg inn som Mari. «Avkalk vannkokeren» er allerede krysset av, med «Fullført … av Jonas» i grønt og overstreket navn: seed-en lar Jonas krysse den av to dager før seed-en ble kjørt.
+2. Logg inn som Jonas i en annen nettleser (eller et privat vindu) og kryss av «Støvsug og vask gulvene». Boksen blir krysset av med en gang, uten bekreftelse, og kortet viser «Fullført i dag». Ditt eget navn står aldri der. Neste frist regnes fra dagen du krysset av (UTC) pluss hyppigheten, også når oppgaven var forfalt: «Hver 2. uke» gir frist om 14 dager. Også «i dag» og «i går» i notatet regnes i UTC-døgn, så en avkrysning like etter midnatt norsk tid kan stå som «Fullført i går».
+3. Trykk **Oppdater** hos Mari: kortet viser «Fullført i dag av Jonas». Kortet står som fullført så lenge neste frist er mer enn 3 dager unna; når den nærmer seg, kommer fristen og en tom boks tilbake.
+4. En avkrysset boks kan ikke angres. Den forblir krysset av, og et nytt trykk sender ingenting. Med Tab kommer du først til boksen («Merk «X» som fullført») og så til oppgaven.
+5. Slå av nettet (i Chrome: DevTools → **Network** → **Offline**) og kryss av en oppgave hos Jonas. Kortet viser «Fullført i dag». Slå nettet på igjen: avkrysningen blir sendt av seg selv, uten at kortet hopper tilbake. **Begrensning:** avkrysninger som er gjort uten nett, ligger bare i minnet. Laster du siden på nytt eller lukker appen før nettet er tilbake, går de tapt, og du må krysse av på nytt.
+6. Logg inn som Jonas, åpne **Medlemmer og invitasjon** og trykk **Forlat hjemmet**. Hos Mari står det nå «Fullført i dag av tidligere medlem»; avkrysningen blir stående.
+7. Anders (leietaker) kan også krysse av oppgaver i «Storgata 12». Bildebevis kommer i Epic 4.
+
+**Prøv å legge til og fjerne oppgaver (Story 2.6):** Forutsetter en nyseedet database, siden stegene endrer oppgavene.
+
+1. Logg inn som Mari og trykk **Legg til oppgave** øverst på oppgaveoversikten. Lista viser katalogoppgavene hjemmet mangler, og **Egen oppgave** nederst. Ingenting er valgt på forhånd; trykker du **Legg til** uten å velge, står det «Velg en oppgave.».
+2. Velg en katalogoppgave: anbefalt **Må**/**Bør** og **Hvor ofte** står ferdig valgt, og du kan endre dem. Lagre: oversikten viser «La til «X».» (leses opp av skjermleseren, vises bare én gang), og oppgaven står i lista med første frist i dag pluss hyppigheten.
+3. Velg **Egen oppgave**: fokus går til navnefeltet. Navnet trimmes og må være 1–100 tegn. Et navn som en aktiv oppgave allerede har (også med andre store og små bokstaver, og også katalogoppgavenes navn), avvises med en melding ved feltet. Egne oppgaver kan aldri kreve bildebevis (Epic 4).
+4. Åpne en oppgave og trykk **Fjern oppgaven**. Bekreftelsen kommer inline: «Oppgaven forsvinner fra lista for alle i hjemmet. Det som er gjort, blir stående.» Trykk **Ja, fjern oppgaven**: du kommer til oversikten med «Fjernet «X».», og oppgaven er borte for alle (trykk **Oppdater** hos Jonas). **Avbryt** sender ingenting. Oppgaven slettes ikke; den arkiveres, og det som er gjort, blir stående i databasen.
+5. Legg til den samme katalogoppgaven igjen: den blir en ny oppgave med ny første frist. Fjerner du alle oppgavene, står det «Ingen oppgaver i hjemmet ennå.» med **Legg til oppgave**; oppsettet av oppgaver tilbys ikke på nytt.
+6. Logg inn som Anders (leietaker): han ser verken **Legg til oppgave** eller **Fjern oppgaven**, og serveren svarer 403 på `POST /api/homes/{home_id}/tasks` og `DELETE /api/homes/{home_id}/tasks/{task_id}` (prøv i <http://localhost:8000/docs> som i Story 2.3). Før oppgavene er satt opp, svarer serveren 409 «Sett opp oppgavene først.» på en `POST`.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 

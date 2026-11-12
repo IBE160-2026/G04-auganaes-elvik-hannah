@@ -1,6 +1,8 @@
 // Story 2.2 (FR-6, FR-21, UX-DR19/20/36/41): the Task Overview at /hjem/<id>, one test per
 // frontend row of the spec's matrix and per acceptance criterion.
-import { focusManager } from '@tanstack/react-query';
+// Story 2.4 (FR-7, FR-17, UX-DR32/42): the checkbox on each card, its retries and roll-back.
+// Story 2.6 (FR-24): «Legg til oppgave» and the list of a Home whose every Task is archived.
+import { focusManager, onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
@@ -8,14 +10,18 @@ import { HOME_MESSAGES, type Home } from '../api/homes';
 import { lastHomeKey } from '../api/lastHome';
 import { TASK_MESSAGES, type Task } from '../api/tasks';
 import {
+  DONE_BY_YOU_TODAY,
   OLA,
   OLAS_HOME,
   OLAS_TASKS,
+  OLAS_TENANCY,
+  completionPath,
   fakeApi,
   homesResponse,
   json,
   resetApi,
   signedInWith,
+  taskServer,
   tasksPath,
 } from '../test-utils/fakeApi';
 import { PULL_THRESHOLD } from './TaskOverview';
@@ -109,7 +115,7 @@ describe('Task Overview', () => {
     await waitFor(() => expect(homes).toHaveFocus());
   });
 
-  it('tabs from the header through the rows, Må before Bør, then to the tab bar', async () => {
+  it('tabs from the header through each card\'s checkbox and row link, Må before Bør, then to the tab bar', async () => {
     fakeApi(signedInWith());
     renderAt(PAGE);
 
@@ -118,11 +124,17 @@ describe('Task Overview', () => {
     await waitFor(() => expect(title).toHaveFocus());
     const nav = screen.getByRole('navigation', { name: 'Hovedmeny' });
 
+    const box = (name: string) => screen.getByRole('checkbox', { name: `Merk «${name}» som fullført` });
     const order = [
       screen.getByRole('link', { name: 'Medlemmer og invitasjon' }),
+      // Story 2.6: a Household Member or the Landlord also gets «Legg til oppgave».
+      screen.getByRole('link', { name: 'Legg til oppgave' }),
       screen.getByRole('button', { name: 'Oppdater' }),
+      box('Rens sluket'),
       must,
+      box('Støvsug og vask gulvene'),
       overdue,
+      box('Vask stekeovnen'),
       soon,
       within(nav).getByRole('link', { name: 'Oppgaver' }),
       within(nav).getByRole('link', { name: 'Innstillinger' }),
@@ -355,5 +367,322 @@ describe('Task Overview', () => {
 
     await waitFor(() => expect(window.location.pathname).toBe(`/hjem/${RENTAL.id}`));
     expect(screen.getByRole('heading', { level: 1, name: RENTAL.name })).toBeInTheDocument();
+  });
+});
+
+// Story 2.4: the self-checkoff on each card.
+const [SLUKET, GULV, OVN] = OLAS_TASKS;
+
+function box(name: string) {
+  return screen.findByRole('checkbox', { name: `Merk «${name}» som fullført` });
+}
+
+function doneBox(name: string) {
+  return screen.findByRole('checkbox', { name: `«${name}» er fullført` });
+}
+
+function card(name: string) {
+  const row = screen.getByRole('link', { name: new RegExp(`^${name}`) });
+  return row.closest('li') as HTMLElement;
+}
+
+describe('Self-checkoff (Story 2.4)', () => {
+  it('completes a Task with one tap: checked, struck through, «Fullført i dag», one POST', async () => {
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(GULV.name));
+
+    const done = await doneBox(GULV.name);
+    expect(done).toBeChecked();
+    expect(done).toHaveAttribute('aria-disabled', 'true');
+    expect(card(GULV.name).firstElementChild).toHaveClass('task-overview__card--done');
+    expect(within(card(GULV.name)).getByText('Fullført i dag')).toBeInTheDocument();
+    expect(within(card(GULV.name)).queryByText(/Forfalt/)).not.toBeInTheDocument();
+    await waitFor(() => expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1));
+    // Only that card.
+    expect(await box(SLUKET.name)).not.toBeChecked();
+  });
+
+  it('shows another Member\'s and a former Member\'s completion with the server\'s words', async () => {
+    const tasks: Task[] = [
+      { ...SLUKET, completion: { ...DONE_BY_YOU_TODAY, by: 'member', name: 'Jonas' } },
+      { ...GULV, due_status: 'later', completion: { ...DONE_BY_YOU_TODAY, days_since: 1, by: 'former_member' } },
+      OVN,
+    ];
+    fakeApi({ ...signedInWith(), [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks }) });
+    renderAt(PAGE);
+
+    expect(await doneBox(SLUKET.name)).toBeChecked();
+    expect(within(card(SLUKET.name)).getByText('Fullført i dag av Jonas')).toBeInTheDocument();
+    expect(within(card(GULV.name)).getByText('Fullført i går av tidligere medlem')).toBeInTheDocument();
+    expect(await box(OVN.name)).not.toBeChecked();
+  });
+
+  it('ignores click and Space on a completed box and sends nothing (no undo)', async () => {
+    const tasks: Task[] = [{ ...SLUKET, completion: DONE_BY_YOU_TODAY }, GULV, OVN];
+    const server = fakeApi({ ...signedInWith(), [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks }) });
+    renderAt(PAGE);
+
+    const done = await doneBox(SLUKET.name);
+    await userEvent.click(done);
+    done.focus();
+    await userEvent.keyboard(' ');
+
+    expect(done).toBeChecked();
+    expect(server.calls('POST', completionPath(OLAS_HOME, SLUKET))).toHaveLength(0);
+  });
+
+  it('sends one request for a double tap', async () => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [200], gate),
+    });
+    renderAt(PAGE);
+
+    await userEvent.dblClick(await box(GULV.name));
+    release();
+
+    expect(await doneBox(GULV.name)).toBeChecked();
+    expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1);
+  });
+
+  it('keeps the card checked through a refetch while the POST is pending', async () => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [200], gate),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(GULV.name));
+    await userEvent.click(screen.getByRole('button', { name: 'Oppdater' }));
+    expect(await screen.findByText(TASK_MESSAGES.refreshed)).toBeInTheDocument();
+
+    // The refetch says «not done»; the pending tick still wins.
+    expect(server.calls('GET', tasksPath(OLAS_HOME))).toHaveLength(2);
+    expect(await doneBox(GULV.name)).toBeChecked();
+    release();
+    await waitFor(() => expect(within(card(GULV.name)).getByText('Fullført i dag')).toBeInTheDocument());
+    expect(await doneBox(GULV.name)).toBeChecked();
+  });
+
+  it('retries a network error quietly: stays checked, no message, saved once', async () => {
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, ['network', 200]),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(GULV.name));
+    await waitFor(() => expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1));
+    expect(await doneBox(GULV.name)).toBeChecked();
+
+    await waitFor(() => expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(2), { timeout: 3000 });
+    expect(await doneBox(GULV.name)).toBeChecked();
+    expect(screen.queryByText(TASK_MESSAGES.completeFailed(GULV.name))).not.toBeInTheDocument();
+  });
+
+  it('retries a 500 quietly and keeps the card checked', async () => {
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [500, 200]),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(GULV.name));
+
+    await waitFor(() => expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(2), { timeout: 3000 });
+    await waitFor(() => expect(within(card(GULV.name)).getByText('Fullført i dag')).toBeInTheDocument());
+    expect(await doneBox(GULV.name)).toBeChecked();
+    expect(screen.queryByText(TASK_MESSAGES.completeFailed(GULV.name))).not.toBeInTheDocument();
+  });
+
+  it('saves a tick made offline when the connection returns, without any action (AC 3)', async () => {
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV),
+    });
+    renderAt(PAGE);
+    const unchecked = await box(GULV.name);
+
+    act(() => onlineManager.setOnline(false));
+    try {
+      await userEvent.click(unchecked);
+      expect(await doneBox(GULV.name)).toBeChecked();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(0);
+    } finally {
+      act(() => onlineManager.setOnline(true));
+    }
+
+    await waitFor(() => expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1));
+    await waitFor(() => expect(within(card(GULV.name)).getByText('Fullført i dag')).toBeInTheDocument());
+    expect(await doneBox(GULV.name)).toBeChecked();
+  });
+
+  it('rolls back only the refused card on a 404, refetches and shows a visible message', async () => {
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [404]),
+      [`POST ${completionPath(OLAS_HOME, OVN)}`]: api.complete(OVN),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(OVN.name));
+    expect(await doneBox(OVN.name)).toBeChecked();
+    await userEvent.click(await box(GULV.name));
+
+    const message = await within(card(GULV.name)).findByText(TASK_MESSAGES.completeFailed(GULV.name));
+    expect(message).toHaveAttribute('aria-live', 'polite');
+    expect(await box(GULV.name)).not.toBeChecked();
+    expect(await doneBox(OVN.name)).toBeChecked();
+    await waitFor(() => expect(server.calls('GET', tasksPath(OLAS_HOME))).toHaveLength(2));
+    expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1);
+  });
+
+  it('shows the empty text when the only due Tasks are ticked', async () => {
+    const api = taskServer([SLUKET, GULV]);
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [200], new Promise(() => {})),
+    });
+    renderAt(PAGE);
+    await rows();
+    expect(screen.queryByText(TASK_MESSAGES.nothingDueHousehold)).not.toBeInTheDocument();
+
+    await userEvent.click(await box(GULV.name));
+
+    expect(await screen.findByText(TASK_MESSAGES.nothingDueHousehold)).toBeInTheDocument();
+  });
+
+  // The server's stored completion reads «Fullført i går», so it is told apart from the pending
+  // note «Fullført i dag».
+  const SERVER_SAYS = { ...DONE_BY_YOU_TODAY, days_since: 1 };
+
+  it('shows the server\'s completion once the tick is saved, without refetching the list', async () => {
+    const api = taskServer(OLAS_TASKS, SERVER_SAYS);
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(GULV.name));
+
+    expect(await within(card(GULV.name)).findByText('Fullført i går')).toBeInTheDocument();
+    expect(await doneBox(GULV.name)).toBeChecked();
+    expect(server.calls('GET', tasksPath(OLAS_HOME))).toHaveLength(1);
+  });
+
+  it('keeps the saved completion when a refetch started before the save answers after it', async () => {
+    const api = taskServer(OLAS_TASKS, SERVER_SAYS);
+    let releasePost = () => {};
+    const postGate = new Promise<void>((resolve) => (releasePost = resolve));
+    let releaseGet = () => {};
+    let getGate: Promise<void> | null = null;
+    const server = fakeApi({
+      ...signedInWith(),
+      // The answer is taken when the request arrives, then held: a stale «not done» list.
+      [`GET ${tasksPath(OLAS_HOME)}`]: async (request) => {
+        const answer = await api.list(request);
+        if (getGate) await getGate;
+        return answer;
+      },
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [200], postGate),
+    });
+    renderAt(PAGE);
+
+    await userEvent.click(await box(GULV.name));
+    getGate = new Promise<void>((resolve) => (releaseGet = resolve));
+    await userEvent.click(screen.getByRole('button', { name: 'Oppdater' }));
+    await waitFor(() => expect(server.calls('GET', tasksPath(OLAS_HOME))).toHaveLength(2));
+
+    releasePost();
+    expect(await within(card(GULV.name)).findByText('Fullført i går')).toBeInTheDocument();
+    releaseGet();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(within(card(GULV.name)).getByText('Fullført i går')).toBeInTheDocument();
+    expect(await doneBox(GULV.name)).toBeChecked();
+  });
+
+  it('leaves a 403 to the global handler: no message, Homes and tasks refetched', async () => {
+    const api = taskServer();
+    const server = fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: api.list,
+      [`POST ${completionPath(OLAS_HOME, GULV)}`]: api.complete(GULV, [403]),
+    });
+    renderAt(PAGE);
+    await rows();
+
+    await userEvent.click(await box(GULV.name));
+
+    await waitFor(() => expect(server.calls('GET', '/api/homes')).toHaveLength(2));
+    await waitFor(() => expect(server.calls('GET', tasksPath(OLAS_HOME))).toHaveLength(2));
+    expect(server.calls('POST', completionPath(OLAS_HOME, GULV))).toHaveLength(1);
+    expect(await box(GULV.name)).not.toBeChecked();
+    expect(screen.queryByText(/Vi fikk ikke krysset av/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Task Overview, add and an empty list (Story 2.6)', () => {
+  it('shows «Legg til oppgave» in the header to whoever may adjust Tasks, and not to a Tenant', async () => {
+    fakeApi(signedInWith());
+    const { unmount } = renderAt(PAGE);
+
+    const link = await screen.findByRole('link', { name: 'Legg til oppgave' });
+    expect(link).toHaveAttribute('href', `${PAGE}/legg-til-oppgave`);
+    unmount();
+    resetApi();
+
+    fakeApi(signedInWith([OLAS_TENANCY]));
+    renderAt(`/hjem/${OLAS_TENANCY.id}`);
+    expect(await screen.findByRole('link', { name: 'Medlemmer og invitasjon' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /^Rens sluket/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
+  });
+
+  it('shows «Ingen oppgaver i hjemmet ennå.» with one «Legg til oppgave» when every Task is archived', async () => {
+    fakeApi({ ...signedInWith(), [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks: [] }) });
+    renderAt(PAGE);
+
+    expect(await screen.findByText(TASK_MESSAGES.noTasks)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Legg til oppgave' })).toHaveLength(1);
+    expect(screen.queryByText(TASK_MESSAGES.nothingDueHousehold)).not.toBeInTheDocument();
+    // Setup is not offered again: the guard keeps the user here.
+    expect(window.location.pathname).toBe(PAGE);
+  });
+
+  it('tells a Tenant the Landlord has not set up Tasks, with no way to add', async () => {
+    fakeApi({ ...signedInWith([OLAS_TENANCY]), [`GET ${tasksPath(OLAS_TENANCY)}`]: () => json(200, { tasks: [] }) });
+    renderAt(`/hjem/${OLAS_TENANCY.id}`);
+
+    expect(await screen.findByText(TASK_MESSAGES.tenantWaiting)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.noTasks)).not.toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import { refreshSession } from './api/client';
 import { createQueryClient } from './api/queries';
 import { AppShell } from './components/AppShell';
 import { InstallPrompt } from './components/InstallPrompt';
+import { AddTask } from './routes/AddTask';
 import { CreateHome } from './routes/CreateHome';
 import { HomePage } from './routes/HomePage';
 import { InvitePage } from './routes/InvitePage';
@@ -89,6 +90,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <Settings />
+          </RequireAuth>
+        }
+      />
+      {/* Story 2.6: add one catalog or custom Task. */}
+      <Route
+        path="/hjem/:homeId/legg-til-oppgave"
+        element={
+          <RequireAuth>
+            <AddTask />
           </RequireAuth>
         }
       />

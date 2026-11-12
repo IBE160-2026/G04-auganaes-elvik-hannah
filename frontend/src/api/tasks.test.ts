@@ -67,3 +67,44 @@ describe('dueText', () => {
     );
   });
 });
+
+// Story 2.4 (decision 4): the completion note, from the server's fields only.
+describe('completionText', () => {
+  const base = { completed_on: '2026-11-03', days_since: 0, completed_this_year: true, by: 'you', name: null } as const;
+
+  it.each([
+    ['today, own', { ...base, completed_on: '2026-11-10' }, 'Fullført i dag'],
+    ['yesterday, own', { ...base, days_since: 1 }, 'Fullført i går'],
+    ['a date this year', { ...base, days_since: 7 }, 'Fullført 3. november'],
+    ['a date last year', { ...base, completed_on: '2025-12-31', days_since: 2, completed_this_year: false }, 'Fullført 31. desember 2025'],
+    ['another Member', { ...base, by: 'member', name: 'Jonas' }, 'Fullført i dag av Jonas'],
+    ['a former Member', { ...base, days_since: 1, by: 'former_member' }, 'Fullført i går av tidligere medlem'],
+  ] as const)('%s', async (_, completion, text) => {
+    const { completionText } = await loadIn('Europe/Oslo');
+    expect(completionText(completion)).toBe(text);
+  });
+
+  it('never names the viewer, even if a name is sent', async () => {
+    const { completionText } = await loadIn('Europe/Oslo');
+    expect(completionText({ ...base, name: 'Sara' })).toBe('Fullført i dag');
+  });
+
+  it('shows the completion date as sent west of Greenwich, and never reads the browser clock', async () => {
+    const { completionText } = await loadIn('America/Los_Angeles');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2031, 0, 1));
+    try {
+      expect(completionText({ ...base, days_since: 8 })).toBe('Fullført 3. november');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('labels for the checkbox', () => {
+  it('names the action and the Task', async () => {
+    const { checkboxLabel, completedLabel } = await import('./tasks');
+    expect(checkboxLabel('Rens sluket')).toBe('Merk «Rens sluket» som fullført');
+    expect(completedLabel('Rens sluket')).toBe('«Rens sluket» er fullført');
+  });
+});

@@ -4,16 +4,16 @@
 
 ## Goal
 
-Give every Member of a Home (Household Member, Tenant, Landlord) the core loop of Husly: a Must-first task list per Home, inline adjustment of Må/Bør and Frequency for Household Members and Landlords (locked for Tenants), one-tap self-checkoff with shared status and per-member attribution, automatic rescheduling counted from the actual completion date, and adding or archiving Tasks after the first setup. Task Setup (2.1) and Task Overview (2.2) are done; the next story is 2.3. The epic owns the single completion domain function that Photo Evidence (Epic 4) later extends. All of Epic 2 is Trinn 1 and must run locally without team accounts.
+Give every Member of a Home (Household Member, Tenant, Landlord) the core loop of Husly: a Must-first task list per Home, inline adjustment of Må/Bør and Frequency for Household Members and Landlords (locked for Tenants), one-tap self-checkoff with shared status and per-member attribution, automatic rescheduling counted from the actual completion date, and adding or archiving Tasks after the first setup. Stories 2.1 to 2.3 are done; 2.4 and 2.5 are built together (PR #44, in review); the next story is 2.6. The epic owns the single completion domain function that Photo Evidence (Epic 4) later extends. All of Epic 2 is Trinn 1 and must run locally without team accounts.
 
 ## Stories
 
 - Story 2.1: Task Setup at Home Creation (done)
 - Story 2.2: Must-First Task Overview (done)
-- Story 2.3: Adjust Task Classification & Frequency (next)
-- Story 2.4: Self-Checkoff Completion with Shared Status & Attribution
-- Story 2.5: Auto-Reschedule on Completion
-- Story 2.6: Add and Remove Tasks (built after 2.5)
+- Story 2.3: Adjust Task Classification & Frequency (done)
+- Story 2.4: Self-Checkoff Completion with Shared Status & Attribution (review, PR #44)
+- Story 2.5: Auto-Reschedule on Completion (review, built with 2.4)
+- Story 2.6: Add and Remove Tasks (next)
 
 ## Requirements & Constraints
 
@@ -31,8 +31,8 @@ Give every Member of a Home (Household Member, Tenant, Landlord) the core loop o
 
 - **Layering:** routes never mutate data; all mutations go through domain services in `backend/app/domain` (tasks live in `domain/tasks`). Shared route dependencies (`SessionDep`, `ErrorOut`, role aliases) are in `backend/app/routes/deps.py`.
 - **Permissions:** role lives on the Membership, resolved per request by `require_role(*roles)` with `home_id` read from the path only, never from a token claim. Every Home-scoped route sits under `/api/homes/{home_id}/...`; `tests/test_permissions.py` fails if a `{home_id}` route lacks `require_role` (or vice versa). The endpoint must also verify the Task belongs to that `home_id`. Permission rules belong in the domain layer and are tested there (the pattern from `can_leave`/`can_remove`: compute a flag server-side and send it to the frontend rather than re-deriving role logic in components).
-- **Data model:** the task-type catalog is a versioned Python module (`domain/task_types.py`), not a table. A Task copies name, classification and Frequency at creation, so editing a Task never touches the catalog and a new catalog version never rewrites Tasks. Photo-evidence eligibility is read from the catalog by key, never stored on the Task. A TaskInstance has a UTC calendar `due_on`, unique per `(task_id, due_on)`. 2.6 adds nullable `archived_at`, nullable `task_type` and partial unique indexes `WHERE archived_at IS NULL`.
-- **Next due date:** `tasks_of` uses the earliest instance today; Story 2.4 must switch it to the earliest *open* instance.
+- **Data model:** the task-type catalog is a versioned Python module (`domain/task_types.py`), not a table. A Task copies name, classification and Frequency at creation, so editing a Task never touches the catalog and a new catalog version never rewrites Tasks. Photo-evidence eligibility is read from the catalog by key, never stored on the Task. A TaskInstance has a UTC calendar `due_on`; a Task has at most one open instance (partial unique index `uq_task_instances_open_task_id` on `task_id WHERE completed_at IS NULL`), and completion is two columns on the instance (`completed_at`, `completed_by_user_id`). 2.6 adds nullable `archived_at`, nullable `task_type` and partial unique indexes `WHERE archived_at IS NULL`.
+- **Next due date:** every Task read goes through `domain/tasks._rows`, which joins the one open instance; a Frequency change moves only that instance. Archived Tasks must be excluded there (2.6).
 - **Single completion path:** `complete_task_instance` alone marks complete, records attribution (referencing the User, not the Membership) and triggers the reschedule; idempotent. Checkbox and later photo upload only call it.
 - **Frontend data:** no direct `fetch` or server data in `useState`; reads/writes via TanStack Query hooks over the generated OpenAPI client (regenerate types after API changes). Self-checkoff is optimistic; other saves need not be. After a mutation, invalidate the Home's tasks query so Overview and Detail agree. No real-time layer — freshness from refetch on mount/window focus.
 - **Errors:** shared `ApiError` in `frontend/src/api/errors.ts`; backend uses `{"detail": "..."}` (Norwegian message) and standard 422 bodies. A global 403 handler in `createQueryClient` refetches Homes and members when access disappears; new mutations must not fight it.
@@ -54,7 +54,7 @@ Give every Member of a Home (Household Member, Tenant, Landlord) the core loop o
 
 ## Cross-Story Dependencies
 
-- Build order: 2.3 → 2.4 → 2.5 → 2.6. 2.3 extends 2.2's read-only Task Detail; 2.6 adds «Fjern oppgaven» to the same page and «Legg til oppgave» to Task Overview, reusing 2.3's Må/Bør and Frequency controls and the fixed Frequency list.
+- Build order: 2.3 → 2.4 → 2.5 → 2.6 (2.6 is stacked on the 2.4 branch while PR #44 is open). 2.3 extends 2.2's read-only Task Detail; 2.6 adds «Fjern oppgaven» to the same page and «Legg til oppgave» to Task Overview, reusing 2.3's Må/Bør and Frequency controls and the fixed Frequency list.
 - 2.3's Frequency change must be what 2.5's reschedule reads (Frequency stored on the Task).
 - 2.4 moves in the checkbox/focus-order AC from 2.2 and switches `tasks_of` to the earliest open instance; 2.5 extends `complete_task_instance`; Epic 4 calls it from photo upload.
 - A later Landlord Home Admin surface (bulk Må/Bør, Frequency, Photo Evidence) reuses the same domain rules; the Portfolio tab moved to Story 6.1.

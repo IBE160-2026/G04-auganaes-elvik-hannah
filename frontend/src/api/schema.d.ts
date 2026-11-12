@@ -293,7 +293,8 @@ export interface paths {
         /** List Tasks */
         get: operations["list_tasks_api_homes__home_id__tasks_get"];
         put?: never;
-        post?: never;
+        /** Add Task */
+        post: operations["add_task_api_homes__home_id__tasks_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -310,17 +311,58 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Archive Task
+         * @description Archives the Task (idempotent: an already archived one changes nothing), 204.
+         */
+        delete: operations["archive_task_api_homes__home_id__tasks__task_id__delete"];
         options?: never;
         head?: never;
         /** Adjust Task */
         patch: operations["adjust_task_api_homes__home_id__tasks__task_id__patch"];
         trace?: never;
     };
+    "/api/homes/{home_id}/tasks/{task_id}/instances/{instance_id}/completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Task
+         * @description Completes the instance (idempotent: an already completed one changes nothing), 200.
+         */
+        post: operations["complete_task_api_homes__home_id__tasks__task_id__instances__instance_id__completion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddTaskRequest */
+        AddTaskRequest: {
+            /** Task Type */
+            task_type?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "must" | "should";
+            /**
+             * Frequency Days
+             * @enum {integer}
+             */
+            frequency_days: 7 | 14 | 30 | 42 | 60 | 90 | 182 | 365;
+        };
         /** AdjustTaskRequest */
         AdjustTaskRequest: {
             /** Classification */
@@ -339,6 +381,25 @@ export interface components {
              */
             token_type: "bearer";
             user: components["schemas"]["UserOut"];
+        };
+        /** CompletionOut */
+        CompletionOut: {
+            /**
+             * Completed On
+             * Format: date
+             */
+            completed_on: string;
+            /** Days Since */
+            days_since: number;
+            /** Completed This Year */
+            completed_this_year: boolean;
+            /**
+             * By
+             * @enum {string}
+             */
+            by: "you" | "member" | "former_member";
+            /** Name */
+            name: string | null;
         };
         /** CreateHomeRequest */
         CreateHomeRequest: {
@@ -523,8 +584,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Instance Id
+             * Format: uuid
+             */
+            instance_id: string;
             /** Task Type */
-            task_type: string;
+            task_type: string | null;
             /** Name */
             name: string;
             /**
@@ -549,6 +615,7 @@ export interface components {
             due_status: "overdue" | "due_soon" | "later";
             /** Days Until Due */
             days_until_due: number;
+            completion: components["schemas"]["CompletionOut"] | null;
         };
         /** TaskTypeOut */
         TaskTypeOut: {
@@ -1222,6 +1289,107 @@ export interface operations {
             };
         };
     };
+    add_task_api_homes__home_id__tasks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Not a Household Member or the Landlord of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description The Home's Tasks are not set up yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_task_api_homes__home_id__tasks__task_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a Household Member or the Landlord of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     adjust_task_api_homes__home_id__tasks__task_id__patch: {
         parameters: {
             query?: never;
@@ -1257,6 +1425,57 @@ export interface operations {
                 };
             };
             /** @description No such Task in this Home */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_task_api_homes__home_id__tasks__task_id__instances__instance_id__completion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                instance_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Not a Member of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home, or no such instance of the Task */
             404: {
                 headers: {
                     [name: string]: unknown;

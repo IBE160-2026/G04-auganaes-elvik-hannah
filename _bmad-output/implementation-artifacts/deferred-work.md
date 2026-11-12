@@ -55,13 +55,14 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Let a Household Member or Landlord add custom tasks (own name, classification and Frequency) beside the catalog's, in setup or later.
   evidence: Story 2.1, decision 5 (Eirik, 2026-11-09): setup only ticks and adjusts catalog entries. The model is ready for it: a Task copies its name from the catalog, so a custom task needs only a nullable `tasks.task_type` (and `photo_evidence_eligible` false), plus a rule for the unique `(home_id, task_type)`. No story owns it yet.
-  outcome: Planned 2026-11-09 (Sprint Change Proposal 2026-11-09) as Story 2.6, with archiving (FR-24). Closed when Story 2.6 is built.
+  outcome: Planned 2026-11-09 (Sprint Change Proposal 2026-11-09) as Story 2.6, with archiving (FR-24). Settled in Story 2.6 (2026-11-12): `tasks.task_type` is nullable (a custom Task has no catalog key), uniqueness of catalog type and lower-case name is a partial unique index on active Tasks only, and `domain/tasks.photo_evidence_eligible` is false for a custom Task (AD-6). Tested by `test_only_flagged_catalog_tasks_may_require_photo_evidence` and the index tests in `test_tasks.py`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Test on Postgres that the Home-row lock in `domain/tasks.set_up_tasks` stops two concurrent setups with disjoint choices from both committing.
   evidence: The tests run on SQLite, which ignores FOR UPDATE; the overlapping-race tests prove only the unique `(home_id, task_type)` backstop. Same gap as the Epic 1 lock tests (Story 1.3/1.4 entries); needs a concurrent Postgres harness in CI.
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Story 2.4 must change `domain/tasks.tasks_of` from the earliest instance to the earliest open (not completed) instance.
   evidence: `tasks_of` uses `min(TaskInstance.due_on)`; once 2.4 stores completions, a completed past instance stays the earliest and the list would show an old date as «Neste gang». The architecture revision note now says so.
+  outcome: Settled in Story 2.4 (2026-11-11): every Task read goes through `domain/tasks._rows`, which joins the one open instance (`completed_at IS NULL`, at most one per Task by `uq_task_instances_open_task_id`). Tested by `test_next_due_is_the_open_instance_not_an_earlier_completed_one`.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-9-one-rule-for-creating-homes.md`
   summary: The seed's `_seed_household` skips Jonas when he has any Membership instead of asking `homes.join_blocker`, so a Jonas who is only a Landlord elsewhere is left out although the app would let him join.
@@ -69,6 +70,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
   summary: Story 2.4 must switch `domain/tasks._open_instance` (the instance a Frequency change moves) to the earliest *open* instance together with `tasks_of`, so both always point at the same instance.
   evidence: Story 2.3 moves the earliest instance, which is the open one only until 2.4 adds completion. If only `tasks_of` changes, a Frequency change would move an already completed instance.
+  outcome: Settled in Story 2.4 (2026-11-11): `_open_instance` and `tasks_of` read the same open instance (`_is_open`), so a Frequency change never moves a completed one. Tested by `test_only_the_open_instance_moves` and `test_a_frequency_change_after_completion_moves_only_the_open_instance`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
   summary: After Story 2.5, moving the open instance on a Frequency change may hit `uq_task_instances_task_id_due_on` when another instance of the Task already has the new date; decide the behaviour (and test it) in 2.5.
   evidence: Story 2.3 spec review. Today every Task has one instance (seed and setup make one), so the shift cannot collide; once completion creates the next instance, a completed instance can share the date.
+  outcome: Settled in Story 2.4 (2026-11-11): the unique `(task_id, due_on)` is replaced by the partial unique index `uq_task_instances_open_task_id` (one open instance per Task), so dates no longer collide; a completed instance may share the open one's date. Tested by `test_a_completed_instance_may_share_the_open_ones_date` and probed on Postgres in CI.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-6-add-and-remove-tasks.md`
+  summary: Give a Tenant a neutral text when every Task of the Home is archived («Ingen oppgaver i hjemmet ennå.») instead of «Utleier har ikke satt opp oppgaver ennå.», which is only true before setup.
+  evidence: Code review of Story 2.6 (Blind Hunter, Edge Case Hunter). The wording follows EXPERIENCE.md's «No active Tasks» row (decided 2026-11-09), so changing it is a UX decision, not a patch; `TASK_MESSAGES.tenantWaiting` is used for both states in `TaskOverview.tsx`.

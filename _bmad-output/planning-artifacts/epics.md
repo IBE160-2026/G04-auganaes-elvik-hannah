@@ -874,6 +874,15 @@ So that my housemates immediately see it's done without me needing to tell them.
 **When** any Member views it
 **Then** it is attributed to «Tidligere medlem» and the completion itself is kept
 
+*Settled 2026-11-11 in the Story 2.4 spec (team decisions, Eirik):*
+
+- A completed card shows the Task's latest completion while the open instance's due state is «later»; once it is due soon or overdue, the due line and an empty checkbox return (decision 1).
+- Copy: «Fullført i dag» / «Fullført i går» / «Fullført 3. november» (year when not this year), plus « av Peter» for another current Member and « av tidligere medlem» for a completer without a Membership in this Home; one's own completion never has a name (decision 4).
+- No undo: a completed checkbox is inert (decision 3).
+- A tick made offline is sent when the connection returns while the app stays open; a reload or closing the app while offline loses it (decision 5, stated in README).
+- **Deviation:** Task Detail shows the completion note read-only; completing from Task Detail (EXPERIENCE.md) moves to Epic 4, where Photo Evidence lands on Detail (decision 6).
+- **Deviation:** Story 2.5 is built and closed together with 2.4 (decision 2): `complete_task_instance` also creates the next instance. 2.5's acceptance criteria are covered by named tests in `backend/tests/test_tasks.py` (marked "2.5").
+
 ### Story 2.5: Auto-Reschedule on Completion
 
 **Stage:** Trinn 1
@@ -900,6 +909,8 @@ So that I never have to remember to set a reminder for an irregular task myself.
 **When** `complete_task_instance` is called again on it (for example, a retried request)
 **Then** it returns the existing completion state unchanged rather than re-attributing or re-scheduling
 
+*Built with Story 2.4 on 2026-11-11 (Story 2.4 spec, decision 2).* Each criterion is covered by a test in `backend/tests/test_tasks.py`: `test_complete_records_who_and_when_and_adds_the_next_instance` (N days from the completion date), `test_late_completion_counts_from_the_completion_date` (2 days late, a full 30 days), `test_completion_on_setup_day_gives_the_next_instance_the_same_date`, and `test_a_retry_double_tap_or_second_member_changes_nothing` (idempotent). The photo-upload path (AD-3) calls the same function in Epic 4.
+
 ### Story 2.6: Add and Remove Tasks
 
 **Stage:** Trinn 1 · **Source:** issue #31, Sprint Change Proposal 2026-11-09 · **FR:** FR-24, FR-4, FR-8 · **AD:** AD-2, AD-3, AD-6, AD-16 · **Builds on:** 2.2 (Task Overview), 2.3 (Task Detail), 2.4 (completion history)
@@ -907,6 +918,8 @@ So that I never have to remember to set a reminder for an irregular task myself.
 As a Household Member or Landlord,
 I want to add tasks my Home needs and remove the ones it no longer needs,
 So that the task list keeps matching my Home after the first setup.
+
+*Decisions 2026-11-12 (Eirik, Story 2.6 spec; no acceptance criterion below changes):* Add Task is one page (a radio list of the catalog types the Home lacks plus «Egen oppgave»), «Legg til oppgave» sits in the Task Overview header, the overview shows «La til «X».» and «Fjernet «X».» once through the one-time notice, and adding before Task Setup has run answers 409. The same flag, `can_adjust_tasks`, covers add and archive. Adjusting or completing an archived Task is 404, archiving it again is 204.
 
 **Acceptance Criteria:**
 
