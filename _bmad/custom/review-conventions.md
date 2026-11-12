@@ -33,3 +33,14 @@ What to do:
 4. Do not report: UI layout and exact copy that EXPERIENCE.md or the story already covers, implementation choices that stay below the requirement (class names, queries, test helpers), and anything a listed convention above covers.
 
 How the orchestrator routes a `PRD-drift:` finding: if the code is right and the text is stale or silent, fix the text (a clean requirement plus one row in the Revision log that links the story's spec, and the same wording in `epics.md`); if the code deviates from a requirement by mistake, fix the code; if the requirement itself would change, that is an intent_gap, not a patch, and goes to the human (`bmad-correct-course`).
+
+## Required check: does each new test guard something?
+
+Source: Epic 2 retrospective (`_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md`, finding P1). In Stories 2.4, 2.6 and 5.1 the reviewers found tests that looked like coverage but passed with the guarded line removed: a state never read after a save, a race test that missed the duplicate branch, a test claiming to cover 403 without calling it, a payload test with no Home to leak.
+
+What to do:
+
+1. For each new test that guards a rule, limit, permission, race or error path, name the line or condition it guards. If you cannot, report it.
+2. Check that removing or inverting that line would make the test fail (read the assertion, not only the test name). Report a finding starting with `Verification gap:` when it would still pass.
+3. In the implementation notes the author states which line each such test guards, so a reviewer can check it.
+

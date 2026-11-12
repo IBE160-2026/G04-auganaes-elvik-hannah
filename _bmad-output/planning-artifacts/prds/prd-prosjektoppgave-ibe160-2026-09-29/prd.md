@@ -18,6 +18,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-12 | Teacher's PRD feedback: Trinn 2 cut line decided (Q1), FR-11 rule (Q4), AI failure, limit and data (FR-14/15), FR-2 and FR-3 rules, FR-16 without "unit type", clean requirement text, account privacy, FR-1 to FR-24 count, SM-9 split, SM-15 | `sprint-change-proposal-2026-11-12.md` |
 | 2026-11-12 | Story 5.1 built: FR-14 states what counts toward the 20 AI calls, the UTC day and reset time, the question rules and who may use "?"; FR-22 mentions demo marking; account data lists the daily call count | `spec-5-1-contextual-quick-answer.md` |
 | 2026-11-12 | Story 5.1 follow-up: FR-14 limits the AI to the task and housework | `spec-5-1-contextual-quick-answer.md` |
+| 2026-11-12 | Epic 2 retrospective: FR-9 states that days are UTC days | `epic-2-retro-2026-11-12.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -213,6 +214,7 @@ Marking a task instance complete automatically calculates and schedules the next
 
 **Consequences (testable):**
 - Completing a task instance with a given Frequency (for example, 30 days) creates or updates the next instance to be due that same interval from the actual completion date — not from the original due date. A task completed 2 days late still yields a full interval (for example, 30 days) from the completion date, not a shortened one.
+- Days are counted in UTC: due dates, the due status (due soon, overdue) and "completed today" use the server's UTC date. In Norway a completion between 00:00 and 01:00 (02:00 in summer time) therefore counts as the previous day.
 
 ### 4.4 Notifications
 
