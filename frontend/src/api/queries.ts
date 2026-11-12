@@ -10,6 +10,7 @@ import {
   type Query,
 } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { askTask } from './ai';
 import { fetchMe, register, signIn, signOut } from './auth';
 import { ApiError } from './errors';
 import {
@@ -253,6 +254,25 @@ export function useArchiveTask(homeId: string) {
       queryClient.setQueryData(noticeKey(userId), TASK_MESSAGES.removed(task.name));
       await queryClient.refetchQueries({ queryKey: key });
     },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 404) void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/**
+ * Story 5.1: asks the AI about a Task (the «?» popover). A mutation, not a query: every call
+ * counts against the daily limit, so nothing is cached, refetched or retried on its own. A 404
+ * (the Task was archived meanwhile) refetches the list, and Task Detail's guard routes. A 403 is
+ * the global handler's.
+ */
+export function useAskTask(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const key = tasksKey(homeId, session?.user.id);
+  return useMutation({
+    mutationFn: ({ taskId, question }: { taskId: string; question?: string }) =>
+      askTask(homeId, taskId, question),
     onError: (error) => {
       if (error instanceof ApiError && error.status === 404) void queryClient.invalidateQueries({ queryKey: key });
     },

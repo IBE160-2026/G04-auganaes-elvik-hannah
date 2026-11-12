@@ -342,6 +342,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/tasks/{task_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask About Task */
+        post: operations["ask_about_task_api_homes__home_id__tasks__task_id__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -369,6 +386,25 @@ export interface components {
             classification?: ("must" | "should") | null;
             /** Frequency Days */
             frequency_days?: (7 | 14 | 30 | 42 | 60 | 90 | 182 | 365) | null;
+        };
+        /** AnswerOut */
+        AnswerOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "low_confidence" | "error";
+            /** Answer */
+            answer: string;
+            /** Disclaimer */
+            disclaimer: string;
+            /** Demo */
+            demo: boolean;
+        };
+        /** AskRequest */
+        AskRequest: {
+            /** Question */
+            question?: string | null;
         };
         /** AuthResponse */
         AuthResponse: {
@@ -497,6 +533,16 @@ export interface components {
             viewer?: ("can_join" | "already_member" | "in_other_home") | null;
             /** Other Home Name */
             other_home_name?: string | null;
+        };
+        /** LimitOut */
+        LimitOut: {
+            /** Detail */
+            detail: string;
+            /**
+             * Resets At
+             * Format: date-time
+             */
+            resets_at: string;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -1491,6 +1537,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_about_task_api_homes__home_id__tasks__task_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerOut"];
+                };
+            };
+            /** @description Not a Member of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The user has used today's AI calls; resets_at says when they restart */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitOut"];
                 };
             };
         };
