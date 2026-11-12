@@ -4,6 +4,11 @@ A Task copies its name from the catalog entry it was made from (task_type is the
 so a later custom task needs only a nullable task_type, and a new catalog version never rewrites
 existing Tasks. A TaskInstance is one dated occurrence.
 
+Story 2.6 (FR-24, AD-6, AD-16): task_type is null for a custom Task, and archived_at is set when a
+Task is removed. Nothing is deleted: an archived Task keeps its instances and completions, and
+only active Tasks (archived_at IS NULL) are read for behaviour. A catalog type and a name are
+unique among active Tasks only, so either can be added again after archiving.
+
 Story 2.4 (FR-7, FR-9, AD-3): a TaskInstance is open until completed; completed_at and
 completed_by_user_id are set together by domain/tasks.complete_task_instance, which also adds the
 next open instance. A Task has at most one open instance (uq_task_instances_open_task_id), and
@@ -22,7 +27,6 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     PrimaryKeyConstraint,
-    UniqueConstraint,
     text,
 )
 from sqlmodel import Field, SQLModel
@@ -36,8 +40,27 @@ class Task(SQLModel, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_tasks"),
         ForeignKeyConstraint(["home_id"], ["homes.id"], name="fk_tasks_home_id_homes"),
-        # One Task per catalog entry and Home; its index also serves lookups by home_id.
-        UniqueConstraint("home_id", "task_type", name="uq_tasks_home_id_task_type"),
+        # Lookups by home_id.
+        Index("ix_tasks_home_id", "home_id"),
+        # Active Tasks only: one per catalog type and one per name (case-insensitive) in a Home.
+        # The domain checks both first (clear message, Unicode case folding); these are the race
+        # backstop. Alembic check ignores index WHERE clauses; the CI probes cover them.
+        Index(
+            "uq_tasks_active_home_id_task_type",
+            "home_id",
+            "task_type",
+            unique=True,
+            postgresql_where=text("archived_at IS NULL"),
+            sqlite_where=text("archived_at IS NULL"),
+        ),
+        Index(
+            "uq_tasks_active_home_id_lower_name",
+            "home_id",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text("archived_at IS NULL"),
+            sqlite_where=text("archived_at IS NULL"),
+        ),
         # Alembic check ignores CHECK constraints; tests/test_tasks.py and CI cover these.
         CheckConstraint("classification IN ('must', 'should')", name="ck_tasks_classification"),
         CheckConstraint("frequency_days > 0", name="ck_tasks_frequency_days"),
@@ -45,13 +68,18 @@ class Task(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
     home_id: uuid.UUID
-    task_type: str = Field(max_length=TASK_TYPE_KEY_MAX_LENGTH)
+    # The catalog key; null for a custom Task.
+    task_type: str | None = Field(default=None, max_length=TASK_TYPE_KEY_MAX_LENGTH)
     name: str = Field(max_length=TASK_NAME_MAX_LENGTH)
     classification: str = Field(max_length=10)
     frequency_days: int
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    # When the Task was removed (UTC); null while active.
+    archived_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
 

@@ -154,6 +154,16 @@ jobs:
                "INSERT INTO task_instances (id, task_id, due_on, created_at) "
                "SELECT :h, i.task_id, i.due_on + 1, now() FROM task_instances i "
                "WHERE i.completed_at IS NULL LIMIT 1"),
+              # Story 2.6: the same for the partial unique indexes on active Tasks: a second
+              # active Task of a catalog type, or with the same name in other case, is refused.
+              ("uq_tasks_active_home_id_task_type",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "created_at) SELECT :h, t.home_id, t.task_type, 'Annet navn', 'should', 7, now() "
+               "FROM tasks t WHERE t.archived_at IS NULL AND t.task_type IS NOT NULL LIMIT 1"),
+              ("uq_tasks_active_home_id_lower_name",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "created_at) SELECT :h, t.home_id, NULL, upper(t.name), 'should', 7, now() "
+               "FROM tasks t WHERE t.archived_at IS NULL LIMIT 1"),
           ]
           with create_engine(get_database_url()).connect() as c:
               for name, sql in cases:
@@ -182,6 +192,27 @@ jobs:
                       "m.user_id FROM task_instances i JOIN tasks t ON t.id = i.task_id "
                       "JOIN memberships m ON m.home_id = t.home_id "
                       "WHERE i.completed_at IS NULL LIMIT 1"
+                  ),
+                  {"h": uuid.uuid4()},
+              )
+              assert inserted.rowcount == 1, inserted.rowcount
+              c.rollback()
+          EOF
+      # Story 2.6: the indexes cover active Tasks only; an archived Task may share the type and
+      # name of an active one (a catalog type added again after archiving).
+      - name: Arkivert oppgave kan ha samme type og navn som en aktiv
+        run: |
+          uv run python - <<'EOF'
+          import uuid
+          from sqlalchemy import create_engine, text
+          from app.config import get_database_url
+          with create_engine(get_database_url()).connect() as c:
+              inserted = c.execute(
+                  text(
+                      "INSERT INTO tasks (id, home_id, task_type, name, classification, "
+                      "frequency_days, created_at, archived_at) SELECT :h, t.home_id, t.task_type, "
+                      "t.name, 'should', 7, now(), now() FROM tasks t "
+                      "WHERE t.archived_at IS NULL AND t.task_type IS NOT NULL LIMIT 1"
                   ),
                   {"h": uuid.uuid4()},
               )

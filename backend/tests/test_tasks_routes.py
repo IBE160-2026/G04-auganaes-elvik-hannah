@@ -5,6 +5,8 @@ Story 2.3 (FR-5, FR-8): PATCH /api/homes/{home_id}/tasks/{task_id} and HomeOut.c
 
 Story 2.4 (FR-7, FR-9, AD-3, AD-16): POST .../tasks/{task_id}/instances/{instance_id}/completion
 and TaskOut.instance_id / completion.
+
+Story 2.6 (FR-24, AD-2, AD-6): POST /api/homes/{home_id}/tasks and DELETE .../tasks/{task_id}.
 """
 
 import uuid
@@ -17,6 +19,7 @@ from sqlmodel import Session, col, select
 
 from app.clock import utc_now
 from app.domain import homes, tasks
+from app.domain import tasks as task_domain
 from app.domain.task_types import CATALOG_VERSION, FREQUENCY_DAYS, TASK_TYPES
 from app.models.task import Task, TaskInstance
 from app.permissions.require_role import FORBIDDEN
@@ -806,3 +809,325 @@ def test_completing_signed_out_is_401_and_bad_ids_are_422(client: TestClient) ->
 
     assert complete(client, {}, home_id, task["id"], task["instance_id"]).status_code == 401
     assert complete(client, mari, home_id, task["id"], "ikke-en-uuid").status_code == 422
+
+
+# Story 2.6 (FR-24, AD-2, AD-6): adding and archiving Tasks.
+
+
+def add(client: TestClient, auth: dict[str, str] | None, home_id: str, body: object):
+    return client.post(f"/api/homes/{home_id}/tasks", json=body, headers=auth)
+
+
+def archive(client: TestClient, auth: dict[str, str] | None, home_id: str, task_id: str):
+    return client.delete(f"/api/homes/{home_id}/tasks/{task_id}", headers=auth)
+
+
+def household_set_up_with_one(client: TestClient) -> tuple[dict[str, str], dict[str, str], str]:
+    mari = sign_up(client, "Mari")
+    home_id = create_home(client, mari)
+    set_up(client, mari, home_id, [ALL[7]])
+    return mari, join(client, mari, home_id, "Jonas"), home_id
+
+
+def names(client: TestClient, auth: dict[str, str], home_id: str) -> list[str]:
+    return [t["name"] for t in list_tasks(client, auth, home_id).json()["tasks"]]
+
+
+def test_a_member_adds_a_catalog_task_and_everyone_sees_it(client: TestClient) -> None:
+    """Matrix «Add catalog»."""
+    mari, jonas, home_id = household_set_up_with_one(client)
+
+    response = add(
+        client,
+        mari,
+        home_id,
+        {"task_type": "avkalk-vannkoker", "classification": "should", "frequency_days": 60},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert (body["name"], body["task_type"], body["frequency_days"]) == (
+        "Avkalk vannkokeren",
+        "avkalk-vannkoker",
+        60,
+    )
+    assert body["due_on"] == (utc_now().date() + timedelta(days=60)).isoformat()
+    assert "Avkalk vannkokeren" in names(client, jonas, home_id)
+
+
+def test_a_custom_task_has_a_null_task_type_in_every_response(client: TestClient) -> None:
+    """Matrix «Add custom»: the name is stored trimmed."""
+    mari, jonas, home_id = household_set_up_with_one(client)
+
+    response = add(
+        client,
+        mari,
+        home_id,
+        {"name": "  Vask gardiner  ", "classification": "must", "frequency_days": 90},
+    )
+
+    assert response.status_code == 201 and response.json()["name"] == "Vask gardiner"
+    listed = list_tasks(client, jonas, home_id).json()["tasks"]
+    assert [t for t in listed if t["name"] == "Vask gardiner"][0]["task_type"] is None
+    assert listed[0]["name"] == "Vask gardiner"  # Må before Bør
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ({"name": "", "classification": "should", "frequency_days": 30}, task_domain.BAD_NAME),
+        (
+            {"name": "x" * 101, "classification": "should", "frequency_days": 30},
+            task_domain.BAD_NAME,
+        ),
+        (
+            {"name": "støvsug og VASK gulvene", "classification": "should", "frequency_days": 30},
+            task_domain.DUPLICATE_NAME.format(name="støvsug og VASK gulvene"),
+        ),
+        ({"classification": "should", "frequency_days": 30}, task_domain.NO_CHOICE),
+        (
+            {"task_type": "gulv", "name": "Noe", "classification": "should", "frequency_days": 30},
+            task_domain.NO_CHOICE,
+        ),
+        (
+            {"task_type": "gulv", "classification": "should", "frequency_days": 30},
+            task_domain.DUPLICATE_NAME.format(name="Støvsug og vask gulvene"),
+        ),
+        (
+            {"task_type": "finnes-ikke", "classification": "should", "frequency_days": 30},
+            task_domain.UNKNOWN_TASK_TYPE.format(key="finnes-ikke"),
+        ),
+    ],
+)
+def test_a_rule_break_is_422_with_the_norwegian_reason_and_adds_nothing(
+    client: TestClient, engine: Engine, body: dict, message: str
+) -> None:
+    """Matrix «Bad name», «Both or neither», «Active type exists», «Unknown type»."""
+    mari = sign_up(client, "Mari")
+    home_id = create_home(client, mari)
+    gulv = next(t for t in ALL if t["task_type"] == "gulv")
+    set_up(client, mari, home_id, [gulv])
+    assert written(engine) == (1, 1)
+
+    response = add(client, mari, home_id, body)
+
+    assert response.status_code == 422 and response.json() == {"detail": message}
+    assert written(engine) == (1, 1)
+
+
+def test_bad_values_are_the_standard_422(client: TestClient) -> None:
+    mari, _, home_id = household_set_up_with_one(client)
+    for body in (
+        {"name": "Noe", "classification": "maybe", "frequency_days": 30},
+        {"name": "Noe", "classification": "should", "frequency_days": 5},
+        {"name": "Noe", "classification": "should"},
+    ):
+        assert add(client, mari, home_id, body).status_code == 422
+
+
+def test_adding_before_setup_is_409(client: TestClient, engine: Engine) -> None:
+    """Matrix «Before setup»."""
+    mari = sign_up(client, "Mari")
+    home_id = create_home(client, mari)
+
+    response = add(
+        client, mari, home_id, {"name": "Noe", "classification": "should", "frequency_days": 30}
+    )
+
+    assert response.status_code == 409 and response.json() == {"detail": task_domain.SET_UP_FIRST}
+    assert written(engine) == (0, 0)
+
+
+def test_a_tenant_cannot_add_or_archive(client: TestClient, engine: Engine) -> None:
+    """Matrix «Tenant»: 403 whatever the body or id."""
+    kari, anders, home_id = landlord_with_tasks(client)
+    task = sluket(client, kari, home_id)
+
+    added = add(
+        client, anders, home_id, {"name": "Noe", "classification": "should", "frequency_days": 30}
+    )
+    bad_body = add(client, anders, home_id, {"nonsense": True})
+    archived = archive(client, anders, home_id, task["id"])
+    unknown = archive(client, anders, home_id, str(uuid.uuid4()))
+
+    for response in (added, bad_body, archived, unknown):
+        assert response.status_code == 403 and response.json() == {"detail": FORBIDDEN}
+    assert written(engine) == (8, 8)
+    assert "Rens sluket" in names(client, kari, home_id)
+
+
+def test_a_landlord_may_add_and_archive(client: TestClient) -> None:
+    kari, _, home_id = landlord_with_tasks(client)
+    task = sluket(client, kari, home_id)
+
+    assert (
+        add(
+            client,
+            kari,
+            home_id,
+            {"name": "Sjekk røykvarsler", "classification": "must", "frequency_days": 365},
+        ).status_code
+        == 201
+    )
+    assert archive(client, kari, home_id, task["id"]).status_code == 204
+
+
+def test_archiving_hides_the_task_for_everyone_and_keeps_its_rows(
+    client: TestClient, engine: Engine
+) -> None:
+    """Matrix «Archive»."""
+    mari, jonas, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    complete(client, jonas, home_id, task["id"], task["instance_id"])
+    before = written(engine)
+
+    response = archive(client, mari, home_id, task["id"])
+
+    assert response.status_code == 204 and response.content == b""
+    assert "Rens sluket" not in names(client, jonas, home_id)
+    assert written(engine) == before
+    with Session(engine) as session:
+        kept = session.get(Task, uuid.UUID(task["id"]))
+        assert kept is not None and kept.archived_at is not None
+
+
+def test_archiving_twice_is_204_both_times(client: TestClient) -> None:
+    """Matrix «Archive twice»."""
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+
+    assert archive(client, mari, home_id, task["id"]).status_code == 204
+    assert archive(client, mari, home_id, task["id"]).status_code == 204
+
+
+def test_an_archived_task_is_404_for_adjust_and_complete_but_204_for_archive(
+    client: TestClient,
+) -> None:
+    """Matrix «Tick or adjust archived»."""
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+    archive(client, mari, home_id, task["id"])
+
+    assert (
+        adjust(client, mari, home_id, task["id"], {"classification": "should"}).status_code == 404
+    )
+    done = complete(client, mari, home_id, task["id"], task["instance_id"])
+    assert done.status_code == 404 and done.json() == {"detail": TASK_NOT_FOUND}
+    assert archive(client, mari, home_id, task["id"]).status_code == 204
+
+
+def test_a_catalog_type_added_again_is_a_new_task(client: TestClient, engine: Engine) -> None:
+    """Matrix «Add after archive»."""
+    mari, _, home_id = household_with_tasks(client)
+    old = sluket(client, mari, home_id)
+    archive(client, mari, home_id, old["id"])
+
+    response = add(
+        client,
+        mari,
+        home_id,
+        {"task_type": "rens-sluket", "classification": "must", "frequency_days": 14},
+    )
+
+    assert response.status_code == 201 and response.json()["id"] != old["id"]
+    assert sluket(client, mari, home_id)["frequency_days"] == 14
+    with Session(engine) as session:
+        assert session.get(Task, uuid.UUID(old["id"])) is not None
+
+
+def test_archive_then_custom_then_the_catalog_type_is_422(client: TestClient) -> None:
+    """Matrix «Archive, custom, re-add»."""
+    mari, _, home_id = household_with_tasks(client)
+    old = sluket(client, mari, home_id)
+    archive(client, mari, home_id, old["id"])
+    assert (
+        add(
+            client,
+            mari,
+            home_id,
+            {"name": "Rens sluket", "classification": "should", "frequency_days": 30},
+        ).status_code
+        == 201
+    )
+
+    response = add(
+        client,
+        mari,
+        home_id,
+        {"task_type": "rens-sluket", "classification": "must", "frequency_days": 30},
+    )
+
+    assert response.status_code == 422
+
+
+def test_a_catalog_task_whose_name_an_active_custom_task_uses_is_422(client: TestClient) -> None:
+    """Matrix «Catalog name taken»."""
+    mari, _, home_id = household_set_up_with_one(client)
+    add(
+        client,
+        mari,
+        home_id,
+        {"name": "avkalk vannkokeren", "classification": "should", "frequency_days": 30},
+    )
+
+    response = add(
+        client,
+        mari,
+        home_id,
+        {"task_type": "avkalk-vannkoker", "classification": "should", "frequency_days": 60},
+    )
+
+    assert response.status_code == 422
+
+
+def test_the_last_archived_task_leaves_the_home_set_up(client: TestClient) -> None:
+    """Matrix «Last Task archived»."""
+    mari, _, home_id = household_set_up_with_one(client)
+    [only] = list_tasks(client, mari, home_id).json()["tasks"]
+
+    archive(client, mari, home_id, only["id"])
+
+    assert list_tasks(client, mari, home_id).json() == {"tasks": []}
+    home = next(
+        h for h in client.get("/api/homes", headers=mari).json()["homes"] if h["id"] == home_id
+    )
+    assert home["has_tasks"] is True
+    assert set_up(client, mari, home_id, [ALL[7]]).status_code == 409
+
+
+def test_another_homes_task_is_404_and_an_outsider_is_403(client: TestClient) -> None:
+    """Matrix «Foreign ids» and the global 403."""
+    mari, _, home_id = household_with_tasks(client)
+    kari, _, other_home = landlord_with_tasks(client)
+    foreign = sluket(client, kari, other_home)
+
+    missing = archive(client, mari, home_id, foreign["id"])
+    assert missing.status_code == 404 and missing.json() == {"detail": TASK_NOT_FOUND}
+    assert archive(client, mari, home_id, str(uuid.uuid4())).status_code == 404
+    outsider = sign_up(client, "Per")
+    create_home(client, outsider)
+    assert archive(client, outsider, home_id, foreign["id"]).status_code == 403
+    assert (
+        add(
+            client,
+            outsider,
+            str(uuid.uuid4()),
+            {"name": "X", "classification": "should", "frequency_days": 7},
+        ).status_code
+        == 403
+    )
+    assert "Rens sluket" in names(client, kari, other_home)
+
+
+def test_adding_and_archiving_signed_out_is_401_and_bad_ids_are_422(client: TestClient) -> None:
+    mari, _, home_id = household_with_tasks(client)
+    task = sluket(client, mari, home_id)
+
+    assert (
+        add(
+            client, None, home_id, {"name": "X", "classification": "should", "frequency_days": 7}
+        ).status_code
+        == 401
+    )
+    assert archive(client, None, home_id, task["id"]).status_code == 401
+    assert archive(client, mari, home_id, "ikke-en-uuid").status_code == 422

@@ -10,7 +10,7 @@ from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from app.clock import utc_now
+from app.clock import as_utc, utc_now
 from app.domain import homes, tasks
 from app.domain.task_types import TASK_TYPES
 from app.models.home import Home
@@ -828,3 +828,318 @@ def test_the_list_is_read_in_three_queries_whatever_its_length(
 
     assert len(rows) == 8 and all(r.last_completion is not None for r in rows)
     assert len(statements) == 3
+
+
+# --- Story 2.6 (FR-24, AD-6, AD-16): add_task, archive_task and the active filter ---
+
+
+def set_up_household(session: Session, *choices: tasks.TaskChoice) -> Membership:
+    """A Household Home whose Task Setup has run with these choices (one «gulv» by default)."""
+    mari = household(session)
+    tasks.set_up_tasks(
+        session, mari, list(choices) or [tasks.TaskChoice("gulv", "should", 7)], TODAY
+    )
+    return mari
+
+
+def named(session: Session, member: Membership) -> dict[str, tasks.TaskWithDue]:
+    return {row.task.name: row for row in tasks.tasks_of(session, member.home_id)}
+
+
+def test_add_a_catalog_task_gives_it_a_first_instance_due_today_plus_frequency(
+    session: Session,
+) -> None:
+    mari = set_up_household(session)
+
+    row = tasks.add_task(session, mari, "should", 60, task_type="avkalk-vannkoker", today=TODAY)
+
+    assert (row.task.name, row.task.task_type) == ("Avkalk vannkokeren", "avkalk-vannkoker")
+    assert (row.task.classification, row.task.frequency_days) == ("should", 60)
+    assert row.due_on == TODAY + timedelta(days=60)
+    assert written(session) == (2, 2)
+
+
+def test_add_a_custom_task_stores_the_trimmed_name_and_no_catalog_key(session: Session) -> None:
+    mari = set_up_household(session)
+
+    row = tasks.add_task(session, mari, "should", 90, name="  Vask gardiner  ", today=TODAY)
+
+    assert (row.task.name, row.task.task_type) == ("Vask gardiner", None)
+    assert row.due_on == TODAY + timedelta(days=90)
+
+
+def test_a_custom_task_is_listed_must_first_with_the_others(session: Session) -> None:
+    mari = set_up_household(session)
+
+    tasks.add_task(session, mari, "must", 365, name="Sjekk røykvarsler", today=TODAY)
+
+    assert [r.task.name for r in tasks.tasks_of(session, mari.home_id)][0] == "Sjekk røykvarsler"
+
+
+@pytest.mark.parametrize("name", ["", "   ", "x" * 101])
+def test_a_bad_name_adds_nothing(session: Session, name: str) -> None:
+    mari = set_up_household(session)
+    before = written(session)
+
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, "should", 30, name=name)
+
+    assert caught.value.message == tasks.BAD_NAME
+    assert written(session) == before
+
+
+def test_a_name_of_exactly_100_characters_is_accepted(session: Session) -> None:
+    mari = set_up_household(session)
+    assert tasks.add_task(session, mari, "should", 30, name="x" * 100).task.name == "x" * 100
+
+
+@pytest.mark.parametrize(
+    "name", ["Støvsug og vask gulvene", "STØVSUG OG VASK GULVENE", "  støvsug og vask gulvene "]
+)
+def test_an_active_name_is_refused_whatever_the_case(session: Session, name: str) -> None:
+    mari = set_up_household(session)
+    before = written(session)
+
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, "should", 30, name=name)
+
+    assert caught.value.message == tasks.DUPLICATE_NAME.format(name=name.strip())
+    assert written(session) == before
+
+
+def test_a_catalog_type_the_home_already_has_is_refused(session: Session) -> None:
+    mari = set_up_household(session)
+    before = written(session)
+
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, "should", 14, task_type="gulv")
+
+    assert caught.value.message == tasks.DUPLICATE_NAME.format(name="Støvsug og vask gulvene")
+    assert written(session) == before
+
+
+def test_a_catalog_type_whose_name_an_active_custom_task_uses_is_refused(session: Session) -> None:
+    mari = set_up_household(session)
+    tasks.add_task(session, mari, "should", 30, name="rens sluket")
+    before = written(session)
+
+    with pytest.raises(tasks.InvalidTaskChoices):
+        tasks.add_task(session, mari, "must", 30, task_type="rens-sluket")
+
+    assert written(session) == before
+
+
+def test_exactly_one_of_type_and_name_is_needed(session: Session) -> None:
+    mari = set_up_household(session)
+    before = written(session)
+
+    for kwargs in ({}, {"task_type": "rens-sluket", "name": "Noe"}):
+        with pytest.raises(tasks.InvalidTaskChoices) as caught:
+            tasks.add_task(session, mari, "should", 30, **kwargs)
+        assert caught.value.message == tasks.NO_CHOICE
+
+    assert written(session) == before
+
+
+@pytest.mark.parametrize(
+    ("classification", "frequency", "message"),
+    [("maybe", 30, tasks.BAD_CLASSIFICATION), ("should", 5, tasks.BAD_FREQUENCY)],
+)
+def test_values_outside_the_rules_add_nothing(
+    session: Session, classification: str, frequency: int, message: str
+) -> None:
+    mari = set_up_household(session)
+    before = written(session)
+
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, classification, frequency, name="Noe")
+
+    assert caught.value.message == message
+    assert written(session) == before
+
+
+def test_an_unknown_catalog_type_is_refused(session: Session) -> None:
+    mari = set_up_household(session)
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, "should", 30, task_type="finnes-ikke")
+    assert caught.value.message == tasks.UNKNOWN_TASK_TYPE.format(key="finnes-ikke")
+
+
+def test_adding_before_setup_is_refused_and_writes_nothing(session: Session) -> None:
+    mari = household(session)
+
+    with pytest.raises(tasks.TasksNotSetUp):
+        tasks.add_task(session, mari, "should", 30, name="Noe")
+
+    assert written(session) == (0, 0)
+
+
+def test_a_tenant_may_not_add_or_archive(session: Session) -> None:
+    kari, anders = landlord_and_tenant(session)
+    tasks.set_up_tasks(session, kari, [tasks.TaskChoice("gulv", "should", 7)], TODAY)
+    [row] = tasks.tasks_of(session, kari.home_id)
+
+    with pytest.raises(ValueError):
+        tasks.add_task(session, anders, "should", 30, name="Noe")
+    with pytest.raises(ValueError):
+        tasks.archive_task(session, anders, row.task.id)
+
+    assert written(session) == (1, 1)
+
+
+def test_a_landlord_may_add_in_a_home_without_tenants(session: Session) -> None:
+    kari = landlord_and_tenant(session)[0]
+    tasks.set_up_tasks(session, kari, [tasks.TaskChoice("gulv", "should", 7)], TODAY)
+    assert tasks.add_task(session, kari, "must", 30, name="Sjekk røykvarsler").task.name
+
+
+def test_archiving_hides_the_task_and_keeps_everything(session: Session) -> None:
+    mari = set_up_household(
+        session, tasks.TaskChoice("rens-sluket", "must", 30), tasks.TaskChoice("gulv", "should", 7)
+    )
+    sluket = named(session, mari)["Rens sluket"]
+    tasks.complete_task_instance(session, mari, sluket.task.id, sluket.instance_id, now=at(TODAY))
+    before = written(session)
+
+    tasks.archive_task(session, mari, sluket.task.id, now=at(TODAY))
+
+    assert list(named(session, mari)) == ["Støvsug og vask gulvene"]
+    assert written(session) == before
+    kept = session.get(Task, sluket.task.id)
+    assert kept is not None and kept.archived_at is not None
+    assert as_utc(kept.archived_at) == at(TODAY)
+    done = [i for i in instances(session, sluket.task.id) if i.completed_at is not None]
+    assert len(done) == 1 and done[0].completed_by_user_id == mari.user_id
+
+
+def test_archiving_twice_changes_nothing(session: Session) -> None:
+    mari = set_up_household(session)
+    [row] = tasks.tasks_of(session, mari.home_id)
+    tasks.archive_task(session, mari, row.task.id, now=at(TODAY))
+    first = session.get(Task, row.task.id)
+    assert first is not None
+    stamp = first.archived_at
+
+    tasks.archive_task(session, mari, row.task.id, now=at(NOV_11))
+
+    session.refresh(first)
+    assert first.archived_at == stamp
+
+
+def test_another_homes_task_or_an_unknown_id_is_not_found_when_archiving(session: Session) -> None:
+    mari = set_up_household(session)
+    other = set_up_household(session)
+    [foreign] = tasks.tasks_of(session, other.home_id)
+
+    for task_id in (foreign.task.id, uuid.uuid4()):
+        with pytest.raises(tasks.TaskNotFound):
+            tasks.archive_task(session, mari, task_id)
+
+    assert len(tasks.tasks_of(session, other.home_id)) == 1
+
+
+def test_an_archived_task_is_not_found_by_adjust_or_complete(session: Session) -> None:
+    mari = set_up_household(session)
+    [row] = tasks.tasks_of(session, mari.home_id)
+    tasks.archive_task(session, mari, row.task.id)
+
+    with pytest.raises(tasks.TaskNotFound):
+        tasks.adjust_task(session, mari, row.task.id, classification="must")
+    with pytest.raises(tasks.TaskNotFound):
+        tasks.complete_task_instance(session, mari, row.task.id, row.instance_id)
+
+    assert all(i.completed_at is None for i in instances(session, row.task.id))
+
+
+def test_a_catalog_type_can_be_added_again_as_a_new_task(session: Session) -> None:
+    mari = set_up_household(session)
+    [old] = tasks.tasks_of(session, mari.home_id)
+    tasks.complete_task_instance(session, mari, old.task.id, old.instance_id, now=at(TODAY))
+    tasks.archive_task(session, mari, old.task.id)
+
+    new = tasks.add_task(session, mari, "must", 14, task_type="gulv", today=NOV_11)
+
+    assert new.task.id != old.task.id
+    assert new.due_on == NOV_11 + timedelta(days=14) and new.last_completion is None
+    assert [r.task.id for r in tasks.tasks_of(session, mari.home_id)] == [new.task.id]
+    assert len([i for i in instances(session, old.task.id) if i.completed_at is not None]) == 1
+
+
+def test_archive_then_custom_with_the_name_then_the_catalog_type_is_refused(
+    session: Session,
+) -> None:
+    mari = set_up_household(session, tasks.TaskChoice("rens-sluket", "must", 30))
+    [row] = tasks.tasks_of(session, mari.home_id)
+    tasks.archive_task(session, mari, row.task.id)
+    tasks.add_task(session, mari, "should", 30, name="Rens sluket")
+
+    with pytest.raises(tasks.InvalidTaskChoices):
+        tasks.add_task(session, mari, "must", 30, task_type="rens-sluket")
+
+
+def test_archiving_every_task_leaves_the_home_set_up(session: Session) -> None:
+    mari = set_up_household(session)
+    [row] = tasks.tasks_of(session, mari.home_id)
+
+    tasks.archive_task(session, mari, row.task.id)
+
+    assert tasks.tasks_of(session, mari.home_id) == []
+    assert tasks.has_tasks(session, mari.home_id)
+    assert tasks.home_ids_with_tasks(session, [mari.home_id]) == {mari.home_id}
+    with pytest.raises(tasks.TasksAlreadySetUp):
+        tasks.set_up_tasks(session, mari, [tasks.TaskChoice("gulv", "should", 7)])
+
+
+def test_the_unique_indexes_cover_active_tasks_only(session: Session) -> None:
+    """The race backstop (ASCII only on SQLite, whose lower() is ASCII-only)."""
+    mari = set_up_household(session)
+    [row] = tasks.tasks_of(session, mari.home_id)
+    custom = tasks.add_task(session, mari, "should", 30, name="Vask gardiner")
+    home_id = mari.home_id
+
+    def extra(**fields: object) -> Task:
+        base = {"home_id": home_id, "classification": "should", "frequency_days": 7, **fields}
+        return Task.model_validate(base)
+
+    session.add(extra(task_type="gulv", name="Annet navn"))
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()
+    session.add(extra(name="VASK GARDINER"))
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()
+
+    tasks.archive_task(session, mari, row.task.id)
+    tasks.archive_task(session, mari, custom.task.id)
+    session.add(extra(task_type="gulv", name="Vask gardiner"))
+    session.commit()
+
+
+def test_a_lost_race_on_the_unique_index_says_what_it_broke(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mari = set_up_household(session)
+
+    def racing_commit() -> None:
+        session.rollback()
+        raise IntegrityError("INSERT", {}, Exception("uq_tasks_active_home_id_lower_name"))
+
+    monkeypatch.setattr(session, "commit", racing_commit)
+    with pytest.raises(tasks.InvalidTaskChoices) as caught:
+        tasks.add_task(session, mari, "should", 30, name="Noe nytt")
+
+    assert caught.value.message == tasks.NOT_ADDED
+
+
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [("rens-sluket", True), ("kjokkenviftefilter", True), ("gulv", False), (None, False)],
+)
+def test_only_flagged_catalog_tasks_may_require_photo_evidence(
+    key: str | None, expected: bool
+) -> None:
+    task = Task(
+        home_id=uuid.uuid4(), task_type=key, name="X", classification="must", frequency_days=7
+    )
+    assert tasks.photo_evidence_eligible(task) is expected

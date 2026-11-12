@@ -59,6 +59,7 @@ class HomeOut(BaseModel):
     can_set_up_tasks: bool
     has_tasks: bool
     # Story 2.3: whether the caller may change a Task's Må/Bør and Frequency (a Tenant may not).
+    # Story 2.6: the same flag covers adding and removing Tasks.
     can_adjust_tasks: bool
 
 

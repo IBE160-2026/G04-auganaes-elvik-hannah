@@ -9,6 +9,12 @@ Story 2.3 (FR-5, FR-8, issue #40): adjust_task changes one Task's Må/Bør and/o
 setup. can_adjust_tasks is the one rule for who may; a new Frequency moves the open instance's
 date from the same start point (team decision 1, 2026-11-11).
 
+Story 2.6 (FR-24, AD-6, AD-16, issue #31): add_task adds one catalog or custom Task after setup,
+and archive_task removes one by setting archived_at (nothing is deleted). Every read that drives
+behaviour goes through _rows, which sees active Tasks only; has_tasks keeps counting archived
+ones, so archiving the last Task never reopens setup. The same Roles as adjusting may add and
+archive (can_adjust_tasks).
+
 Story 2.4 (FR-7, FR-9, AD-3, AD-16, issue #43): complete_task_instance is the one completion
 path. It records who completed which instance and when, and adds the next open instance due on
 the completion's UTC date + the Task's Frequency (Story 2.5 closed in the same change). Every
@@ -36,7 +42,8 @@ from app.models.user import User
 # household_member exists only in Household Homes and landlord only in Landlord Homes.
 SETUP_ROLES: frozenset[Role] = frozenset({"household_member", "landlord"})
 
-# Story 2.3: the same Roles as setup; a Tenant inherits the Landlord's setting.
+# Story 2.3: the same Roles as setup; a Tenant inherits the Landlord's setting. Story 2.6: the same
+# Roles also add and archive Tasks (FR-24), so there is one flag, HomeOut.can_adjust_tasks.
 ADJUST_ROLES: frozenset[Role] = SETUP_ROLES
 
 NO_TASKS_CHOSEN = "Velg minst én oppgave."
@@ -45,6 +52,11 @@ DUPLICATE_TASK_TYPE = "Oppgaven «{key}» er valgt mer enn én gang."
 BAD_CLASSIFICATION = "En oppgave må være «Må» eller «Bør»."
 BAD_FREQUENCY = "Velg et av intervallene i lista."
 NO_CHANGE = "Ingen endring."
+NO_CHOICE = "Velg en oppgave eller skriv et navn."
+BAD_NAME = "Navnet må være mellom 1 og 100 tegn."
+DUPLICATE_NAME = "Hjemmet har allerede en oppgave som heter «{name}»."
+NOT_ADDED = "Vi fikk ikke lagt til oppgaven."
+SET_UP_FIRST = "Sett opp oppgavene først."
 
 # Decision (Story 2.2, 1): a Task is due soon from today up to and including today + 3 days.
 # With 7, a weekly Task would always be due soon.
@@ -92,6 +104,10 @@ class TasksAlreadySetUp(Exception):
 
 class TaskNotFound(Exception):
     """No Task with this id in the Membership's Home."""
+
+
+class TasksNotSetUp(Exception):
+    """The Home's Task Setup has not run; a Task cannot be added before it (Story 2.6)."""
 
 
 class NothingToChange(ValueError):
@@ -192,8 +208,7 @@ def set_up_tasks(
         # The models have no relationship(), so the Tasks are flushed before their instances.
         session.flush()
         for task in created:
-            due_on = today + timedelta(days=task.frequency_days)
-            session.add(TaskInstance(task_id=task.id, due_on=due_on))
+            session.add(_first_instance(task, today))
         session.commit()
     except IntegrityError:
         session.rollback()
@@ -201,9 +216,30 @@ def set_up_tasks(
     return tasks_of(session, home_id)
 
 
+def _first_instance(task: Task, today: date) -> TaskInstance:
+    """A new Task's first open instance, due `today` + its Frequency."""
+    return TaskInstance(task_id=task.id, due_on=today + timedelta(days=task.frequency_days))
+
+
 def _is_open() -> ColumnElement[bool]:
     """The one statement of what an open instance is."""
     return col(TaskInstance.completed_at).is_(None)
+
+
+def _is_active() -> ColumnElement[bool]:
+    """The one statement of what an active (not archived) Task is."""
+    return col(Task.archived_at).is_(None)
+
+
+def photo_evidence_eligible(task: Task) -> bool:
+    """Whether Photo Evidence may be required on this Task (AD-6, Story 4.1).
+
+    Read from the catalog by key, never stored. A custom Task has no key, so it never is.
+    """
+    if task.task_type is None:
+        return False
+    entry = task_types.task_type(task.task_type)
+    return entry is not None and entry.photo_evidence_eligible
 
 
 def _open_instance(session: Session, task_id: uuid.UUID) -> TaskInstance:
@@ -225,7 +261,7 @@ def _rows(
     query = (
         select(Task, TaskInstance)
         .join(TaskInstance, col(TaskInstance.task_id) == col(Task.id))
-        .where(Task.home_id == home_id, _is_open())
+        .where(Task.home_id == home_id, _is_active(), _is_open())
         .order_by(
             case((col(Task.classification) == "must", 0), else_=1),
             col(TaskInstance.due_on),
@@ -325,7 +361,9 @@ def adjust_task(
     # Locks the Task row until commit, so two parallel saves cannot mix one's Frequency with the
     # other's date shift. Postgres only; SQLite ignores FOR UPDATE (accepted risk).
     task = session.exec(
-        select(Task).where(Task.id == task_id, Task.home_id == membership.home_id).with_for_update()
+        select(Task)
+        .where(Task.id == task_id, Task.home_id == membership.home_id, _is_active())
+        .with_for_update()
     ).first()
     if task is None:
         session.rollback()
@@ -348,6 +386,115 @@ def adjust_task(
         session.rollback()
     session.refresh(task)
     return _row(session, task)
+
+
+def _is_duplicate(session: Session, home_id: uuid.UUID, key: str | None, name: str) -> bool:
+    """Whether an active Task of the Home has this catalog key or this name (case-insensitive)."""
+    rows = session.exec(
+        select(Task.task_type, Task.name).where(Task.home_id == home_id, _is_active())
+    ).all()
+    folded = name.casefold()
+    return any((key is not None and k == key) or n.casefold() == folded for k, n in rows)
+
+
+def add_task(
+    session: Session,
+    membership: Membership,
+    classification: str,
+    frequency_days: int,
+    task_type: str | None = None,
+    name: str | None = None,
+    today: date | None = None,
+) -> TaskWithDue:
+    """Add one Task to a set-up Home: a catalog type or a custom Task (Story 2.6, FR-24).
+
+    Exactly one of `task_type` and `name` is given. A custom name is trimmed and 1–100 characters;
+    a catalog Task takes the catalog's name. An active Task of the Home may not share the catalog
+    type or the name (case-insensitive), whichever path adds it. The first instance is due
+    `today` + Frequency like in set_up_tasks. Raises InvalidTaskChoices (Norwegian reason) for a
+    rule break and TasksNotSetUp when the Home has no Tasks yet (nothing is written).
+    """
+    if not can_adjust_tasks(membership.role):
+        raise ValueError(f"role {membership.role!r} may not add tasks")
+    if (task_type is None) == (name is None):
+        raise InvalidTaskChoices(NO_CHOICE)
+    if classification not in task_types.CLASSIFICATIONS:
+        raise InvalidTaskChoices(BAD_CLASSIFICATION)
+    if frequency_days not in task_types.FREQUENCY_DAYS:
+        raise InvalidTaskChoices(BAD_FREQUENCY)
+    if task_type is not None:
+        entry = task_types.task_type(task_type)
+        if entry is None:
+            raise InvalidTaskChoices(UNKNOWN_TASK_TYPE.format(key=task_type))
+        key: str | None = entry.key
+        task_name = entry.name
+    else:
+        assert name is not None
+        key = None
+        task_name = name.strip()
+        if not 1 <= len(task_name) <= task_types.TASK_NAME_MAX_LENGTH:
+            raise InvalidTaskChoices(BAD_NAME)
+    today = today or utc_now().date()
+    home_id = membership.home_id
+    # Same Home lock as set_up_tasks, so an add and a parallel add see each other's Task.
+    # Postgres only; SQLite ignores FOR UPDATE. The unique indexes are the backstop below.
+    session.exec(select(Home).where(Home.id == home_id).with_for_update()).one()
+    if not has_tasks(session, home_id):
+        session.rollback()
+        raise TasksNotSetUp
+    if _is_duplicate(session, home_id, key, task_name):
+        session.rollback()
+        raise InvalidTaskChoices(DUPLICATE_NAME.format(name=task_name))
+    task = Task(
+        home_id=home_id,
+        task_type=key,
+        name=task_name,
+        classification=classification,
+        frequency_days=frequency_days,
+    )
+    try:
+        session.add(task)
+        session.flush()
+        session.add(_first_instance(task, today))
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        # A parallel add won: say which rule it broke, never "already set up".
+        if _is_duplicate(session, home_id, key, task_name):
+            raise InvalidTaskChoices(DUPLICATE_NAME.format(name=task_name)) from None
+        raise InvalidTaskChoices(NOT_ADDED) from None
+    return _row(session, task)
+
+
+def archive_task(
+    session: Session,
+    membership: Membership,
+    task_id: uuid.UUID,
+    now: datetime | None = None,
+) -> None:
+    """Remove a Task by setting archived_at; instances and completions stay (Story 2.6, FR-24).
+
+    Idempotent: an already archived Task changes nothing. Found by id and Home without the
+    active filter, unlike adjust_task and complete_task_instance, which treat an archived Task
+    as not found. Raises TaskNotFound when the Task is not in the Membership's Home.
+    """
+    if not can_adjust_tasks(membership.role):
+        raise ValueError(f"role {membership.role!r} may not archive tasks")
+    now = to_utc(now) if now is not None else utc_now()
+    # Same lock as adjust_task and complete_task_instance. Postgres only.
+    task = session.exec(
+        select(Task).where(Task.id == task_id, Task.home_id == membership.home_id).with_for_update()
+    ).first()
+    if task is None:
+        session.rollback()
+        raise TaskNotFound
+    if task.archived_at is not None:
+        # Nothing written; ends the transaction and releases the lock.
+        session.rollback()
+        return
+    task.archived_at = now
+    session.add(task)
+    session.commit()
 
 
 def complete_task_instance(
@@ -373,7 +520,9 @@ def complete_task_instance(
     # Same lock as adjust_task (Task row first, then the instance), so a completion and a
     # Frequency change serialize. Postgres only; SQLite ignores FOR UPDATE (accepted risk).
     task = session.exec(
-        select(Task).where(Task.id == task_id, Task.home_id == membership.home_id).with_for_update()
+        select(Task)
+        .where(Task.id == task_id, Task.home_id == membership.home_id, _is_active())
+        .with_for_update()
     ).first()
     if task is None:
         session.rollback()

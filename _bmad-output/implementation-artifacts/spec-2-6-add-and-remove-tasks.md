@@ -2,7 +2,8 @@
 title: 'Story 2.6: Add and Remove Tasks'
 type: 'feature'
 created: '2026-11-12'
-status: 'ready-for-dev'
+status: 'in-progress'
+baseline_commit: '60c287a2584e2cabe32f017989d34f4245a778e8'
 route: 'dispatch'
 review_loop_iteration: 0
 context:
