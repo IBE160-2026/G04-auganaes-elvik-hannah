@@ -81,3 +81,16 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-1-contextual-quick-answer.md`
   summary: Check «?» with a screen reader: the live region sits in a `hidden` panel, so the skeleton text at the moment of opening may not be announced, and the failure text has `role="alert"` inside the polite region.
   evidence: Code review of Story 5.1 (Blind Hunter). Jest-dom cannot show what a screen reader says. Fix if it matters: keep a visually hidden status element outside the panel and drop `role="alert"` there.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
+  summary: Before Story 3.2 sends pushes, check that a stored endpoint does not point at an internal address, and consider an allowlist of known push-service hosts.
+  evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). 3.1 only accepts an ASCII https URL; the server does not yet POST to it, so the SSRF risk starts with 3.2.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
+  summary: In the service worker, focus and navigate an existing app window on `notificationclick` before opening a new one, and give notifications a `tag`, `icon` and `badge` so several pushes do not stack.
+  evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). Today every tap opens a new tab. It belongs with the message text and deep links of Story 3.2.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
+  summary: When real VAPID keys are set after devices subscribed with the dev key, compare the browser subscription's `applicationServerKey` with the server's key and re-subscribe on a mismatch.
+  evidence: Code review of Story 3.1 (Edge Case Hunter). A stale subscription is stored and the push service rejects the real pushes. Matters when the hosted demo gets real keys (Story 3.2); locally the key never changes.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
+  summary: Remove the device's push row also when the session ends without the «Logg ut» button (expired token), or let the server drop it.
+  evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). FR-10 now says removal is best effort. The 3-second timeout of the sign-out request is untested (a real timer would slow the suite).

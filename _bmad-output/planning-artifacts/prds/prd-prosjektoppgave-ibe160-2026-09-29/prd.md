@@ -19,6 +19,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-12 | Story 5.1 built: FR-14 states what counts toward the 20 AI calls, the UTC day and reset time, the question rules and who may use "?"; FR-22 mentions demo marking; account data lists the daily call count | `spec-5-1-contextual-quick-answer.md` |
 | 2026-11-12 | Story 5.1 follow-up: FR-14 limits the AI to the task and housework | `spec-5-1-contextual-quick-answer.md` |
 | 2026-11-12 | Epic 2 retrospective: FR-9 states that days are UTC days | `epic-2-retro-2026-11-12.md` |
+| 2026-11-12 | Story 3.1 built: FR-10 states the per-device registration, the 10-device cap, silent registration, best-effort removal at sign-out and the blocked-push note; account data lists the stored push devices | `spec-3-1-push-notification-permission-device-registration.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -227,6 +228,8 @@ The system sends a push notification to relevant Members when a task instance be
 
 **Consequences (testable):**
 - A Member with at least one due or overdue task receives one push notification per day from the daily morning due-check (scheduled around 07:00–08:00 Norwegian time; the platform may start it up to 59 minutes late), covering all of that Member's due and overdue tasks.
+- A Member turns push on per device from Settings, which shows the browser's permission (granted, denied, not asked, unsupported). Each device is registered on its own, so a second device never replaces the first, and a Member has at most 10 registered devices (an 11th replaces the one registered longest ago). When permission is already granted, opening Settings registers the device without a new prompt. A device belongs to one Member at a time: signing out removes it on a best-effort basis, and otherwise it moves to the next Member who registers it, so a Member who closes the app without signing out may still have reminders reach that browser until then.
+- A Member who has blocked push sees one inline, dismissible note on Task Overview, only while a task is overdue or due soon, and not again once that Member has dismissed it on that device.
 
 #### FR-11: Fairness-based targeted notification
 When completion attribution (FR-7) shows a Member has not performed any of a recurring shared task's recent completions, the system targets a reminder specifically to that Member instead of the whole Home. Realizes UJ-3.
@@ -445,7 +448,7 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 - Photo Evidence (FR-18/19) is restricted by design to task types where completion is objectively visible without capturing sensitive or private content (for example, a cleaned drain, not a general room photo). This is a product-level scoping rule, not merely a UX suggestion. It is enforced by a curated, system-controlled allowlist: the flag `photo_evidence_eligible` in the task catalog, which no user can change. Custom Tasks can never require Photo Evidence (FR-24).
 - Photo retention: each photo is automatically replaced the next time the same task is completed — the system never accumulates a photo history for a task. Access is restricted to the Home's Landlord only.
 - Tenant data (task history, Photo Evidence, completion records) is visible to that Tenant's Landlord by design (this is the product's core value proposition for the Landlord segment) but must not be visible to other Tenants or other Landlords outside the relevant Home.
-- Account data: an account stores an e-mail address, a display name and a password hash. Other Members of a Home see only the display name, never the e-mail address. The only user-related data sent to an external service is the minimal AI call described in FR-14. The app also stores, per user and day, how many AI calls were made (a number only, never the questions or answers). Account deletion is described in §5.
+- Account data: an account stores an e-mail address, a display name and a password hash. Other Members of a Home see only the display name, never the e-mail address. The only user-related data sent to an external service is the minimal AI call described in FR-14. The app also stores, per user and day, how many AI calls were made (a number only, never the questions or answers), and, per user and device that has turned push on, the browser's push address and its two public keys (never the Home or the Role). A Member has at most 10 such devices. Account deletion is described in §5.
 
 ## 10. Cross-Cutting NFRs
 

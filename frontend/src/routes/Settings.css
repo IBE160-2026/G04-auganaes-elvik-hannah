@@ -82,3 +82,8 @@
   color: var(--color-primary);
   font-weight: var(--font-weight-bold);
 }
+
+/* Story 3.1: the line under «Varsler» when turning push on failed. */
+.settings__error {
+  color: var(--color-danger);
+}

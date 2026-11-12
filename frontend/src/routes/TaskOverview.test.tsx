@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { HOME_MESSAGES, type Home } from '../api/homes';
 import { lastHomeKey } from '../api/lastHome';
+import { PUSH_MESSAGES } from '../api/push';
 import { TASK_MESSAGES, type Task } from '../api/tasks';
 import {
   DONE_BY_YOU_TODAY,
@@ -17,6 +18,7 @@ import {
   OLAS_TENANCY,
   completionPath,
   fakeApi,
+  fakePush,
   homesResponse,
   json,
   resetApi,
@@ -677,5 +679,55 @@ describe('Task Overview, add and an empty list (Story 2.6)', () => {
     expect(await screen.findByText(TASK_MESSAGES.tenantWaiting)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
     expect(screen.queryByText(TASK_MESSAGES.noTasks)).not.toBeInTheDocument();
+  });
+});
+
+// Story 3.1 (UX-DR31): one dismissible note when push is blocked and something is due.
+describe('Task Overview, blocked push note', () => {
+  const NOTE = PUSH_MESSAGES.deniedNote;
+
+  it('shows one inline note, not a modal, when push is denied and a Task is overdue or due soon', async () => {
+    fakePush({ permission: 'denied' });
+    fakeApi(signedInWith());
+    renderAt(PAGE);
+
+    expect(await screen.findByText(NOTE)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getAllByText(NOTE)).toHaveLength(1);
+  });
+
+  it.each([
+    ['push is allowed', 'granted', OLAS_TASKS],
+    ['push is not asked yet', 'default', OLAS_TASKS],
+    ['nothing is due, even when push is denied', 'denied', NOTHING_DUE],
+  ] as const)('shows no note when %s', async (_label, permission, tasks) => {
+    fakePush({ permission });
+    fakeApi({ ...signedInWith(), [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks }) });
+    renderAt(PAGE);
+
+    await taskList();
+    expect(screen.queryByText(NOTE)).toBeNull();
+  });
+
+  it('shows no note where the browser cannot push at all', async () => {
+    fakeApi(signedInWith());
+    renderAt(PAGE);
+
+    await taskList();
+    expect(screen.queryByText(NOTE)).toBeNull();
+  });
+
+  it('stays closed after «Lukk», also on the next visit', async () => {
+    fakePush({ permission: 'denied' });
+    fakeApi(signedInWith());
+    const first = renderAt(PAGE);
+
+    await userEvent.click(await screen.findByRole('button', { name: PUSH_MESSAGES.dismissNote }));
+    expect(screen.queryByText(NOTE)).toBeNull();
+
+    first.unmount();
+    renderAt(PAGE);
+    await taskList();
+    expect(screen.queryByText(NOTE)).toBeNull();
   });
 });

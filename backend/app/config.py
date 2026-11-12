@@ -18,6 +18,13 @@ MIN_JWT_SECRET_BYTES = 32
 # Story 5.1: the model used when GEMINI_MODEL is not set.
 DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 
+# Story 3.1 (AD-15): the public key browsers subscribe with when no VAPID keys are set. A fixed
+# P-256 point whose private half was thrown away: the mock sender (Story 3.2) never delivers, so
+# subscribing works locally and offline without any account.
+DEV_VAPID_PUBLIC_KEY = (
+    "BENY7bYG7NNnXpiNfxTonfWM7tgRr5PnqDjwEUBAvyd4_bOFdz1wxFF4Cfkuq9sf787Iug-qKOA8kYxkoNV6ow0"
+)
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -100,6 +107,19 @@ def get_gemini_api_key() -> str | None:
 
 def get_gemini_model() -> str:
     return _env("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+
+
+def push_is_mock() -> bool:
+    """Story 3.1 (AD-15): push is mocked unless both VAPID keys are set."""
+    return _env("VAPID_PUBLIC_KEY") is None or _env("VAPID_PRIVATE_KEY") is None
+
+
+def get_vapid_public_key() -> str:
+    """The key browsers subscribe with: the real one when both keys are set, else the dev key."""
+    public = _env("VAPID_PUBLIC_KEY")
+    if push_is_mock() or public is None:
+        return DEV_VAPID_PUBLIC_KEY
+    return public
 
 
 def get_settings() -> Settings:

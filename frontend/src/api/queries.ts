@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { askTask } from './ai';
 import { fetchMe, register, signIn, signOut } from './auth';
 import { ApiError } from './errors';
+import { enablePush, forgetDevice, registerDevice } from './push';
 import {
   createHome,
   fetchHomes,
@@ -91,9 +92,22 @@ export function useRegister() {
 export function useSignOut() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: signOut,
+    // Story 3.1: this device's push row goes first, while the access token still works.
+    mutationFn: async () => {
+      await forgetDevice();
+      await signOut();
+    },
     onSettled: () => queryClient.clear(),
   });
+}
+
+// Story 3.1: «Slå på varsler», and the silent registration when permission is already granted.
+export function useEnablePush() {
+  return useMutation({ mutationFn: enablePush });
+}
+
+export function useRegisterDevice() {
+  return useMutation({ mutationFn: registerDevice });
 }
 
 // Story 1.3: keyed on the user, so one user's Homes are never shown to the next.
