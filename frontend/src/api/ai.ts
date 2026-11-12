@@ -16,7 +16,7 @@ export const AI_MESSAGES = {
   demo:
     'Demo-svar: ingen KI-nøkkel er satt, så svaret er ferdigskrevet og svarer ikke på selve ' +
     'spørsmålet. Med nøkkel sendes spørsmålet til en ekstern KI-tjeneste (Google Gemini).',
-  questionLabel: 'Spør om noe annet',
+  questionLabel: 'Spør KI om mer',
   ask: 'Spør',
   retry: 'Prøv igjen',
   limit: (detail: string, resetsAt: string) => `${detail} Du kan spørre igjen ${formatReset(resetsAt)}.`,
