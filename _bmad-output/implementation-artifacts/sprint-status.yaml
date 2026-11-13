@@ -65,7 +65,7 @@ development_status:
   epic-2-retrospective: done
 
   epic-3: in-progress
-  3-1-push-notification-permission-device-registration: review
+  3-1-push-notification-permission-device-registration: done
   3-2-due-overdue-push-notifications-via-due-check-job: backlog
   3-3-fairness-based-targeted-notification: backlog
   3-4-landlord-ad-hoc-broadcast-message: backlog
