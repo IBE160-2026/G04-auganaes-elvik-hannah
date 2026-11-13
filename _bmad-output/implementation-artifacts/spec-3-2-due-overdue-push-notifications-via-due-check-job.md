@@ -2,7 +2,7 @@
 title: 'Story 3.2: Due/Overdue Push Notifications via Due-Check Job'
 type: 'feature'
 created: '2026-11-13'
-status: 'in-review'
+status: 'done'
 baseline_commit: '8ee040febd7d597edfbd391509b190f42c74e69e'
 route: 'dispatch'
 review_loop_iteration: 0
