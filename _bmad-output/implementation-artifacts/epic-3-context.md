@@ -39,4 +39,6 @@ Members get a push notification when a task becomes due or overdue, with a fairn
 ## Cross-Story Dependencies
 
 - 3.2–3.5 all depend on the PushSubscriptions and the push adapter from 3.1.
-- Retro item 3 (split `domain/tasks.py`; Norwegian day vs UTC day for the due job) must be decided before Story 3.2.
+- Retro item 3 was decided 2026-11-13, before Story 3.2:
+  - **Day:** the UTC day stays. The cron fires at 06:00 UTC (07:00/08:00 in Oslo), so the UTC and Norwegian calendar dates are the same when the job runs; only ticks between 00:00 and 01:00/02:00 local time differ, as FR-9 already says. Story 3.2 adds one `clock.utc_today()` for the routes and the due check, so switching to Europe/Oslo later is one line plus FR-9/AD-3 (then `bmad-correct-course`).
+  - **`domain/tasks.py` (566 lines):** not split. The due check goes in a new `domain/due_check.py` (and fairness in `domain/fairness.py` for 3.3); `_is_open` and `_is_active` become public so it can reuse them across Homes. Split when 3.3 has to change `_rows`, or when the file passes about 650 lines.

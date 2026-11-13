@@ -169,7 +169,12 @@ action_items:
     action: "At the start of Epic 3, decide whether to split domain/tasks.py into
       read model and commands before Stories 3.2 and 3.3 (A1)"
     owner: "Eirik and Claude"
-    status: open
+    status: done
+    decision: "2026-11-13: no split. Epic 3 code goes in new modules (domain/due_check.py,
+      later domain/fairness.py); _is_open and _is_active become public instead. Revisit if 3.3
+      must change _rows or tasks.py passes ~650 lines. Also: the day stays the UTC day (cron
+      06:00 UTC is the same calendar day in Oslo); 3.2 adds one clock.utc_today() that all
+      routes and the due check use, so a later switch to Europe/Oslo is one line."
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
   - id: "epic-2-retro-item-4-remove-browser-clock-default-in-formatdueon"
     epic: 2
