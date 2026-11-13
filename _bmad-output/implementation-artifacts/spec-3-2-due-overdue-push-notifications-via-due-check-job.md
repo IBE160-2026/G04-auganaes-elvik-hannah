@@ -2,7 +2,7 @@
 title: 'Story 3.2: Due/Overdue Push Notifications via Due-Check Job'
 type: 'feature'
 created: '2026-11-13'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: '8ee040febd7d597edfbd391509b190f42c74e69e'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -84,9 +84,46 @@ context:
 
 ## Implementation Notes
 
+- Implemented directly in the main session (no implementation subagent; the user asked for subagents only for the reviewers).
+- Backend: `clock.utc_today()` now backs every `utc_now().date()` in app code; `domain/due_check.py`, `models/due_notification.py` (migration `b9d3e7a1c5f4`, checked up, `alembic check`, down, up on a temporary Postgres database, never on `husly`), `push/` (`senders.py`, `hosts.py`), `routes/internal.py`, `pywebpush==2.5.0`.
+- The allowlist also accepts any subdomain of `push.services.mozilla.com` (Firefox's regional hosts), a little wider than the spec's single host.
+- Frontend: `service-worker.ts` (tag, icon, badge, `renotify`, focus then navigate), `api/push.ts` (key comparison, POST remove).
+- Not verifiable here: real delivery through `pywebpush` and the Vercel Cron call (both need the hosted demo). Eirik sets `CRON_SECRET` under Production in Vercel; a real run needs VAPID keys under Preview or Production.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+| Finding | Verdict | Evidence / route |
+|---|---|---|
+| Cron path in `vercel.json` not tied to the route | medium | No test read `vercel.json`; a renamed route would pass everything. Patch: test reads the file and calls the path. |
+| PRD-drift: «call without the correct secret is refused» vs local mock mode (3 reviewers) | medium | Code right (FR-22, AC 5). Patch: FR-10, epics note, AD-8 reworded. |
+| PRD-drift: AD-8 says «has been sent», code claims before sending | medium | Patch: AD-8 revised with a dated note. |
+| PRD-drift: Privacy Constraints say only the AI call leaves the system | medium | Patch: the encrypted push text is named. |
+| PRD-drift: Notification reliability NFR says «sent» | medium | Patch: says «claimed», failures logged. |
+| PRD-drift: FR-10 description «target only the Member(s) who haven't acted» | medium | That is FR-11. Patch: description reworded. |
+| PRD-drift: tray replacement and 24 h expiry unstated | low | Patch: one sentence in FR-10. |
+| PRD-drift: 10 s timeout, 200-entry mock buffer, `NAMES_SHOWN`, 401 | low | Reject: implementation choices below the requirement. |
+| `due_notifications` grows without retention; no `ON DELETE` | medium | Patch: each run deletes claims from earlier days (test). Account deletion and cascades: deferred. |
+| Test named «unique» does not exercise the constraint; `deque_empty`; `type: ignore`; ttl not asserted; no two-Homes test | medium | Patch: renamed, direct duplicate-insert test, helpers simplified, ttl asserted, two-Homes test added. |
+| `usesKey` branch without a key untested | low | Patch: Settings test. |
+| `renotify` cast hides option errors | low | Patch: narrow `PushNotificationOptions` type. |
+| Failure log without cause | low | Patch: logs the exception class. |
+| README lacks that Cron runs only in Production | medium | Patch: README says where `CRON_SECRET` goes. |
+| Claim before send loses a day for a Member without devices, a failed or 429/5xx send, or a crash | medium | Reject: decision 3 (Eirik, 2026-11-13) and matrix row «No devices»; AD-8 accepted risk. |
+| No time budget or per-Member error isolation in `run_due_check` | medium | Defer: unverified at course scale (few devices; Vercel default 300 s). |
+| 401/403 from the push service (key mismatch) not handled | medium | Defer: unverified until real VAPID keys run on the demo. |
+| Stored endpoint outside the allowlist skipped every day, never cleaned | low | Reject: only pre-allowlist dev rows; the fix adds a branch. |
+| Stale-key unsubscribe followed by a failed subscribe leaves the old row | low | Reject: the old endpoint answers 404/410 and the job deletes the row. |
+| Backend deep-link path vs `App.tsx` route only tied by strings | low | Defer: stable route from Story 2.x. |
+| No `pushsubscriptionchange` handler | medium | Defer: the device re-registers when Settings is opened. |
+| `focus` succeeds then `navigate` fails opens a second window; `matchAll` rejects | low | Reject: rare, fallback intended and tested. |
+| Summer time: `0 6 * * *` is 08:00 in summer | false | FR-10 says «around 07:00–08:00», which covers both. |
+| Allowlist wider than spec (Mozilla suffix) | low | Reject: Mozilla's own domain; noted. |
+| Spec wording «first», «`sent: 0`», «under 3 KB» | false | Matches PRD («the first few»); the response fields are `members/tasks/pushes`; names are capped at 100 characters. |
+| «Bearer hemmelig » (trailing space) may not reach the handler | false | The test passes with 401; a stripped header would give 200. |
+| `GET` changes state | false | Vercel Cron only calls GET (AD-8). |
+| Index on `(user_id, day)` | low | Reject: the table is one day long now. |
 
 ## Verification
 

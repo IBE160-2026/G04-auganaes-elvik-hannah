@@ -5,7 +5,7 @@ run_due_check finds every open instance of an active Task that is due today or o
 claims each (instance, Member, day) in `due_notifications` BEFORE sending, so a second or
 concurrent run finds the pairs taken and sends nothing. The price is deliberate (AD-8): a send
 that fails is not retried that day. Each Member gets one push covering all their tasks, across
-Homes, to each of their devices.
+Homes, to each of their devices. Claims from earlier days are deleted at the start of a run.
 """
 
 import logging
@@ -123,7 +123,14 @@ def _claim(session: Session, user_id: uuid.UUID, due: list[DueTask], today: date
     return claimed
 
 
+def _forget_old_claims(session: Session, today: date) -> None:
+    """A claim only matters on its own day, so earlier days go (the table stays one day long)."""
+    session.execute(delete(DueNotification).where(col(DueNotification.day) < today))
+    session.commit()
+
+
 def run_due_check(session: Session, sender: Sender, today: date) -> DueCheckResult:
+    _forget_old_claims(session, today)
     members = 0
     task_count = 0
     pushes = 0

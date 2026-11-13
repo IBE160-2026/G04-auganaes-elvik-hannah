@@ -226,6 +226,16 @@ describe('Settings, Varsler', () => {
     expect(push.subscribe).toHaveBeenCalledOnce();
   });
 
+  it('keeps a subscription that reports no key', async () => {
+    const push = fakePush({ permission: 'granted', subscribed: true, staleKey: true, reportsKey: false });
+    const puts: unknown[] = [];
+    fakeApi({ ...signedInWith(), ...pushServer(puts) });
+    renderAt('/innstillinger');
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(push.unsubscribe).not.toHaveBeenCalled();
+  });
+
   it('keeps a subscription made with the current key', async () => {
     const push = fakePush({ permission: 'granted', subscribed: true });
     const puts: unknown[] = [];

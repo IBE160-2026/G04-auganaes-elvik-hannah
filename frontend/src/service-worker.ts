@@ -8,6 +8,9 @@ declare const self: ServiceWorkerGlobalScope;
 
 type PushPayload = { title?: unknown; body?: unknown; url?: unknown; tag?: unknown };
 
+// `renotify` is a real option, but missing from TypeScript's lib.
+type PushNotificationOptions = NotificationOptions & { renotify?: boolean };
+
 const ICON = '/icons/icon-192.png';
 const DEFAULT_TAG = 'husly';
 
@@ -44,17 +47,16 @@ self.addEventListener('push', (event) => {
   const title = typeof payload.title === 'string' && payload.title ? payload.title : 'Husly';
   const body = typeof payload.body === 'string' ? payload.body : undefined;
   const tag = typeof payload.tag === 'string' && payload.tag ? payload.tag : DEFAULT_TAG;
-  event.waitUntil(
-    // renotify: a new push with the same tag replaces the old one but still alerts.
-    self.registration.showNotification(title, {
-      body,
-      tag,
-      icon: ICON,
-      badge: ICON,
-      data: { url: appPath(payload.url) },
-      renotify: true,
-    } as NotificationOptions),
-  );
+  // renotify: a new push with the same tag replaces the old one but still alerts.
+  const options: PushNotificationOptions = {
+    body,
+    tag,
+    icon: ICON,
+    badge: ICON,
+    data: { url: appPath(payload.url) },
+    renotify: true,
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 /** Focus and navigate an open app window; only when there is none (or it will not move) open one. */

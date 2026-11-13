@@ -73,6 +73,8 @@ type FakePushOptions = {
   subscribeFails?: boolean;
   /** True: the existing subscription was made with another application server key. */
   staleKey?: boolean;
+  /** False: the subscription reports no key at all, as older browsers do. */
+  reportsKey?: boolean;
 };
 
 /** Story 3.1: Notification, PushManager and navigator.serviceWorker, which jsdom lacks. */
@@ -83,6 +85,7 @@ export function fakePush({
   subscribed = false,
   subscribeFails = false,
   staleKey = false,
+  reportsKey = true,
 }: FakePushOptions = {}) {
   const unsubscribe = vi.fn(async () => {
     current = null;
@@ -93,7 +96,9 @@ export function fakePush({
     toJSON: () => ({ endpoint: PUSH_ENDPOINT, keys: { p256dh: 'k1', auth: 'a1' } }),
     unsubscribe,
     // A real subscription reports the key it was made with.
-    options: { applicationServerKey: staleKey ? new Uint8Array([1, 2, 3]).buffer : publicKeyBytes() },
+    options: reportsKey
+      ? { applicationServerKey: staleKey ? new Uint8Array([1, 2, 3]).buffer : publicKeyBytes() }
+      : undefined,
   };
   let current: typeof subscription | null = subscribed ? subscription : null;
   const subscribe = vi.fn(async () => {

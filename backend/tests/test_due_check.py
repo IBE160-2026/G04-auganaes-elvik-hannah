@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 from pywebpush import WebPushException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.domain import due_check, homes, tasks
@@ -15,7 +16,7 @@ from app.models.membership import Membership
 from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
 from app.models.user import User
-from app.push import MOCK_SENDER, MockSender, PushMessage, PushTarget, SendResult
+from app.push import MOCK_SENDER, MockSender, PushMessage, PushTarget, Sender, SendResult
 from app.push import senders as senders_module
 from tests.helpers import new_user, sign_up
 
@@ -60,7 +61,7 @@ def device(session: Session, user: User, endpoint: str) -> None:
     session.commit()
 
 
-def run(session: Session, sender: MockSender, today: date = TODAY) -> due_check.DueCheckResult:
+def run(session: Session, sender: Sender, today: date = TODAY) -> due_check.DueCheckResult:
     return due_check.run_due_check(session, sender, today)
 
 
@@ -154,12 +155,8 @@ def test_a_task_due_tomorrow_or_later_sends_nothing_and_claims_nothing(session: 
 
     assert run(session, sender) == due_check.DueCheckResult(0, 0, 0)
 
-    assert sender.sent == deque_empty()
+    assert len(sender.sent) == 0
     assert session.exec(select(DueNotification)).all() == []
-
-
-def deque_empty():
-    return type(MockSender().sent)(maxlen=senders_module.MOCK_KEEP)
 
 
 def test_a_second_run_the_same_day_sends_nothing(session: Session) -> None:
@@ -252,7 +249,7 @@ def test_a_member_without_devices_is_claimed_and_still_not_notified_by_a_later_r
 
     assert first == due_check.DueCheckResult(members=2, tasks=2, pushes=0)
     assert second.pushes == 0
-    assert sender.sent == deque_empty()
+    assert len(sender.sent) == 0
 
 
 def test_a_gone_device_is_deleted_and_the_others_are_still_sent(session: Session) -> None:
@@ -262,7 +259,7 @@ def test_a_gone_device_is_deleted_and_the_others_are_still_sent(session: Session
     device(session, anders, "alive")
     sender = RecordingSender({"dead": "gone"})
 
-    result = run(session, sender)  # type: ignore[arg-type]
+    result = run(session, sender)
 
     assert result.pushes == 1
     assert sorted(sender.calls) == ["alive", "dead"]
@@ -276,8 +273,8 @@ def test_a_failed_device_is_kept_and_not_retried_that_day(session: Session) -> N
     device(session, anders, "flaky")
     sender = RecordingSender({"flaky": "failed"})
 
-    run(session, sender)  # type: ignore[arg-type]
-    run(session, sender)  # type: ignore[arg-type]
+    run(session, sender)
+    run(session, sender)
 
     assert sender.calls == ["flaky"]
     assert session.exec(select(PushSubscription)).all() != []
@@ -296,10 +293,10 @@ def test_an_endpoint_outside_the_allowlist_is_never_called(session: Session) -> 
 
     run(session, sender)
 
-    assert sender.sent == deque_empty()
+    assert len(sender.sent) == 0
 
 
-def test_the_claim_is_unique_per_instance_member_and_day(session: Session) -> None:
+def test_a_run_claims_one_row_per_member_and_instance_on_its_day(session: Session) -> None:
     home_id, kari, anders = landlord_home(session)
     add_task(session, home_id, kari, "Støvsuge", TODAY)
     run(session, MockSender())
@@ -307,6 +304,62 @@ def test_the_claim_is_unique_per_instance_member_and_day(session: Session) -> No
     assert len(rows) == 2
     assert {r.user_id for r in rows} == {kari.id, anders.id}
     assert {r.day for r in rows} == {TODAY}
+
+
+def test_the_database_refuses_a_second_claim_for_the_same_instance_member_and_day(
+    session: Session,
+) -> None:
+    home_id, kari, anders = landlord_home(session)
+    task = add_task(session, home_id, kari, "Støvsuge", TODAY)
+    instance = session.exec(select(TaskInstance).where(TaskInstance.task_id == task.id)).one()
+    session.add(DueNotification(task_instance_id=instance.id, user_id=anders.id, day=TODAY))
+    session.commit()
+    session.add(DueNotification(task_instance_id=instance.id, user_id=anders.id, day=TODAY))
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()
+    # The same pair on another day is a different claim.
+    session.add(
+        DueNotification(task_instance_id=instance.id, user_id=anders.id, day=TODAY + timedelta(1))
+    )
+    session.commit()
+
+
+def test_claims_from_earlier_days_are_deleted_by_the_next_run(session: Session) -> None:
+    home_id, kari, anders = landlord_home(session)
+    add_task(session, home_id, kari, "Støvsuge", TODAY - timedelta(days=1))
+    run(session, MockSender(), TODAY)
+    run(session, MockSender(), TODAY + timedelta(days=1))
+    assert {r.day for r in session.exec(select(DueNotification)).all()} == {TODAY + timedelta(1)}
+
+
+def test_a_member_of_two_homes_gets_one_push_covering_both_and_the_overview_link(
+    session: Session,
+) -> None:
+    first, kari, _anders = landlord_home(session)
+    second = homes.create_home(session, kari, name="Bakgata 3", type="landlord").home.id
+    add_task(session, first, kari, "Støvsuge", TODAY)
+    add_task(session, second, kari, "Vaske bad", TODAY)
+    # A Landlord may own several Homes (Anders, a Tenant, may not): Kari is in both.
+    device(session, kari, "a")
+    sender = MockSender()
+
+    run(session, sender)
+
+    message = sent_to(sender)["a"]
+    assert (message.title, message.url) == ("2 oppgaver venter", "/")
+
+
+def test_the_cron_in_vercel_json_calls_a_route_that_exists_on_the_schedule_in_the_story(
+    client: TestClient,
+) -> None:
+    import json
+    from pathlib import Path
+
+    config = json.loads((Path(__file__).parents[2] / "vercel.json").read_text(encoding="utf-8"))
+    [cron] = config["crons"]
+    assert cron["schedule"] == "0 6 * * *"
+    assert client.get(cron["path"]).status_code == 200
 
 
 # --- the senders ---------------------------------------------------------------------------------
@@ -373,6 +426,7 @@ def test_the_web_push_sender_sends_the_payload_with_a_timeout(
     assert seen["vapid_private_key"] == "privat"
     assert seen["vapid_claims"] == {"sub": "mailto:a@b.example"}
     assert seen["timeout"] == senders_module.PUSH_TIMEOUT_SECONDS
+    assert seen["ttl"] == 24 * 3600
 
 
 @pytest.mark.parametrize(("status", "expected"), [(404, "gone"), (410, "gone"), (500, "failed")])

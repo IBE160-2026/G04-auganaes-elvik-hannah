@@ -94,3 +94,18 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
   summary: Remove the device's push row also when the session ends without the «Logg ut» button (expired token), or let the server drop it.
   evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). FR-10 now says removal is best effort. The 3-second timeout of the sign-out request is untested (a real timer would slow the suite).
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
+  summary: Give `run_due_check` a time budget and isolate each Member's send block, so a slow push service or an unexpected error cannot cost later Members their notification.
+  evidence: Code review of Story 3.2 (Edge Case Hunter, Blind Hunter), unverified, would be medium. Sends are sequential with 10 s per device and claims are committed per Member before sending. Fine at course scale; revisit if the demo gets many devices.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
+  summary: Treat 401/403 from a push service (VAPID key mismatch) as a stale device: delete the row or flag it, instead of logging «failed» every day.
+  evidence: Code review of Story 3.2 (Edge Case Hunter), unverified, would be medium. Matters when real VAPID keys replace the dev key in the hosted demo; confirm what each push service answers first.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
+  summary: Add a `pushsubscriptionchange` handler to the service worker so a rotated endpoint or key re-registers without opening Settings.
+  evidence: Code review of Story 3.2 (Blind Hunter), medium. Today a device is re-registered only when Settings is opened.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
+  summary: Decide `ON DELETE` behaviour for `push_subscriptions` and `due_notifications` when account deletion (PRD §5) is built, and test that deleting a user leaves no such rows.
+  evidence: Code review of Story 3.2 (Blind Hunter, Edge Case Hunter). Both tables have foreign keys to `users` without `ON DELETE`; no account deletion exists yet.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
+  summary: Add a test that the one-task push path (`/hjem/<home>/oppgaver/<task>`) matches a route in `frontend/src/App.tsx`.
+  evidence: Code review of Story 3.2 (Verification Gap), low. The backend builds the path and the frontend defines the route; only string literals tie them together.

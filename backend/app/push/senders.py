@@ -82,9 +82,9 @@ class WebPushSender:
                 return "gone"
             logger.warning("Push feilet (HTTP %s).", error.status_code)
             return "failed"
-        except Exception:
-            # A timeout or network error: the push service's address is not logged.
-            logger.warning("Push feilet.", exc_info=False)
+        except Exception as error:
+            # A timeout or network error. The class names the cause; the endpoint is not logged.
+            logger.warning("Push feilet (%s).", type(error).__name__)
             return "failed"
         return "sent"
 
