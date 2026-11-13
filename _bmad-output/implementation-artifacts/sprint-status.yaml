@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-12-2026 23:36
+last_updated: 11-13-2026 09:00
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -66,7 +66,7 @@ development_status:
 
   epic-3: in-progress
   3-1-push-notification-permission-device-registration: done
-  3-2-due-overdue-push-notifications-via-due-check-job: backlog
+  3-2-due-overdue-push-notifications-via-due-check-job: in-progress
   3-3-fairness-based-targeted-notification: backlog
   3-4-landlord-ad-hoc-broadcast-message: backlog
   3-5-landlord-controlled-notification-cadence: backlog
