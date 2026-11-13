@@ -5,7 +5,7 @@ back on a naive value, and response models type their datetimes `UtcDatetime`, s
 datetime the API sends carries a zone, whatever the database or session time zone.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from pydantic import AfterValidator
@@ -13,6 +13,11 @@ from pydantic import AfterValidator
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def utc_today() -> date:
+    """The one «today» (FR-9, AD-3): the UTC date. Switching to Europe/Oslo later is this line."""
+    return utc_now().date()
 
 
 def as_utc(moment: datetime) -> datetime:

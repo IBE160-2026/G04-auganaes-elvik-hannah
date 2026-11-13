@@ -22,7 +22,7 @@ from app.ai.providers import (
     ProviderAnswer,
     select_provider,
 )
-from app.clock import utc_now
+from app.clock import utc_today
 from app.domain import ai_usage
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ def answer_question(
     today: date | None = None,
 ) -> AiAnswer:
     """Counts the call, asks the provider, and returns the answer. Raises only LimitReached."""
-    day = today if today is not None else utc_now().date()
+    day = today if today is not None else utc_today()
     # Before counting, so a provider that cannot be built never spends one of the user's calls.
     chosen = provider if provider is not None else select_provider()
     if not ai_usage.try_count_call(session, user_id, day, AI_DAILY_LIMIT):

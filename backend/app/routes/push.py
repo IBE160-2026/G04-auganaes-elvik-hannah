@@ -7,22 +7,32 @@ routes use CurrentUser and no require_role. Every call touches only the caller's
 from typing import Annotated
 
 from fastapi import APIRouter, Response, status
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 
 from app.config import get_vapid_public_key, push_is_mock
 from app.domain import push
 from app.models.push_subscription import ENDPOINT_MAX_LENGTH, KEY_MAX_LENGTH
 from app.permissions.current_user import CurrentUser
+from app.push import is_allowed_endpoint
 from app.routes.deps import SessionDep
 
 router = APIRouter(prefix="/push", tags=["push"])
 
-# Story 3.2 will POST to this address, so it must be an https URL in visible ASCII. Real push
-# services always are; this also keeps a long non-ASCII value out of the unique index.
-Endpoint = Annotated[
-    str,
-    Field(max_length=ENDPOINT_MAX_LENGTH, pattern=r"^https://[\x21-\x7e]+$"),
+UNKNOWN_PUSH_SERVICE = "Ukjent push-tjeneste."
+
+
+def _known_push_service(endpoint: str) -> str:
+    if not is_allowed_endpoint(endpoint):
+        raise ValueError(UNKNOWN_PUSH_SERVICE)
+    return endpoint
+
+
+# The server POSTs to this address (Story 3.2), so it must be an https URL in visible ASCII on a
+# known push service (push/hosts.py, SSRF). This also keeps a long non-ASCII value out of the index.
+ShapedEndpoint = Annotated[
+    str, Field(max_length=ENDPOINT_MAX_LENGTH, pattern=r"^https://[\x21-\x7e]+$")
 ]
+Endpoint = Annotated[ShapedEndpoint, AfterValidator(_known_push_service)]
 Key = Annotated[str, Field(min_length=1, max_length=KEY_MAX_LENGTH)]
 
 
@@ -39,7 +49,8 @@ class SubscriptionIn(BaseModel):
 
 
 class EndpointIn(BaseModel):
-    endpoint: Endpoint
+    # Removing needs no host check: it only deletes the caller's own row.
+    endpoint: ShapedEndpoint
 
 
 @router.get("/config", response_model=PushConfigOut)
@@ -53,7 +64,8 @@ def register_subscription(body: SubscriptionIn, user: CurrentUser, session: Sess
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.delete("/subscriptions", status_code=status.HTTP_204_NO_CONTENT)
+# POST, not DELETE: proxies may drop the body of a DELETE (Story 3.2, risk found in Story 3.1).
+@router.post("/subscriptions/remove", status_code=status.HTTP_204_NO_CONTENT)
 def remove_subscription(body: EndpointIn, user: CurrentUser, session: SessionDep) -> Response:
     push.remove_subscription(session, user.id, body.endpoint)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

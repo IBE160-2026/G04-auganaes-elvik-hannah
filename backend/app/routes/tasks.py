@@ -26,7 +26,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
 
-from app.clock import utc_now
+from app.clock import utc_today
 from app.domain import task_types, tasks
 from app.domain.task_types import Classification, Frequency
 from app.permissions.current_user import CurrentUser
@@ -167,7 +167,7 @@ def task_out(row: tasks.TaskWithDue, today: date, viewer_id: uuid.UUID) -> TaskO
 
 
 def tasks_out(rows: list[tasks.TaskWithDue], viewer_id: uuid.UUID) -> TasksOut:
-    today = utc_now().date()
+    today = utc_today()
     return TasksOut(tasks=[task_out(row, today, viewer_id) for row in rows])
 
 
@@ -249,7 +249,7 @@ def add_task(body: AddTaskRequest, adjuster: TaskAdjuster, session: SessionDep) 
         raise HTTPException(status.HTTP_409_CONFLICT, detail=tasks.SET_UP_FIRST) from None
     except tasks.InvalidTaskChoices as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from None
-    return task_out(row, utc_now().date(), adjuster.user_id)
+    return task_out(row, utc_today(), adjuster.user_id)
 
 
 @router.delete(
@@ -303,7 +303,7 @@ def adjust_task(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND) from None
     except (tasks.NothingToChange, tasks.InvalidTaskChoices) as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from None
-    return task_out(row, utc_now().date(), adjuster.user_id)
+    return task_out(row, utc_today(), adjuster.user_id)
 
 
 @router.post(
@@ -327,4 +327,4 @@ def complete_task(
         row = tasks.complete_task_instance(session, member, task_id, instance_id)
     except tasks.TaskNotFound:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND) from None
-    return task_out(row, utc_now().date(), member.user_id)
+    return task_out(row, utc_today(), member.user_id)

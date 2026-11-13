@@ -8,13 +8,14 @@ import inspect
 import pkgutil
 import typing
 import uuid
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import AfterValidator, BaseModel, TypeAdapter
 
 import app.routes
-from app.clock import UtcDatetime, as_utc, to_utc, utc_now
+from app.clock import UtcDatetime, as_utc, to_utc, utc_now, utc_today
 from app.routes.homes import HomeOut
 from app.routes.invites import InviteOut
 from tests.helpers import sign_up
@@ -151,3 +152,10 @@ def test_the_sweep_catches_a_plain_datetime() -> None:
         "Throwaway.maybe",
         "Throwaway.many",
     ]
+
+
+def test_utc_today_is_the_utc_date_not_the_local_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 23:30 UTC on 13 November is already 14 November in Oslo: «today» stays the UTC date (FR-9).
+    late = datetime(2026, 11, 13, 23, 30, tzinfo=UTC)
+    monkeypatch.setattr("app.clock.utc_now", lambda: late)
+    assert utc_today() == date(2026, 11, 13)
