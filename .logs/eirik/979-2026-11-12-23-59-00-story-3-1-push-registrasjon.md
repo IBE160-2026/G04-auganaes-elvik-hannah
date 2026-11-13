@@ -26,25 +26,26 @@ Merge PR #56 når CI var grønn, og start Story 3.1 (issue #55, push-registrerin
 - Før Story 3.2: avgjøre om `domain/tasks.py` splittes og om «i dag» er norsk dag i stedet for UTC-dag (ligger allerede åpent fra Epic 2-retroen).
 - Story 3.2 må sjekke at endepunktet ikke peker mot intern adresse, fokusere åpent vindu ved `notificationclick` og sette `tag`/`icon`, og håndtere ny abonnering når ekte VAPID-nøkler settes (alt i `deferred-work.md`).
 
-## 2026-11-13 kl. 18:05 — Eirik
+## 2026-11-13 kl. 21:39 — Eirik
 
 ### Oppgave
-Fortsette Story 3.1: pushe branchen, lage PR, teste, kjøre `bmad-walkthrough` og merge.
+Fullføre Story 3.1 (PR, test, walkthrough, merge), ta beslutningen om norsk dag og `domain/tasks.py` som stod åpen før Story 3.2, og gjøre klart for å bygge 3.2 i ny terminal.
 
 ### Plan
-- Sjekke CI og kjøre testene lokalt, starte database, backend og preview-bygg for en manuell røyktest av push (Eirik gjorde den selv).
-- Kjøre `bmad-walkthrough` på PR #57, og merge etter Eiriks godkjenning.
-- Statuscommit etter merge: sprint-status 3-1 til `done`, CLAUDE.md og KI-logg README.
+- Pushe branchen og lage PR #57, sjekke CI, kjøre testene lokalt, og starte database, backend og preview-bygg for Eiriks manuelle røyktest av push.
+- Kjøre `bmad-walkthrough` på PR #57 og merge etter Eiriks godkjenning.
+- Statuscommit etter merge, og en egen liten PR for beslutningen om dag og `domain/tasks.py` (retro-tiltak 3).
+- Opprette issue og branch for Story 3.2 og gi Eirik en startprompt for ny terminal.
 
 ### Resultat
-- Pushet `story/3-1-push-registrasjon` og laget PR #57 (lenker issue #55, beskriver test og KI-rettinger). Endret øktlogg committet først (`2805c58`).
-- Lokalt: backend 707 grønne og `ruff` rent, frontend 467 grønne, `eslint` og bygg grønt. CI var grønn på alle jobber, også Windows og Postgres 18-migreringen.
-- Eirik testet push manuelt i produksjonsbygg (preview på port 4173, backend på 8000, seedede Mari og Jonas).
-- Walkthrough: seks konsern og fem risikopunkter (utlogging som best effort, upsert flytter rad mellom brukere, SSRF i 3.2, `DELETE` med body, VAPID-nøkkelbytte).
-- PR #57 merget 2026-11-13 (merge-commit `7e56442`). Serverne ble stoppet.
-- Statuscommit på `chore/status-etter-story-3-1`: sprint-status 3-1 = `done`, CLAUDE.md, `docs/ki-logg/README.md`. Ikke pushet.
+- PR #57 (Story 3.1) merget, merge-commit `7e56442`. Lokalt: backend 707 og frontend 467 tester grønne, `ruff`, `eslint` og bygg grønt. CI grønn på alle jobber. Eirik testet push manuelt i produksjonsbygg.
+- Walkthrough: seks konsern og fem risikopunkter (utlogging best effort, upsert flytter rad mellom brukere, SSRF i 3.2, `DELETE` med body, VAPID-nøkkelbytte).
+- PR #58 (status etter 3.1: sprint-status 3-1 = `done`, CLAUDE.md, KI-logg README) merget, merge-commit `b4fc7cd`.
+- Beslutning (PR #59, merge-commit `1e2037c`, retro-tiltak 3 = `done`): UTC-døgnet beholdes, siden cron `0 6 * * *` UTC er samme kalenderdag i Norge, og 3.2 legger inn én `clock.utc_today()`. `domain/tasks.py` splittes ikke: forfallsjobben går i `domain/due_check.py`, fairness i `domain/fairness.py`, og `_is_open`/`_is_active` gjøres offentlige. Splitt når 3.3 må endre `_rows` eller filen når ca. 650 linjer. PRD og arkitektur er uendret. Beslutningen står i `sprint-status.yaml` og `epic-3-context.md`.
+- Issue #60 (Story 3.2) og branch `story/3-2-due-check-jobb` laget fra `main`. Eirik bygger 3.2 i ny terminal med `bmad-build`.
+- Rettet underveis: PR-teksten til #58 sa at `git status` var rent, men Stop-hooken eksporterte øktloggen på nytt. Første forsøk på å oppdatere filer med `sed -i` feilet på macOS, byttet til Python.
 
 ### Åpne punkter
-- Testen av `DELETE` med body og push-registrering på Vercel Preview mot Neon er ikke gjort.
-- Story 3.2 må ta vertssjekk (SSRF) og vurdere utlogging som best effort, i tillegg til punktene som alt står i `deferred-work.md`.
-- Beslutningen om å splitte `domain/tasks.py` og om norsk dag i stedet for UTC-dag står fortsatt åpen før 3.2.
+- Story 3.2 (issue #60) skal bygges. Spec-en må ta med vertssjekk av push-adressen (SSRF), utlogging som best effort, `DELETE` med body på Vercel og VAPID-nøkkelbytte, i tillegg til `deferred-work.md`.
+- `CRON_SECRET` må settes i Vercel (Preview først) av Eirik før cron kan testes hostet, og README og `.env.example` oppdateres i samme PR.
+- Test av `DELETE` med body og push-registrering på Vercel Preview mot Neon er ikke gjort.
