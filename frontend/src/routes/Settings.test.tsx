@@ -188,7 +188,7 @@ describe('Settings, Varsler', () => {
     const api = fakeApi({
       ...signedInWith(),
       ...pushServer(),
-      'DELETE /api/push/subscriptions': async (request) => {
+      'POST /api/push/subscriptions/remove': async (request) => {
         deletes.push(await request.json());
         throw new TypeError('Failed to fetch');
       },
@@ -200,7 +200,7 @@ describe('Settings, Varsler', () => {
     await waitFor(() => expect(api.calls('POST', '/api/auth/logout')).toHaveLength(1));
     expect(deletes).toEqual([{ endpoint: PUSH_ENDPOINT }]);
     const order = api.requests.map((r) => `${r.method} ${new URL(r.url).pathname}`);
-    expect(order.indexOf('DELETE /api/push/subscriptions')).toBeLessThan(order.indexOf('POST /api/auth/logout'));
+    expect(order.indexOf('POST /api/push/subscriptions/remove')).toBeLessThan(order.indexOf('POST /api/auth/logout'));
     expect(await screen.findByRole('heading', { name: /Logg inn/ })).toBeInTheDocument();
   });
 
@@ -213,6 +213,28 @@ describe('Settings, Varsler', () => {
     await waitFor(() => expect(puts).toEqual([{ endpoint: PUSH_ENDPOINT, p256dh: 'k1', auth: 'a1' }]));
     expect(push.subscribe).toHaveBeenCalledOnce();
     expect(push.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('starts over when the subscription was made with another key', async () => {
+    const push = fakePush({ permission: 'granted', subscribed: true, staleKey: true });
+    const puts: unknown[] = [];
+    fakeApi({ ...signedInWith(), ...pushServer(puts) });
+    renderAt('/innstillinger');
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(push.unsubscribe).toHaveBeenCalledOnce();
+    expect(push.subscribe).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a subscription made with the current key', async () => {
+    const push = fakePush({ permission: 'granted', subscribed: true });
+    const puts: unknown[] = [];
+    fakeApi({ ...signedInWith(), ...pushServer(puts) });
+    renderAt('/innstillinger');
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(push.unsubscribe).not.toHaveBeenCalled();
+    expect(push.subscribe).not.toHaveBeenCalled();
   });
 
   it('shows a failed silent registration, and clears it when «Prøv igjen» works', async () => {
