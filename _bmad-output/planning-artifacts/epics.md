@@ -997,6 +997,8 @@ So that I can actually receive due/overdue reminders and broadcasts.
 **When** they later reach their first due task contextually
 **Then** Task Overview shows a single dismissible inline note explaining that reminders won't arrive — never a repeating nag, never a modal
 
+> **Note 2026-11-12 (team decisions, Story 3.1 spec, `spec-3-1-push-notification-permission-device-registration.md`):** Push is mocked without VAPID keys: the server hands out a fixed dev public key, so subscribing works offline and the mock sender (Story 3.2) records instead of delivering. A Member has at most 10 registered devices (the oldest is dropped), and signing out removes that device's subscription so a later user of a shared browser never gets the previous user's reminders. With permission already granted, Settings registers the device silently. Settings also shows a fourth state, «støttes ikke her» (no active service worker, or a browser without push), and asks for no permission then. «First due task» in the last AC means the Task Overview has a task that is overdue or due soon (the server's `due_status`); the note is shown once per user and device. The service worker registers only in production builds, so push can be tried with `npm run build && npm run preview` or Docker, not `npm run dev`. The acceptance criteria above are unchanged.
+
 ### Story 3.2: Due/Overdue Push Notifications via Due-Check Job
 
 **Stage:** Trinn 2

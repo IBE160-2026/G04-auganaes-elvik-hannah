@@ -21,6 +21,7 @@ import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
 import { ROLE_LABELS, type Home } from '../api/homes';
 import { recordLastHome } from '../api/lastHome';
+import { PUSH_MESSAGES, isPushDenied, readNoteDismissed, recordNoteDismissed } from '../api/push';
 import { useCompleteTask, useHomes, useTasksWithPending, type TaskView } from '../api/queries';
 import { useSession } from '../api/session';
 import {
@@ -221,9 +222,37 @@ function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh
         <p className={`task-overview__pull${pulled ? ' task-overview__pull--ready' : ''}`} aria-hidden="true">
           Slipp for å oppdatere
         </p>
+        <DeniedPushNote views={views} />
         <TaskListBody home={home} tasks={tasks} views={views} />
       </section>
     </>
+  );
+}
+
+/**
+ * Story 3.1 (UX-DR31): when push is blocked and a Task is overdue or due soon (the server's
+ * due_status, never the browser's clock), one inline note says reminders will not arrive. It is
+ * not a modal, can be closed, and once closed it stays closed for this user on this device.
+ */
+function DeniedPushNote({ views }: { views: TaskView[] | undefined }) {
+  const userId = useSession()?.user.id;
+  const [dismissed, setDismissed] = useState(() => readNoteDismissed(userId));
+  const somethingDue = views?.some((task) => !task.pending && task.due_status !== 'later') ?? false;
+  if (dismissed || !somethingDue || !isPushDenied()) return null;
+  return (
+    <aside className="task-overview__push-note" aria-label="Om varsler">
+      <p>{PUSH_MESSAGES.deniedNote}</p>
+      <button
+        type="button"
+        className="task-overview__secondary"
+        onClick={() => {
+          recordNoteDismissed(userId);
+          setDismissed(true);
+        }}
+      >
+        {PUSH_MESSAGES.dismissNote}
+      </button>
+    </aside>
   );
 }
 

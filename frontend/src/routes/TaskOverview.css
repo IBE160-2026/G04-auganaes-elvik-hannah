@@ -242,3 +242,14 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Story 3.1: the one inline note when push is blocked. Never a modal. */
+.task-overview__push-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}

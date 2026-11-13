@@ -7,6 +7,7 @@
 // answers PATCH /api/homes/<id>/tasks/<taskId>.
 // Story 2.4: tasks carry instance_id and completion; completeHandler answers the completion POST.
 // Story 5.1: answerHandler answers the «?» POST (answer, error, limit, failure).
+// Story 3.1: fakePush stubs the browser's push APIs; pushServer answers /api/push.
 // Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
@@ -46,7 +47,75 @@ export function fakeApi(handlers: Record<string, Handler>) {
 
 export function resetApi() {
   vi.unstubAllGlobals();
+  delete (navigator as { serviceWorker?: unknown }).serviceWorker;
   setSession(null);
+}
+
+export const PUSH_ENDPOINT = 'https://push.example/device-1';
+
+type FakePushOptions = {
+  permission?: NotificationPermission;
+  /** The permission a tap on «Slå på varsler» ends with. */
+  answer?: NotificationPermission;
+  /** False: no active service worker, as on the dev server. */
+  worker?: boolean;
+  /** True: the browser already holds a subscription. */
+  subscribed?: boolean;
+  /** True: pushManager.subscribe rejects. */
+  subscribeFails?: boolean;
+};
+
+/** Story 3.1: Notification, PushManager and navigator.serviceWorker, which jsdom lacks. */
+export function fakePush({
+  permission = 'default',
+  answer = 'granted',
+  worker = true,
+  subscribed = false,
+  subscribeFails = false,
+}: FakePushOptions = {}) {
+  const subscription = {
+    endpoint: PUSH_ENDPOINT,
+    toJSON: () => ({ endpoint: PUSH_ENDPOINT, keys: { p256dh: 'k1', auth: 'a1' } }),
+  };
+  let current: typeof subscription | null = subscribed ? subscription : null;
+  const subscribe = vi.fn(async () => {
+    if (subscribeFails) throw new DOMException('denied', 'NotAllowedError');
+    current = subscription;
+    return subscription;
+  });
+  const state = { permission };
+  const requestPermission = vi.fn(async () => {
+    state.permission = answer;
+    return answer;
+  });
+  vi.stubGlobal('Notification', {
+    requestPermission,
+    get permission() {
+      return state.permission;
+    },
+  });
+  vi.stubGlobal('PushManager', class {});
+  Object.defineProperty(navigator, 'serviceWorker', {
+    configurable: true,
+    value: {
+      getRegistration: async () =>
+        worker ? { active: {}, pushManager: { getSubscription: async () => current, subscribe } } : undefined,
+    },
+  });
+  return { requestPermission, subscribe };
+}
+
+/** Story 3.1: the push routes. Records PUT bodies; `config` answers GET /api/push/config. */
+export function pushServer(puts: unknown[] = [], status: 204 | 500 = 204) {
+  return {
+    'GET /api/push/config': () => json(200, { public_key: 'BENY7bYG7NNnXpiNfxTonfWM7tgRr5PnqDjwEUBAvyd4_bOFdz1wxFF4Cfkuq9sf787Iug-qKOA8kYxkoNV6ow0', mock: true }),
+    'PUT /api/push/subscriptions': async (request: Request) => {
+      puts.push(await request.json());
+      return status === 204 ? new Response(null, { status: 204 }) : json(500, { detail: 'Internal Server Error' });
+    },
+    'DELETE /api/push/subscriptions': () => new Response(null, { status: 204 }),
+    'POST /api/auth/logout': () => new Response(null, { status: 204 }),
+  } satisfies Record<string, Handler>;
 }
 
 // Story 1.3: Homes as GET /api/homes returns them.

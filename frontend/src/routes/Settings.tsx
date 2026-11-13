@@ -2,9 +2,14 @@
 // hjem» to switch between Homes (each with «Medlemmer», and «Sett opp oppgaver» while it has no
 // Tasks and the user may set them up), «Opprett nytt hjem» when the server's allowed_types offers
 // something, and «Logg ut». «Bytt hjem» on the Task Overview lands on #dine-hjem.
+// Story 3.1 (FR-10, UX-DR31): «Varsler» shows the browser's push permission plainly and turns push
+// on for this device with one tap; with permission already granted the device is registered
+// silently, so a user who signs in on a browser that allowed push is not left without a row.
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { ROLE_LABELS, type Home } from '../api/homes';
-import { useHomes, useMe, useSignOut } from '../api/queries';
+import { PUSH_MESSAGES, readPushStatus, type PushStatus } from '../api/push';
+import { useEnablePush, useHomes, useMe, useRegisterDevice, useSignOut } from '../api/queries';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
@@ -90,9 +95,61 @@ function SettingsPage({ homes, canCreate }: { homes: readonly Home[]; canCreate:
           </Link>
         )}
       </section>
+      <PushSection />
       <PrimaryButton onClick={() => signOut.mutate()} pending={signOut.isPending}>
         Logg ut
       </PrimaryButton>
     </div>
+  );
+}
+
+function PushSection() {
+  const [status, setStatus] = useState<PushStatus | null>(null);
+  const enable = useEnablePush();
+  const register = useRegisterDevice();
+  const { mutate: registerSilently } = register;
+
+  useEffect(() => {
+    let current = true;
+    void readPushStatus().then((value) => {
+      if (!current) return;
+      setStatus(value);
+      // Only on opening the page: a tap on «Slå på varsler» registers the device itself.
+      if (value === 'granted') registerSilently();
+    });
+    return () => {
+      current = false;
+    };
+  }, [registerSilently]);
+
+  const failed = enable.isError || register.isError;
+
+  function turnOn() {
+    // A failed silent registration must not keep its error after a retry that works.
+    register.reset();
+    enable.mutate(undefined, { onSettled: () => void readPushStatus().then(setStatus) });
+  }
+
+  return (
+    <section className="settings__section" aria-labelledby="settings-push">
+      <h2 id="settings-push" className="settings__subtitle">
+        {PUSH_MESSAGES.title}
+      </h2>
+      {status === null ? (
+        <p role="status">Laster …</p>
+      ) : (
+        <p aria-live="polite">{PUSH_MESSAGES[status]}</p>
+      )}
+      {failed && (
+        <p className="settings__error" role="alert">
+          {PUSH_MESSAGES.failed}
+        </p>
+      )}
+      {(status === 'default' || (failed && status === 'granted')) && (
+        <PrimaryButton onClick={turnOn} pending={enable.isPending}>
+          {failed ? PUSH_MESSAGES.retry : PUSH_MESSAGES.enable}
+        </PrimaryButton>
+      )}
+    </section>
   );
 }

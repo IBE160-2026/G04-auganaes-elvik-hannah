@@ -3,7 +3,8 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import type { Home } from '../api/homes';
-import { OLA, OLAS_HOME, fakeApi, json, resetApi, signedInWith } from '../test-utils/fakeApi';
+import { PUSH_MESSAGES } from '../api/push';
+import { OLA, OLAS_HOME, PUSH_ENDPOINT, fakeApi, fakePush, json, pushServer, resetApi, signedInWith } from '../test-utils/fakeApi';
 
 const STORGATA: Home = {
   ...OLAS_HOME,
@@ -113,5 +114,121 @@ describe('Settings', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: STORGATA.name })).toBeInTheDocument();
     expect(window.location.pathname).toBe(`/hjem/${STORGATA.id}`);
+  });
+});
+
+// Story 3.1 (FR-10, UX-DR31): «Varsler» shows the permission and registers this device.
+describe('Settings, Varsler', () => {
+  function pushSection() {
+    return within(screen.getByRole('region', { name: 'Varsler' }));
+  }
+
+  it.each([
+    ['default', PUSH_MESSAGES.default],
+    ['denied', PUSH_MESSAGES.denied],
+  ] as const)('says plainly that the permission is %s', async (permission, text) => {
+    fakePush({ permission });
+    fakeApi({ ...signedInWith(), ...pushServer() });
+    renderAt('/innstillinger');
+
+    await screen.findByRole('region', { name: 'Varsler' });
+    expect(await pushSection().findByText(text)).toBeInTheDocument();
+    expect(pushSection().queryByRole('button', { name: PUSH_MESSAGES.enable }) !== null).toBe(permission === 'default');
+  });
+
+  it('says push is unsupported without an active service worker, and never waits for one', async () => {
+    fakePush({ worker: false });
+    fakeApi({ ...signedInWith(), ...pushServer() });
+    renderAt('/innstillinger');
+
+    await screen.findByRole('region', { name: 'Varsler' });
+    expect(await pushSection().findByText(PUSH_MESSAGES.unsupported)).toBeInTheDocument();
+    expect(pushSection().queryByRole('button')).toBeNull();
+  });
+
+  it('asks for permission only after the tap, then stores this device with its keys', async () => {
+    const push = fakePush({ permission: 'default', answer: 'granted' });
+    const puts: unknown[] = [];
+    fakeApi({ ...signedInWith(), ...pushServer(puts) });
+    renderAt('/innstillinger');
+
+    await screen.findByRole('region', { name: 'Varsler' });
+    await pushSection().findByText(PUSH_MESSAGES.default);
+    expect(push.requestPermission).not.toHaveBeenCalled();
+    await userEvent.click(pushSection().getByRole('button', { name: PUSH_MESSAGES.enable }));
+
+    expect(await pushSection().findByText(PUSH_MESSAGES.granted)).toBeInTheDocument();
+    expect(push.subscribe).toHaveBeenCalledOnce();
+    expect(puts).toEqual([{ endpoint: PUSH_ENDPOINT, p256dh: 'k1', auth: 'a1' }]);
+  });
+
+  it('keeps the status and offers «Prøv igjen» when the subscription fails', async () => {
+    fakePush({ permission: 'default', answer: 'granted', subscribeFails: true });
+    fakeApi({ ...signedInWith(), ...pushServer() });
+    renderAt('/innstillinger');
+
+    await userEvent.click(await screen.findByRole('button', { name: PUSH_MESSAGES.enable }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(PUSH_MESSAGES.failed);
+    expect(pushSection().getByRole('button', { name: PUSH_MESSAGES.retry })).toBeInTheDocument();
+  });
+
+  it('registers this device silently when permission is already granted', async () => {
+    const push = fakePush({ permission: 'granted', subscribed: true });
+    const puts: unknown[] = [];
+    fakeApi({ ...signedInWith(), ...pushServer(puts) });
+    renderAt('/innstillinger');
+
+    await waitFor(() => expect(puts).toEqual([{ endpoint: PUSH_ENDPOINT, p256dh: 'k1', auth: 'a1' }]));
+    expect(push.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('removes this device on the server before signing out, and still signs out if that fails', async () => {
+    fakePush({ permission: 'granted', subscribed: true });
+    const deletes: unknown[] = [];
+    const api = fakeApi({
+      ...signedInWith(),
+      ...pushServer(),
+      'DELETE /api/push/subscriptions': async (request) => {
+        deletes.push(await request.json());
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    renderAt('/innstillinger');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Logg ut' }));
+
+    await waitFor(() => expect(api.calls('POST', '/api/auth/logout')).toHaveLength(1));
+    expect(deletes).toEqual([{ endpoint: PUSH_ENDPOINT }]);
+    const order = api.requests.map((r) => `${r.method} ${new URL(r.url).pathname}`);
+    expect(order.indexOf('DELETE /api/push/subscriptions')).toBeLessThan(order.indexOf('POST /api/auth/logout'));
+    expect(await screen.findByRole('heading', { name: /Logg inn/ })).toBeInTheDocument();
+  });
+
+  it('subscribes this browser when permission is granted but it holds no subscription yet', async () => {
+    const push = fakePush({ permission: 'granted', subscribed: false });
+    const puts: unknown[] = [];
+    fakeApi({ ...signedInWith(), ...pushServer(puts) });
+    renderAt('/innstillinger');
+
+    await waitFor(() => expect(puts).toEqual([{ endpoint: PUSH_ENDPOINT, p256dh: 'k1', auth: 'a1' }]));
+    expect(push.subscribe).toHaveBeenCalledOnce();
+    expect(push.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('shows a failed silent registration, and clears it when «Prøv igjen» works', async () => {
+    fakePush({ permission: 'granted', subscribed: true });
+    let status: 204 | 500 = 500;
+    fakeApi({
+      ...signedInWith(),
+      ...pushServer(),
+      'PUT /api/push/subscriptions': () =>
+        status === 204 ? new Response(null, { status: 204 }) : json(500, { detail: 'nei' }),
+    });
+    renderAt('/innstillinger');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(PUSH_MESSAGES.failed);
+    status = 204;
+    await userEvent.click(pushSection().getByRole('button', { name: PUSH_MESSAGES.retry }));
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });
 });
