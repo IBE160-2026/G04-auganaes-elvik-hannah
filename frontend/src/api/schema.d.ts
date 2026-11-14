@@ -387,8 +387,24 @@ export interface paths {
         /** Register Subscription */
         put: operations["register_subscription_api_push_subscriptions_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/push/subscriptions/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         /** Remove Subscription */
-        delete: operations["remove_subscription_api_push_subscriptions_delete"];
+        post: operations["remove_subscription_api_push_subscriptions_remove_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1711,7 +1727,7 @@ export interface operations {
             };
         };
     };
-    remove_subscription_api_push_subscriptions_delete: {
+    remove_subscription_api_push_subscriptions_remove_post: {
         parameters: {
             query?: never;
             header?: never;

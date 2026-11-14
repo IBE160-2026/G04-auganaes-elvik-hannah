@@ -88,3 +88,6 @@
 - [ ] 2026-11-12 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Story 3.2 må ta med `deferred-work.md`-punktene fra 3.1: endepunkt mot intern adresse, fokus på åpent vindu og `tag`/`icon`, ny abonnering ved bytte til ekte VAPID-nøkler, fjerning av rad ved utløpt økt
 - [ ] 2026-11-13 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Teste `DELETE /api/push/subscriptions` (JSON-body) og push-registrering på Vercel Preview/Neon; ikke sett utenfor lokal kjøring
 - [ ] 2026-11-13 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Story 3.2 må ta vertssjekk av push-adressen (SSRF) og vurdere utlogging som best effort (rad blir stående hvis DELETE feiler eller økten utløper) før den sender til delte nettlesere
+
+- [ ] 2026-11-13 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Bygg Story 3.2 (issue #60, branch `story/3-2-due-check-jobb`) i ny terminal med `bmad-build`
+- [ ] 2026-11-13 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Eirik: sett `CRON_SECRET` i Vercel (Preview først) før cron testes hostet

@@ -11,9 +11,12 @@ from app.models.push_subscription import PushSubscription
 from tests.helpers import new_user, sign_up
 
 URL = "/api/push/subscriptions"
+REMOVE_URL = URL + "/remove"
 
 
-def body(endpoint: str = "https://push.example/a", p256dh: str = "k1", auth: str = "a1") -> dict:
+def body(
+    endpoint: str = "https://fcm.googleapis.com/fcm/send/a", p256dh: str = "k1", auth: str = "a1"
+) -> dict:
     return {"endpoint": endpoint, "p256dh": p256dh, "auth": auth}
 
 
@@ -26,18 +29,25 @@ def test_first_device_is_stored_for_the_user(client: TestClient, session: Sessio
     mari = sign_up(client, "Mari")
     assert client.put(URL, json=body(), headers=mari).status_code == 204
     [row] = rows(session)
-    assert (row.endpoint, row.p256dh, row.auth) == ("https://push.example/a", "k1", "a1")
+    assert (row.endpoint, row.p256dh, row.auth) == (
+        "https://fcm.googleapis.com/fcm/send/a",
+        "k1",
+        "a1",
+    )
 
 
 def test_a_second_device_adds_a_row_and_leaves_the_first(
     client: TestClient, session: Session
 ) -> None:
     mari = sign_up(client, "Mari")
-    client.put(URL, json=body("https://push.example/a"), headers=mari)
-    client.put(URL, json=body("https://push.example/b", "k2", "a2"), headers=mari)
+    client.put(URL, json=body("https://fcm.googleapis.com/fcm/send/a"), headers=mari)
+    client.put(URL, json=body("https://fcm.googleapis.com/fcm/send/b", "k2", "a2"), headers=mari)
     by_endpoint = {r.endpoint: r for r in rows(session)}
-    assert set(by_endpoint) == {"https://push.example/a", "https://push.example/b"}
-    assert by_endpoint["https://push.example/a"].p256dh == "k1"
+    assert set(by_endpoint) == {
+        "https://fcm.googleapis.com/fcm/send/a",
+        "https://fcm.googleapis.com/fcm/send/b",
+    }
+    assert by_endpoint["https://fcm.googleapis.com/fcm/send/a"].p256dh == "k1"
     assert len({r.user_id for r in by_endpoint.values()}) == 1
 
 
@@ -67,41 +77,41 @@ def test_the_eleventh_device_removes_the_oldest(client: TestClient, session: Ses
     mari = sign_up(client, "Mari")
     assert push.MAX_SUBSCRIPTIONS_PER_USER == 10
     for n in range(11):
-        client.put(URL, json=body(f"https://push.example/{n}"), headers=mari)
+        client.put(URL, json=body(f"https://fcm.googleapis.com/fcm/send/{n}"), headers=mari)
     endpoints = {r.endpoint for r in rows(session)}
     assert len(endpoints) == 10
-    assert "https://push.example/0" not in endpoints
-    assert "https://push.example/10" in endpoints
+    assert "https://fcm.googleapis.com/fcm/send/0" not in endpoints
+    assert "https://fcm.googleapis.com/fcm/send/10" in endpoints
 
 
 def test_sign_out_removes_only_the_callers_own_row(client: TestClient, session: Session) -> None:
     mari = sign_up(client, "Mari")
     jonas = sign_up(client, "Jonas")
-    client.put(URL, json=body("https://push.example/mari"), headers=mari)
-    client.put(URL, json=body("https://push.example/jonas"), headers=jonas)
+    client.put(URL, json=body("https://fcm.googleapis.com/fcm/send/mari"), headers=mari)
+    client.put(URL, json=body("https://fcm.googleapis.com/fcm/send/jonas"), headers=jonas)
     # Jonas cannot delete Mari's device, and deleting a row that is not there is fine.
     assert (
-        client.request(
-            "DELETE", URL, json={"endpoint": "https://push.example/mari"}, headers=jonas
+        client.post(
+            REMOVE_URL, json={"endpoint": "https://fcm.googleapis.com/fcm/send/mari"}, headers=jonas
         ).status_code
         == 204
     )
     assert {r.endpoint for r in rows(session)} == {
-        "https://push.example/mari",
-        "https://push.example/jonas",
+        "https://fcm.googleapis.com/fcm/send/mari",
+        "https://fcm.googleapis.com/fcm/send/jonas",
     }
     assert (
-        client.request(
-            "DELETE", URL, json={"endpoint": "https://push.example/mari"}, headers=mari
+        client.post(
+            REMOVE_URL, json={"endpoint": "https://fcm.googleapis.com/fcm/send/mari"}, headers=mari
         ).status_code
         == 204
     )
-    assert {r.endpoint for r in rows(session)} == {"https://push.example/jonas"}
+    assert {r.endpoint for r in rows(session)} == {"https://fcm.googleapis.com/fcm/send/jonas"}
 
 
 def test_push_routes_need_a_signed_in_user(client: TestClient) -> None:
     assert client.put(URL, json=body()).status_code == 401
-    assert client.request("DELETE", URL, json={"endpoint": "x"}).status_code == 401
+    assert client.post(REMOVE_URL, json={"endpoint": "https://x"}).status_code == 401
     assert client.get("/api/push/config").status_code == 401
 
 
@@ -141,7 +151,13 @@ def test_config_hands_out_the_real_key_only_when_both_keys_are_set(
 
 
 @pytest.mark.parametrize(
-    "endpoint", ["http://push.example/a", "ftp://push.example/a", "https://push.example/ø", "push"]
+    "endpoint",
+    [
+        "http://push.example/a",
+        "ftp://push.example/a",
+        "https://fcm.googleapis.com/fcm/send/ø",
+        "push",
+    ],
 )
 def test_only_an_ascii_https_endpoint_is_accepted(client: TestClient, endpoint: str) -> None:
     mari = sign_up(client, "Mari")
@@ -153,7 +169,7 @@ def test_a_parallel_registration_of_the_same_endpoint_updates_the_row_that_won(
 ) -> None:
     jonas = new_user(session, "Jonas")
     mari = new_user(session, "Mari")
-    endpoint = "https://push.example/a"
+    endpoint = "https://fcm.googleapis.com/fcm/send/a"
     push.register_subscription(session, jonas.id, endpoint, "old", "old")
 
     # Mari's request looked the endpoint up before Jonas's insert was visible: the first lookup
@@ -178,3 +194,57 @@ def test_a_parallel_registration_of_the_same_endpoint_updates_the_row_that_won(
     session.expire_all()
     [row] = session.exec(select(PushSubscription)).all()
     assert (row.user_id, row.p256dh, row.auth) == (mari.id, "new", "new")
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://169.254.169.254/latest/meta-data",
+        "https://localhost/push",
+        "https://fcm.googleapis.com.evil.example/x",
+        "https://fcm.googleapis.com@evil.example/x",
+        "https://evilnotify.windows.com/x",
+        "https://fcm.googleapis.com:8443/x",
+        "http://fcm.googleapis.com/x",
+    ],
+)
+def test_an_endpoint_outside_the_push_services_is_422(
+    client: TestClient, session: Session, endpoint: str
+) -> None:
+    mari = sign_up(client, "Mari")
+    assert client.put(URL, json=body(endpoint), headers=mari).status_code == 422
+    assert rows(session) == []
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://updates.push.services.mozilla.com/wpush/v2/abc",
+        "https://web.push.apple.com/abc",
+        "https://eu.push.apple.com/abc",
+        "https://db5p.notify.windows.com/?token=abc",
+    ],
+)
+def test_the_known_push_services_are_accepted(
+    client: TestClient, session: Session, endpoint: str
+) -> None:
+    mari = sign_up(client, "Mari")
+    assert client.put(URL, json=body(endpoint), headers=mari).status_code == 204
+
+
+def test_removing_an_endpoint_needs_no_known_host(client: TestClient) -> None:
+    mari = sign_up(client, "Mari")
+    assert (
+        client.post(
+            REMOVE_URL, json={"endpoint": "https://gammel.example/x"}, headers=mari
+        ).status_code
+        == 204
+    )
+
+
+def test_delete_with_a_body_is_gone(client: TestClient) -> None:
+    mari = sign_up(client, "Mari")
+    assert (
+        client.request("DELETE", URL, json={"endpoint": "https://x"}, headers=mari).status_code
+        == 405
+    )

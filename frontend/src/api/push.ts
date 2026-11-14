@@ -56,6 +56,14 @@ function urlBase64ToBytes(value: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(raw, (char) => char.charCodeAt(0));
 }
 
+/** A subscription that reports no key (older browsers) counts as matching. */
+function usesKey(subscription: PushSubscription, key: Uint8Array): boolean {
+  const current = subscription.options?.applicationServerKey;
+  if (!current) return true;
+  const bytes = new Uint8Array(current);
+  return bytes.length === key.length && bytes.every((byte, index) => byte === key[index]);
+}
+
 async function fetchPushKey(): Promise<string> {
   const { data, error, response } = await api.GET('/api/push/config');
   if (!data) throw toApiError(response, error, { passThrough: [], fallback: GENERIC_ERROR });
@@ -70,12 +78,18 @@ async function fetchPushKey(): Promise<string> {
 export async function registerDevice(): Promise<void> {
   const registration = await activeRegistration();
   if (!registration) throw new Error('Ingen aktiv service worker.');
-  const subscription =
-    (await registration.pushManager.getSubscription()) ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToBytes(await fetchPushKey()),
-    }));
+  const key = urlBase64ToBytes(await fetchPushKey());
+  let subscription = await registration.pushManager.getSubscription();
+  if (subscription && !usesKey(subscription, key)) {
+    // Made with another key (the dev key, before real VAPID keys were set): the push service
+    // would refuse the server's pushes, so start over.
+    await subscription.unsubscribe();
+    subscription = null;
+  }
+  subscription ??= await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: key,
+  });
   const { endpoint, keys } = subscription.toJSON();
   if (!endpoint || !keys?.p256dh || !keys.auth) throw new Error('Ufullstendig push-abonnement.');
   const { error, response } = await api.PUT('/api/push/subscriptions', {
@@ -98,7 +112,7 @@ export async function forgetDevice(): Promise<void> {
   try {
     const subscription = await (await activeRegistration())?.pushManager.getSubscription();
     if (!subscription) return;
-    await api.DELETE('/api/push/subscriptions', {
+    await api.POST('/api/push/subscriptions/remove', {
       body: { endpoint: subscription.endpoint },
       signal: AbortSignal.timeout(SIGN_OUT_TIMEOUT_MS),
     });

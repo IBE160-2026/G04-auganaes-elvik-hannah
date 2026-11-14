@@ -53,6 +53,14 @@ export function resetApi() {
 
 export const PUSH_ENDPOINT = 'https://push.example/device-1';
 
+const PUSH_PUBLIC_KEY = 'BENY7bYG7NNnXpiNfxTonfWM7tgRr5PnqDjwEUBAvyd4_bOFdz1wxFF4Cfkuq9sf787Iug-qKOA8kYxkoNV6ow0';
+
+/** The bytes of the key the fake server hands out, as a browser reports them on a subscription. */
+function publicKeyBytes(): ArrayBuffer {
+  const padded = PUSH_PUBLIC_KEY.replace(/-/g, '+').replace(/_/g, '/').padEnd(88, '=');
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)).buffer;
+}
+
 type FakePushOptions = {
   permission?: NotificationPermission;
   /** The permission a tap on «Slå på varsler» ends with. */
@@ -63,6 +71,10 @@ type FakePushOptions = {
   subscribed?: boolean;
   /** True: pushManager.subscribe rejects. */
   subscribeFails?: boolean;
+  /** True: the existing subscription was made with another application server key. */
+  staleKey?: boolean;
+  /** False: the subscription reports no key at all, as older browsers do. */
+  reportsKey?: boolean;
 };
 
 /** Story 3.1: Notification, PushManager and navigator.serviceWorker, which jsdom lacks. */
@@ -72,16 +84,27 @@ export function fakePush({
   worker = true,
   subscribed = false,
   subscribeFails = false,
+  staleKey = false,
+  reportsKey = true,
 }: FakePushOptions = {}) {
+  const unsubscribe = vi.fn(async () => {
+    current = null;
+    return true;
+  });
   const subscription = {
     endpoint: PUSH_ENDPOINT,
     toJSON: () => ({ endpoint: PUSH_ENDPOINT, keys: { p256dh: 'k1', auth: 'a1' } }),
+    unsubscribe,
+    // A real subscription reports the key it was made with.
+    options: reportsKey
+      ? { applicationServerKey: staleKey ? new Uint8Array([1, 2, 3]).buffer : publicKeyBytes() }
+      : undefined,
   };
   let current: typeof subscription | null = subscribed ? subscription : null;
   const subscribe = vi.fn(async () => {
     if (subscribeFails) throw new DOMException('denied', 'NotAllowedError');
-    current = subscription;
-    return subscription;
+    current = { ...subscription, options: { applicationServerKey: publicKeyBytes() } };
+    return current;
   });
   const state = { permission };
   const requestPermission = vi.fn(async () => {
@@ -102,18 +125,18 @@ export function fakePush({
         worker ? { active: {}, pushManager: { getSubscription: async () => current, subscribe } } : undefined,
     },
   });
-  return { requestPermission, subscribe };
+  return { requestPermission, subscribe, unsubscribe };
 }
 
 /** Story 3.1: the push routes. Records PUT bodies; `config` answers GET /api/push/config. */
 export function pushServer(puts: unknown[] = [], status: 204 | 500 = 204) {
   return {
-    'GET /api/push/config': () => json(200, { public_key: 'BENY7bYG7NNnXpiNfxTonfWM7tgRr5PnqDjwEUBAvyd4_bOFdz1wxFF4Cfkuq9sf787Iug-qKOA8kYxkoNV6ow0', mock: true }),
+    'GET /api/push/config': () => json(200, { public_key: PUSH_PUBLIC_KEY, mock: true }),
     'PUT /api/push/subscriptions': async (request: Request) => {
       puts.push(await request.json());
       return status === 204 ? new Response(null, { status: 204 }) : json(500, { detail: 'Internal Server Error' });
     },
-    'DELETE /api/push/subscriptions': () => new Response(null, { status: 204 }),
+    'POST /api/push/subscriptions/remove': () => new Response(null, { status: 204 }),
     'POST /api/auth/logout': () => new Response(null, { status: 204 }),
   } satisfies Record<string, Handler>;
 }

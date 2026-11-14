@@ -16,5 +16,6 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "backend" } },
     { "source": "/(.*)", "destination": { "service": "frontend" } }
-  ]
+  ],
+  "crons": [{ "path": "/api/internal/run-due-check", "schedule": "0 6 * * *" }]
 }

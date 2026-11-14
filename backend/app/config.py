@@ -25,6 +25,9 @@ DEV_VAPID_PUBLIC_KEY = (
     "BENY7bYG7NNnXpiNfxTonfWM7tgRr5PnqDjwEUBAvyd4_bOFdz1wxFF4Cfkuq9sf787Iug-qKOA8kYxkoNV6ow0"
 )
 
+# Story 3.2: the contact address in the VAPID claim when VAPID_SUBJECT is not set.
+DEFAULT_VAPID_SUBJECT = "mailto:husly@example.com"
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -93,9 +96,13 @@ def get_jwt_secret() -> str:
     return secret
 
 
+def is_vercel() -> bool:
+    return _env("VERCEL") is not None
+
+
 def get_cookie_secure() -> bool:
     """Secure refresh cookie: always on Vercel, locally only with AUTH_COOKIE_SECURE=true."""
-    if _env("VERCEL"):
+    if is_vercel():
         return True
     return (_env("AUTH_COOKIE_SECURE") or "").lower() == "true"
 
@@ -112,6 +119,20 @@ def get_gemini_model() -> str:
 def push_is_mock() -> bool:
     """Story 3.1 (AD-15): push is mocked unless both VAPID keys are set."""
     return _env("VAPID_PUBLIC_KEY") is None or _env("VAPID_PRIVATE_KEY") is None
+
+
+def get_vapid_private_key() -> str | None:
+    return _env("VAPID_PRIVATE_KEY")
+
+
+def get_vapid_subject() -> str:
+    """Story 3.2: the `sub` claim push services may use to reach the sender. Generic by default."""
+    return _env("VAPID_SUBJECT") or DEFAULT_VAPID_SUBJECT
+
+
+def get_cron_secret() -> str | None:
+    """Story 3.2 (AD-8): the Bearer secret Vercel Cron sends to the due-check."""
+    return _env("CRON_SECRET")
 
 
 def get_vapid_public_key() -> str:

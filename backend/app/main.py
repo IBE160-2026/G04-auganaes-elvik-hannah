@@ -7,7 +7,7 @@ full path, and the Vite dev/preview servers proxy /api locally. So there is no C
 from fastapi import FastAPI
 
 from app.config import Settings, get_settings
-from app.routes import ai, auth, health, homes, invites, push, tasks
+from app.routes import ai, auth, health, homes, internal, invites, push, tasks
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -21,6 +21,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks.router, prefix="/api")
     app.include_router(ai.router, prefix="/api")
     app.include_router(push.router, prefix="/api")
+    app.include_router(internal.router, prefix="/api")
     return app
 
 

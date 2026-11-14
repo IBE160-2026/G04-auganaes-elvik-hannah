@@ -15,7 +15,7 @@ from datetime import timedelta
 
 from sqlmodel import Session, select
 
-from app.clock import utc_now
+from app.clock import utc_now, utc_today
 from app.domain import task_types, tasks
 from app.models.home import Home
 from app.models.membership import Membership
@@ -85,7 +85,7 @@ def _set_up(session: Session, email: str, home_name: str, days_ago: int) -> None
     choices = [
         tasks.TaskChoice(t.key, t.classification, t.frequency_days) for t in task_types.TASK_TYPES
     ]
-    today = utc_now().date() - timedelta(days=days_ago)
+    today = utc_today() - timedelta(days=days_ago)
     created = tasks.set_up_tasks(session, membership, choices, today=today)
     print(f"Satte opp {len(created)} oppgaver i «{home_name}»")
     _complete_example(session, home)

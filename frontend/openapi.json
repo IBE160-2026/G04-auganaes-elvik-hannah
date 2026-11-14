@@ -1300,13 +1300,15 @@
             "HTTPBearer": []
           }
         ]
-      },
-      "delete": {
+      }
+    },
+    "/api/push/subscriptions/remove": {
+      "post": {
         "tags": [
           "push"
         ],
         "summary": "Remove Subscription",
-        "operationId": "remove_subscription_api_push_subscriptions_delete",
+        "operationId": "remove_subscription_api_push_subscriptions_remove_post",
         "requestBody": {
           "content": {
             "application/json": {

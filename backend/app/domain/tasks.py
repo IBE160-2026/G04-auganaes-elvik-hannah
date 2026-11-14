@@ -31,7 +31,7 @@ from sqlalchemy import ColumnElement, case, func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from app.clock import as_utc, to_utc, utc_now
+from app.clock import as_utc, to_utc, utc_now, utc_today
 from app.domain import task_types
 from app.models.home import Home
 from app.models.membership import Membership, Role
@@ -182,7 +182,7 @@ def set_up_tasks(
     if not can_set_up_tasks(membership.role):
         raise ValueError(f"role {membership.role!r} may not set up tasks")
     _validate(choices)
-    today = today or utc_now().date()
+    today = today or utc_today()
     home_id = membership.home_id
     # Locks the Home row until commit, so two parallel setups (two tabs, a double click) cannot
     # both see an empty Home. Postgres only; SQLite ignores FOR UPDATE. The unique
@@ -221,12 +221,12 @@ def _first_instance(task: Task, today: date) -> TaskInstance:
     return TaskInstance(task_id=task.id, due_on=today + timedelta(days=task.frequency_days))
 
 
-def _is_open() -> ColumnElement[bool]:
+def is_open() -> ColumnElement[bool]:
     """The one statement of what an open instance is."""
     return col(TaskInstance.completed_at).is_(None)
 
 
-def _is_active() -> ColumnElement[bool]:
+def is_active() -> ColumnElement[bool]:
     """The one statement of what an active (not archived) Task is."""
     return col(Task.archived_at).is_(None)
 
@@ -245,7 +245,7 @@ def photo_evidence_eligible(task: Task) -> bool:
 def active_task(session: Session, home_id: uuid.UUID, task_id: uuid.UUID) -> Task:
     """The Home's active Task with this id. Raises TaskNotFound (Story 5.1: «?» on a Task)."""
     task = session.exec(
-        select(Task).where(Task.id == task_id, Task.home_id == home_id, _is_active())
+        select(Task).where(Task.id == task_id, Task.home_id == home_id, is_active())
     ).first()
     if task is None:
         raise TaskNotFound
@@ -255,7 +255,7 @@ def active_task(session: Session, home_id: uuid.UUID, task_id: uuid.UUID) -> Tas
 def _open_instance(session: Session, task_id: uuid.UUID) -> TaskInstance:
     """The Task's one open instance (uq_task_instances_open_task_id)."""
     return session.exec(
-        select(TaskInstance).where(TaskInstance.task_id == task_id, _is_open())
+        select(TaskInstance).where(TaskInstance.task_id == task_id, is_open())
     ).one()
 
 
@@ -271,7 +271,7 @@ def _rows(
     query = (
         select(Task, TaskInstance)
         .join(TaskInstance, col(TaskInstance.task_id) == col(Task.id))
-        .where(Task.home_id == home_id, _is_active(), _is_open())
+        .where(Task.home_id == home_id, is_active(), is_open())
         .order_by(
             case((col(Task.classification) == "must", 0), else_=1),
             col(TaskInstance.due_on),
@@ -372,7 +372,7 @@ def adjust_task(
     # other's date shift. Postgres only; SQLite ignores FOR UPDATE (accepted risk).
     task = session.exec(
         select(Task)
-        .where(Task.id == task_id, Task.home_id == membership.home_id, _is_active())
+        .where(Task.id == task_id, Task.home_id == membership.home_id, is_active())
         .with_for_update()
     ).first()
     if task is None:
@@ -401,7 +401,7 @@ def adjust_task(
 def _is_duplicate(session: Session, home_id: uuid.UUID, key: str | None, name: str) -> bool:
     """Whether an active Task of the Home has this catalog key or this name (case-insensitive)."""
     rows = session.exec(
-        select(Task.task_type, Task.name).where(Task.home_id == home_id, _is_active())
+        select(Task.task_type, Task.name).where(Task.home_id == home_id, is_active())
     ).all()
     folded = name.casefold()
     return any((key is not None and k == key) or n.casefold() == folded for k, n in rows)
@@ -444,7 +444,7 @@ def add_task(
         task_name = name.strip()
         if not 1 <= len(task_name) <= task_types.TASK_NAME_MAX_LENGTH:
             raise InvalidTaskChoices(BAD_NAME)
-    today = today or utc_now().date()
+    today = today or utc_today()
     home_id = membership.home_id
     # Same Home lock as set_up_tasks, so an add and a parallel add see each other's Task.
     # Postgres only; SQLite ignores FOR UPDATE. The unique indexes are the backstop below.
@@ -531,7 +531,7 @@ def complete_task_instance(
     # Frequency change serialize. Postgres only; SQLite ignores FOR UPDATE (accepted risk).
     task = session.exec(
         select(Task)
-        .where(Task.id == task_id, Task.home_id == membership.home_id, _is_active())
+        .where(Task.id == task_id, Task.home_id == membership.home_id, is_active())
         .with_for_update()
     ).first()
     if task is None:

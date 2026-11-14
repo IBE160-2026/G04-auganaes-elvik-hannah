@@ -2,6 +2,7 @@
 // The worker is a classic script that registers its handlers on `self`, which is `window` here.
 const showNotification = vi.fn().mockResolvedValue(undefined);
 const openWindow = vi.fn().mockResolvedValue(null);
+const matchAll = vi.fn();
 const listeners = new Map<string, EventListener>();
 
 beforeAll(async () => {
@@ -12,7 +13,7 @@ beforeAll(async () => {
     }
     add(type, listener, options);
   });
-  Object.assign(window, { registration: { showNotification }, clients: { openWindow } });
+  Object.assign(window, { registration: { showNotification }, clients: { openWindow, matchAll } });
   // By variable, so TypeScript does not pull the worker's webworker lib into the app's program.
   const worker = './service-worker';
   await import(/* @vite-ignore */ worker);
@@ -21,6 +22,7 @@ beforeAll(async () => {
 beforeEach(() => {
   showNotification.mockClear();
   openWindow.mockClear();
+  matchAll.mockReset().mockResolvedValue([]);
 });
 
 function pushEvent(data: { json: () => unknown } | null) {
@@ -44,7 +46,19 @@ function clickEvent(data: unknown) {
 describe('push handler', () => {
   it('shows the title and body from the payload and keeps its in-app link', async () => {
     await pushEvent({ json: () => ({ title: 'Forfalt', body: 'Rens sluket', url: '/hjem/1' }) });
-    expect(showNotification).toHaveBeenCalledWith('Forfalt', { body: 'Rens sluket', data: { url: '/hjem/1' } });
+    expect(showNotification).toHaveBeenCalledWith('Forfalt', {
+      body: 'Rens sluket',
+      tag: 'husly',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: '/hjem/1' },
+      renotify: true,
+    });
+  });
+
+  it('uses the payload tag, so one day\'s push replaces the last', async () => {
+    await pushEvent({ json: () => ({ title: 'x', tag: 'husly-forfall' }) });
+    expect(showNotification.mock.calls[0][1].tag).toBe('husly-forfall');
   });
 
   it('still shows a notification when the payload is empty or not JSON', async () => {
@@ -55,7 +69,7 @@ describe('push handler', () => {
       },
     });
     expect(showNotification).toHaveBeenCalledTimes(2);
-    expect(showNotification).toHaveBeenLastCalledWith('Husly', { body: undefined, data: { url: '/' } });
+    expect(showNotification).toHaveBeenLastCalledWith('Husly', expect.objectContaining({ body: undefined, data: { url: '/' } }));
   });
 
   it('never carries a link that leaves the app', async () => {
@@ -81,5 +95,30 @@ describe('notificationclick handler', () => {
     await clickEvent({ url: 'https://evil.example/' }).done;
     await clickEvent({ url: '/\\evil.example' }).done;
     expect(openWindow.mock.calls).toEqual([['/'], ['/'], ['/']]);
+  });
+
+  it('focuses and navigates an open app window instead of opening another', async () => {
+    const navigate = vi.fn().mockResolvedValue(null);
+    const focus = vi.fn().mockResolvedValue({ navigate });
+    matchAll.mockResolvedValue([{ url: `${window.location.origin}/hjem/9`, focus }]);
+    await clickEvent({ url: '/hjem/1/oppgaver/2' }).done;
+    expect(focus).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/hjem/1/oppgaver/2');
+    expect(openWindow).not.toHaveBeenCalled();
+  });
+
+  it('opens a new window when the open one cannot be navigated', async () => {
+    const focus = vi.fn().mockResolvedValue({ navigate: vi.fn().mockRejectedValue(new TypeError('no')) });
+    matchAll.mockResolvedValue([{ url: `${window.location.origin}/`, focus }]);
+    await clickEvent({ url: '/hjem/1' }).done;
+    expect(openWindow).toHaveBeenCalledWith('/hjem/1');
+  });
+
+  it('ignores a window on another origin', async () => {
+    const focus = vi.fn();
+    matchAll.mockResolvedValue([{ url: 'https://evil.example/', focus }]);
+    await clickEvent({ url: '/hjem/1' }).done;
+    expect(focus).not.toHaveBeenCalled();
+    expect(openWindow).toHaveBeenCalledWith('/hjem/1');
   });
 });
