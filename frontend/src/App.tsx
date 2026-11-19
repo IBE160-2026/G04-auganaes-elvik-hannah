@@ -9,6 +9,7 @@ import { AddTask } from './routes/AddTask';
 import { CreateHome } from './routes/CreateHome';
 import { HomePage } from './routes/HomePage';
 import { InvitePage } from './routes/InvitePage';
+import { LandlordAdmin } from './routes/LandlordAdmin';
 import { MembersPage } from './routes/MembersPage';
 import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
@@ -99,6 +100,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <AddTask />
+          </RequireAuth>
+        }
+      />
+      {/* Story 3.4: Landlord Home Admin shell with the broadcast composer. */}
+      <Route
+        path="/hjem/:homeId/utleier"
+        element={
+          <RequireAuth>
+            <LandlordAdmin />
           </RequireAuth>
         }
       />

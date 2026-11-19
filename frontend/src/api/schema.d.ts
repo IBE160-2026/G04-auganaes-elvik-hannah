@@ -198,6 +198,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/broadcast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Broadcast */
+        post: operations["send_broadcast_api_homes__home_id__broadcast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homes/{home_id}/invites": {
         parameters: {
             query?: never;
@@ -469,6 +486,18 @@ export interface components {
             token_type: "bearer";
             user: components["schemas"]["UserOut"];
         };
+        /** BroadcastIn */
+        BroadcastIn: {
+            /** Message */
+            message: string;
+        };
+        /** BroadcastOut */
+        BroadcastOut: {
+            /** Recipients */
+            recipients: number;
+            /** Without Push */
+            without_push: number;
+        };
         /** CompletionOut */
         CompletionOut: {
             /**
@@ -547,6 +576,8 @@ export interface components {
             has_tasks: boolean;
             /** Can Adjust Tasks */
             can_adjust_tasks: boolean;
+            /** Can Broadcast */
+            can_broadcast: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -1149,6 +1180,59 @@ export interface operations {
             };
             /** @description Not the Landlord here, no such Home, or the user is not a Tenant here */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_broadcast_api_homes__home_id__broadcast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastOut"];
+                };
+            };
+            /** @description Not the Landlord of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description The Home has no Tenants */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

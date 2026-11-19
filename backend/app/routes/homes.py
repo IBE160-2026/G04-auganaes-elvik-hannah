@@ -23,7 +23,7 @@ from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
 from app.clock import UtcDatetime
-from app.domain import homes, tasks
+from app.domain import broadcast, homes, tasks
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
 from app.models.membership import Role
 from app.permissions.current_user import CurrentUser
@@ -61,6 +61,8 @@ class HomeOut(BaseModel):
     # Story 2.3: whether the caller may change a Task's Må/Bør and Frequency (a Tenant may not).
     # Story 2.6: the same flag covers adding and removing Tasks.
     can_adjust_tasks: bool
+    # Story 3.4: whether the caller may send a broadcast to the Tenants (the Landlord).
+    can_broadcast: bool
 
 
 class HomesOut(BaseModel):
@@ -86,6 +88,7 @@ def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
         can_set_up_tasks=tasks.can_set_up_tasks(member_home.role),
         has_tasks=has_tasks,
         can_adjust_tasks=tasks.can_adjust_tasks(member_home.role),
+        can_broadcast=broadcast.can_broadcast(member_home.role),
     )
 
 

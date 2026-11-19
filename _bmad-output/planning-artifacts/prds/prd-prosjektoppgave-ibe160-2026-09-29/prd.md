@@ -21,6 +21,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-12 | Epic 2 retrospective: FR-9 states that days are UTC days | `epic-2-retro-2026-11-12.md` |
 | 2026-11-12 | Story 3.1 built: FR-10 states the per-device registration, the 10-device cap, silent registration, best-effort removal at sign-out and the blocked-push note; account data lists the stored push devices | `spec-3-1-push-notification-permission-device-registration.md` |
 | 2026-11-13 | Story 3.2 built: FR-10 states who is notified and which tasks count, one notification per task instance, Member and day, the refusal without the secret, the allowed push services and removal of gone devices; account data lists the claimed notifications | `spec-3-2-due-overdue-push-notifications-via-due-check-job.md` |
+| 2026-11-19 | Story 3.4 built: FR-12 states who receives and who can send, the 1–300 character limit, what the Landlord is told (a count of Tenants reached and of Tenants who could not be reached), that the text is kept when nobody was reached, the refusal for a Home with no Tenants, that nothing is stored or limited by cadence, and that a failed send is not retried by the system | `spec-3-4-landlord-ad-hoc-broadcast-message.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -245,7 +246,11 @@ When completion attribution (FR-7) shows a Member has not performed any of a rec
 A Landlord can send a free-form reminder message to all Tenants of a specific Home. Realizes UJ-2, UJ-3.
 
 **Consequences (testable):**
-- A sent broadcast message is delivered as a push notification to every Tenant Member of the targeted Home.
+- A sent broadcast message is delivered as a push notification to every Tenant Member of the targeted Home, at once and not with the daily due-check. Only the Home's current Tenants receive it: the Landlord, Household Members and Tenants who have left do not.
+- Only the Home's Landlord can send. The text is 1 to 300 characters after leading and trailing spaces are removed.
+- The Landlord is told how many Tenants the message reached, not who. A Tenant counts as reached when at least one of their devices took the push; the Landlord also sees how many Tenants could not be reached (no device, or every send failed), because push is the only channel. If no Tenant could be reached, the text is kept so it can be sent again.
+- The message is not stored: it only passes through the push services to the Tenants' devices. The Landlord's notification cadence (FR-13) does not limit or delay it, and no daily limit on broadcasts applies.
+- A Home with no Tenants refuses the message with a clear text. A failed send shows an error with a retry and keeps the text; a failed send is not retried by the system.
 
 #### FR-13: Landlord-controlled notification cadence
 A Landlord can configure how strictly/often Tenants of a Home are reminded about due/overdue Must tasks, independent of the task's Frequency. Tenants cannot adjust this themselves. Realizes UJ-2.

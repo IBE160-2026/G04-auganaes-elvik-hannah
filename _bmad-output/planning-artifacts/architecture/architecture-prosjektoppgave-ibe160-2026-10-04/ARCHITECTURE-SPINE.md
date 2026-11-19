@@ -137,7 +137,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Binds:** FR-12
 - **Stage:** Trinn 2
 - **Prevents:** a Landlord's ad-hoc message silently inheriting AD-8's once-a-day cron cadence, when the PRD expects it sent as soon as the Landlord submits it.
-- **Rule:** The broadcast endpoint calls the push-sending domain function directly and synchronously on request, independent of the `/internal/run-due-check` job. AD-8 governs only the due/overdue scan and FR-11's fairness nudge, never FR-12.
+- **Rule:** The broadcast endpoint calls the push-sending domain function directly and synchronously on request, independent of the `/internal/run-due-check` job. AD-8 governs only the due/overdue scan and FR-11's fairness nudge, never FR-12. *Note 2026-11-19 (Story 3.4):* the route is `POST /api/homes/{home_id}/broadcast`, behind `require_role("landlord")`. It shares one device-delivery function (`domain/push.deliver`) with the due-check, sends to current Tenants only (AD-16), and does not reserve or retry: a failed device send is final.
 
 ### AD-15 — Local Docker-based running is the primary path
 

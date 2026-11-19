@@ -5,6 +5,7 @@ updates its keys and, if another User signed in on that browser, its owner. A Us
 MAX_SUBSCRIPTIONS_PER_USER rows; a newer one pushes the oldest out.
 """
 
+import logging
 import uuid
 
 from sqlalchemy import delete
@@ -13,6 +14,9 @@ from sqlmodel import Session, col, select
 
 from app.clock import utc_now
 from app.models.push_subscription import PushSubscription
+from app.push import PushMessage, PushTarget, Sender, is_allowed_endpoint
+
+logger = logging.getLogger(__name__)
 
 MAX_SUBSCRIPTIONS_PER_USER = 10
 
@@ -65,3 +69,37 @@ def remove_subscription(session: Session, user_id: uuid.UUID, endpoint: str) -> 
         )
     )
     session.commit()
+
+
+def deliver(session: Session, sender: Sender, user_id: uuid.UUID, message: PushMessage) -> int:
+    """Pushes the message to each of the User's devices and returns how many accepted it.
+
+    Shared by the due-check (Story 3.2) and the Landlord's broadcast (Story 3.4). A device the
+    push service says is gone (404/410) is deleted. An address outside the allowed hosts is
+    skipped, also at send time (SSRF). A failed send is not retried.
+    """
+    subscriptions = session.exec(
+        select(
+            PushSubscription.id,
+            PushSubscription.endpoint,
+            PushSubscription.p256dh,
+            PushSubscription.auth,
+        )
+        .where(PushSubscription.user_id == user_id)
+        .order_by(col(PushSubscription.created_at), col(PushSubscription.id))
+    ).all()
+    sent = 0
+    gone: list[uuid.UUID] = []
+    for sub_id, endpoint, p256dh, auth in subscriptions:
+        if not is_allowed_endpoint(endpoint):
+            logger.warning("Hoppet over push-adresse utenfor tillatelseslisten.")
+            continue
+        result = sender.send(PushTarget(endpoint, p256dh, auth), message)
+        if result == "sent":
+            sent += 1
+        elif result == "gone":
+            gone.append(sub_id)
+    if gone:
+        session.execute(delete(PushSubscription).where(col(PushSubscription.id).in_(gone)))
+        session.commit()
+    return sent
