@@ -7,11 +7,10 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import { ApiError } from '../api/errors';
 import type { Home } from '../api/homes';
 import { PHOTO_UPLOAD_MESSAGES } from '../api/photoEvidence';
-import { useUploadPhotoEvidence } from '../api/queries';
-import type { Task } from '../api/tasks';
+import { useUploadPhotoEvidence, type TaskView } from '../api/queries';
 import './PhotoUpload.css';
 
-export function PhotoUpload({ home, task }: { home: Home; task: Task }) {
+export function PhotoUpload({ home, task }: { home: Home; task: TaskView }) {
   const upload = useUploadPhotoEvidence(home.id);
   const chosen = useRef<File | null>(null);
   const [done, setDone] = useState(false);
