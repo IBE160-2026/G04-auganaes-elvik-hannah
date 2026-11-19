@@ -2,7 +2,7 @@
 title: 'Story 4.1: Landlord requires Photo Evidence on eligible Must tasks'
 type: 'feature'
 created: '2026-11-19'
-status: 'in-progress'
+status: 'in-review'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 12e7ffbbe49a6aca8a8f5edf7afa32a9fd62c429
@@ -61,7 +61,7 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `backend/app/models/task.py`, new Alembic revision, `.github/workflows/ci.yml` -- column; the migration is proven by the CI job «Migreringer (Postgres 18)»
+- [ ] `backend/app/models/task.py`, new Alembic revision, `.github/workflows/ci.yml` -- column, a CHECK that only Must may require a photo, and two CI probes on the migrated schema (the CHECK and the NOT NULL false default)
 - [ ] `backend/app/domain/photo_evidence.py`, `tasks.py` -- rule, setter, clearing on downgrade
 - [ ] `backend/app/routes/photo_evidence.py`, `main.py`, `deps.py`, `routes/tasks.py`, `routes/homes.py` -- route and fields; regenerate OpenAPI and `schema.d.ts`
 - [ ] `backend/tests/test_photo_evidence.py` -- the matrix, each test names the line it guards
@@ -75,9 +75,34 @@ context:
 
 ## Implementation Notes
 
+- Built directly by Claude under Eirik's mandate, 2026-11-19. Backend 842 tests green locally before the review fixes; frontend, `tsc`, eslint and the migration run only in CI.
+- Review added: a row lock in `set_requirement`, a named CHECK `ck_tasks_photo_evidence_must` (the lock does nothing on SQLite, the CHECK does), one `refusal()` function that both `set_requirement` and the `may_require` flag read, and two CI probes.
+- The «Bildebevis» note on the page says the requirement is saved now but a Tenant is only stopped when upload exists (Story 4.2), so the Landlord is not told it protects them yet.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Three reviewers (Blind Hunter, Edge Case Hunter, Verification Gap), 2026-11-19.
+
+| Finding | Verdict | Evidence / route |
+|---|---|---|
+| `set_requirement` read without a lock while `adjust_task` clears the flag: a Bør task could keep a requirement (Edge, Blind) | medium | patched: `FOR UPDATE` in `set_requirement` and a named CHECK `ck_tasks_photo_evidence_must` with a CI probe |
+| Migration's NOT NULL false default proven by no test (Verification Gap) | medium | patched: CI step reading `information_schema` |
+| UI note said a Tenant must attach a photo, which nothing enforces before 4.2 (Edge, Blind) | medium | patched: the note says it is saved now and enforced later |
+| A requirement that may no longer be set was hidden, so it could not be turned off (Edge) | medium | patched: the list also shows tasks that have the requirement; test added |
+| PRD/epics said «each with its own message», code has two messages for three refusals (Edge, Blind) | low | patched: text now says two messages |
+| Eligibility rule written twice (Blind) | low | patched: one `refusal()` used by both |
+| Retry shown only when the message equalled the fallback text (Blind) | low | patched: shown unless the status is 409 |
+| The Bør round trip test named a guard its second assertion did not hold; clearing not tested through PATCH; no no-op test (Blind) | medium | patched: comments fixed, PATCH test and a same-value test added |
+| FR-18 consequence «cannot complete without a photo» unqualified while only the flag is stored (Blind, Edge) | low | patched: the Revision log row says the rule is built with FR-19; PRD text states the target |
+| Checkbox flips back after save before the refetch (Edge) | false | `onSuccess: refresh` returns the refetch promise, so the mutation stays pending until it ends |
+| Raw network error text shown, no retry offline (Edge) | low | deferred: same pattern as Stories 3.4 and 3.5, fix once for all three |
+| Landlord not told a change to Bør dropped the requirement (Blind) | low | deferred |
+| `TaskOut` flags sent to every role; page not in EXPERIENCE.md (Blind) | low | rejected: harmless to Tenants and read by Story 4.2; the page section follows the Landlord Home Admin row |
+| README bullet long, hard-coded type names (Blind) | low | rejected: same structure as Stories 3.4 and 3.5; one sentence added |
+| Raw-insert test is SQLite only (Blind) | low | rejected: like the other schema tests; the CI probes cover Postgres |
+| Archived task keeps the flag (Verification Gap) | low | rejected: unreachable (404) |
 
 ## Verification
 

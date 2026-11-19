@@ -18,7 +18,6 @@ import {
 } from '../api/broadcast';
 import type { Home } from '../api/homes';
 import { CADENCE_MESSAGES, CADENCE_OPTIONS, type CadenceDays } from '../api/cadence';
-import { PHOTO_EVIDENCE_MESSAGES } from '../api/photoEvidence';
 import { useHomes, useSaveCadence, useSendBroadcast, useSetPhotoEvidence, useTasks } from '../api/queries';
 import type { Task } from '../api/tasks';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -199,7 +198,10 @@ function CadenceSection({ home }: { home: Home }) {
 
 function PhotoEvidenceSection({ home }: { home: Home }) {
   const tasks = useTasks(home.id);
-  const eligible = tasks.data?.filter((task) => task.may_require_photo_evidence) ?? [];
+  // A requirement the server would no longer allow is still listed, so it can be turned off.
+  const eligible =
+    tasks.data?.filter((task) => task.may_require_photo_evidence || task.requires_photo_evidence) ??
+    [];
 
   return (
     <section className="landlord-admin__section" aria-labelledby="landlord-admin-photo">
@@ -208,7 +210,7 @@ function PhotoEvidenceSection({ home }: { home: Home }) {
       </h2>
       <p className="landlord-admin__note">
         Du kan kreve bilde på Må-oppgaver der det går an å se at det er gjort, uten å vise noe
-        privat. Leietakeren må da legge ved et bilde når oppgaven krysses av.
+        privat. Kravet lagres nå, men leietakeren stoppes først når opplasting av bilde er på plass.
       </p>
       {tasks.isError ? (
         <>
@@ -261,7 +263,7 @@ function PhotoEvidenceRow({ home, task }: { home: Home; task: Task }) {
           <p className="auth-form__error" role="alert">
             {failure}
           </p>
-          {failure === PHOTO_EVIDENCE_MESSAGES.failed && (
+          {!(set.error instanceof ApiError && set.error.status === 409) && (
             <button
               type="button"
               className="landlord-admin__retry"

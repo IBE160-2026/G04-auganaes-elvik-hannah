@@ -1199,7 +1199,7 @@ So that I can trust completion was actually done without visiting in person.
 
 **Given** a custom task, or a Should task of an eligible type
 **When** the Landlord tries to require Photo Evidence
-**Then** the server refuses with its own message; turning the requirement off is always allowed
+**Then** the server refuses with a clear message (one for a custom or non-eligible task, one for a Should task); turning the requirement off is always allowed
 
 **Given** a task with the requirement
 **When** it is changed to Should

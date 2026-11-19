@@ -23,7 +23,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-13 | Story 3.2 built: FR-10 states who is notified and which tasks count, one notification per task instance, Member and day, the refusal without the secret, the allowed push services and removal of gone devices; account data lists the claimed notifications | `spec-3-2-due-overdue-push-notifications-via-due-check-job.md` |
 | 2026-11-19 | Story 3.4 built: FR-12 states who receives and who can send, the 1–300 character limit, what the Landlord is told (a count of Tenants reached and of Tenants who could not be reached), that the text is kept when nobody was reached, the refusal for a Home with no Tenants, that nothing is stored or limited by cadence, and that a failed send is not retried by the system | `spec-3-4-landlord-ad-hoc-broadcast-message.md` |
 | 2026-11-19 | Story 3.5 built: FR-13 states the three options and the daily default, that a Tenant is reminded on the due day and then every whole interval after it in UTC days, that it applies to Tenants and Must tasks only, and that only the Landlord can change it | `spec-3-5-landlord-controlled-notification-cadence.md` |
-| 2026-11-19 | Story 4.1 built: FR-18 states who can set the requirement, the three refusals (custom, not eligible, Should), that turning it off is always allowed, that a change to Should removes it, and that a household Home has no such setting | `spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md` |
+| 2026-11-19 | Story 4.1 built: FR-18 states who can set the requirement, the three refusals (custom, not eligible, Should), that turning it off is always allowed, that a change to Should removes it, and that a household Home has no such setting; the rule that a Tenant cannot complete without a photo is built with FR-19 | `spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -320,7 +320,7 @@ A Landlord can mark a specific Must task as requiring Photo Evidence from Tenant
 **Consequences (testable):**
 - A task flagged as requiring Photo Evidence cannot be marked complete by a Tenant without an attached photo.
 - Requiring Photo Evidence is an explicit Landlord setting per task, not a system-wide default.
-- Only the Home's Landlord can set it, one task at a time. The server refuses it for a custom task, for a task type that is not marked as eligible in the catalog, and for a Should task, each with its own message; turning it off is always allowed. A Landlord cannot change which types are eligible.
+- Only the Home's Landlord can set it, one task at a time. The server refuses it for a custom task, for a task type that is not marked as eligible in the catalog, and for a Should task, with a clear message (one for tasks of a type that cannot, one for Should tasks); turning it off is always allowed. A Landlord cannot change which types are eligible.
 - Changing a task to Should removes its requirement, and changing it back does not restore it.
 - A household Home has no such setting at all.
 

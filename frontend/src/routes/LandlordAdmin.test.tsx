@@ -352,6 +352,22 @@ describe('Photo Evidence', () => {
     expect(await second.json()).toEqual({ required: true });
   });
 
+  it('still lists a task that has a requirement but may no longer have one, so it can be turned off', async () => {
+    fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`GET ${tasksPath(LANDLORD)}`]: () =>
+        json(200, {
+          tasks: OLAS_TASKS.map((t) =>
+            t === SLUKET ? { ...t, requires_photo_evidence: true, may_require_photo_evidence: false } : t,
+          ),
+        }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+
+    // Guards `|| task.requires_photo_evidence` in the list filter.
+    expect(await screen.findByRole('checkbox', { name: /Rens sluket/ })).toBeChecked();
+  });
+
   it('says so when no task can require a photo', async () => {
     fakeApi({
       ...signedInWith([LANDLORD]),

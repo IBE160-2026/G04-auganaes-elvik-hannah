@@ -66,6 +66,11 @@ class Task(SQLModel, table=True):
         # Alembic check ignores CHECK constraints; tests/test_tasks.py and CI cover these.
         CheckConstraint("classification IN ('must', 'should')", name="ck_tasks_classification"),
         CheckConstraint("frequency_days > 0", name="ck_tasks_frequency_days"),
+        # Story 4.1: only a Must Task may require Photo Evidence (FR-18).
+        CheckConstraint(
+            "NOT requires_photo_evidence OR classification = 'must'",
+            name="ck_tasks_photo_evidence_must",
+        ),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4)

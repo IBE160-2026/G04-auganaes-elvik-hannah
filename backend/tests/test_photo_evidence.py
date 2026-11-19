@@ -9,6 +9,7 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.domain import homes, photo_evidence, tasks
@@ -125,7 +126,8 @@ def test_turning_it_off_is_allowed_even_when_the_task_may_no_longer_require_it(
     client: TestClient, session: Session
 ) -> None:
     home_id, kari, _anders = landlord_home(session)
-    task = add_task(session, home_id, "Rens sluket", classification="should")
+    # A Must task that is no longer eligible (here a custom one) but still has a requirement.
+    task = add_task(session, home_id, "Vask vinduer", None)
     task.requires_photo_evidence = True
     session.add(task)
     session.commit()
@@ -148,11 +150,66 @@ def test_changing_a_task_to_bor_clears_the_requirement_and_back_does_not_restore
     landlord = session.exec(select(Membership).where(Membership.user_id == kari.id)).one()
 
     tasks.adjust_task(session, landlord, task.id, classification="should")
+    # Guards `if classification != "must": task.requires_photo_evidence = False`.
     assert stored(session, task) is False
 
     tasks.adjust_task(session, landlord, task.id, classification="must")
-    # Guards `if classification != "must": task.requires_photo_evidence = False`.
+    # Changing back must not bring the old requirement back.
     assert stored(session, task) is False
+
+
+def test_the_patch_route_clears_the_requirement_when_a_task_becomes_bor(
+    client: TestClient, session: Session
+) -> None:
+    home_id, kari, _anders = landlord_home(session)
+    task = add_task(session, home_id, "Rens sluket")
+    task.requires_photo_evidence = True
+    session.add(task)
+    session.commit()
+
+    response = client.patch(
+        f"/api/homes/{home_id}/tasks/{task.id}",
+        json={"classification": "should"},
+        headers=auth_for(client, kari.email),
+    )
+
+    # Guards the clearing through the real route, and that the response says what may be required.
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["requires_photo_evidence"], body["may_require_photo_evidence"]) == (False, False)
+    assert stored(session, task) is False
+
+
+def test_setting_the_same_value_twice_changes_nothing(client: TestClient, session: Session) -> None:
+    home_id, kari, _anders = landlord_home(session)
+    task = add_task(session, home_id, "Rens sluket")
+
+    first = put(client, kari, home_id, task, True)
+    second = put(client, kari, home_id, task, True)
+    off = put(client, kari, home_id, task, False)
+    off_again = put(client, kari, home_id, task, False)
+
+    # Guards the no-op branch: every call answers 200 with the stored value.
+    assert [r.json()["requires_photo_evidence"] for r in (first, second, off, off_again)] == [
+        True,
+        True,
+        False,
+        False,
+    ]
+
+
+def test_the_database_refuses_a_requirement_on_a_should_task(session: Session) -> None:
+    home_id, _kari, _anders = landlord_home(session)
+
+    with pytest.raises(IntegrityError, match="ck_tasks_photo_evidence_must"):
+        session.execute(
+            text(
+                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days,"
+                " requires_photo_evidence, created_at)"
+                " VALUES (:id, :h, NULL, 'x', 'should', 7, 1, :t)"
+            ),
+            {"id": uuid.uuid4().hex, "h": home_id.hex, "t": "2026-11-19 12:00:00"},
+        )
 
 
 def test_a_frequency_change_keeps_the_requirement(session: Session) -> None:
