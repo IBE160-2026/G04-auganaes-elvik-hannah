@@ -92,7 +92,7 @@
 - [x] 2026-11-13 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Bygg Story 3.2 (issue #60, branch `story/3-2-due-check-jobb`) i ny terminal med `bmad-build` (løst 2026-11-19)
 - [x] 2026-11-13 [story-3-1-push-registrasjon](979-2026-11-12-23-59-00-story-3-1-push-registrasjon.md) — Eirik: sett `CRON_SECRET` i Vercel (Preview først) før cron testes hostet (løst 2026-11-19)
 - [x] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Eirik: les og godkjenn Claudes valg i spec 3.4 («Decisions») (løst 2026-11-19: Eirik bekreftet alle valg)
-- [ ] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Eirik: rett I/O-raden «3 pushes» til 2 i den frosne blokken i spec 3.4 (koden og testen sier 2)
+- [x] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Eirik: rett I/O-raden «3 pushes» til 2 i den frosne blokken i spec 3.4 (koden og testen sier 2) (løst 2026-11-19)
 - [ ] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Eirik: review og merge PR #62 og #64; deretter 3.4 til `done` i `sprint-status.yaml` og Status i `CLAUDE.md`
 - [ ] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Vitest starter ikke lokalt (arbeider-timeout, treg `node_modules`); undersøk før neste story
 - [x] 2026-11-19 [story-3-5-varslingsfrekvens](977-2026-11-19-22-30-00-story-3-5-varslingsfrekvens.md) — Eirik: les og godkjenn Claudes valg i spec 3.5 («Decisions») og review PR #66 (løst 2026-11-19: Eirik bekreftet alle valg)
