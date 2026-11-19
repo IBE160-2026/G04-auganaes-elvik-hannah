@@ -24,6 +24,7 @@ import {
   type Home,
   type Homes,
 } from './homes';
+import { sendBroadcast } from './broadcast';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
@@ -390,6 +391,10 @@ export function useInvite(token: string) {
     queryKey: inviteKey(token, session?.user.id),
     queryFn: () => fetchInvite(token),
   });
+}
+
+export function useSendBroadcast(homeId: string) {
+  return useMutation({ mutationFn: (message: string) => sendBroadcast(homeId, message) });
 }
 
 export function useCreateInvite(homeId: string) {

@@ -475,6 +475,84 @@
         }
       }
     },
+    "/api/homes/{home_id}/broadcast": {
+      "post": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "Send Broadcast",
+        "operationId": "send_broadcast_api_homes__home_id__broadcast_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the Landlord of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Home has no Tenants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/homes/{home_id}/invites": {
       "post": {
         "tags": [
@@ -1516,6 +1594,39 @@
         ],
         "title": "AuthResponse"
       },
+      "BroadcastIn": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "BroadcastIn"
+      },
+      "BroadcastOut": {
+        "properties": {
+          "recipients": {
+            "type": "integer",
+            "title": "Recipients"
+          },
+          "without_push": {
+            "type": "integer",
+            "title": "Without Push"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipients",
+          "without_push"
+        ],
+        "title": "BroadcastOut"
+      },
       "CompletionOut": {
         "properties": {
           "completed_on": {
@@ -1679,6 +1790,10 @@
           "can_adjust_tasks": {
             "type": "boolean",
             "title": "Can Adjust Tasks"
+          },
+          "can_broadcast": {
+            "type": "boolean",
+            "title": "Can Broadcast"
           }
         },
         "type": "object",
@@ -1692,7 +1807,8 @@
           "can_leave",
           "can_set_up_tasks",
           "has_tasks",
-          "can_adjust_tasks"
+          "can_adjust_tasks",
+          "can_broadcast"
         ],
         "title": "HomeOut"
       },

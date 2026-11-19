@@ -108,6 +108,11 @@ function Header({ home, titleRef, canSwitch, canAdd, onRefresh, refreshing }: He
         <Link to={`/hjem/${home.id}/medlemmer`} className="task-overview__link">
           Medlemmer og invitasjon
         </Link>
+        {home.can_broadcast && (
+          <Link to={`/hjem/${home.id}/utleier`} className="task-overview__link">
+            Send melding til leietakerne
+          </Link>
+        )}
         {canAdd && (
           <Link to={addTaskPath(home)} className="task-overview__link">
             Legg til oppgave
