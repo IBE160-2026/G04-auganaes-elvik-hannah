@@ -35,7 +35,7 @@ context:
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| Send | Landlord, 2 Tenants, one with 2 devices, one with none | 3 pushes; `recipients: 1`, `without_push: 1` | N/A |
+| Send | Landlord, 2 Tenants, one with 2 devices, one with none | 2 pushes; `recipients: 1`, `without_push: 1` | N/A |
 | No Tenants | Landlord, Home has only the Landlord | 409, nothing sent | Message "Det er ingen leietakere i hjemmet ennå." |
 | Wrong Role | Household Member or Tenant | 403, nothing sent | Same 403 as `require_role` |
 | Not a Member | Another Home's Landlord | 403 | Same 403 |
@@ -80,7 +80,7 @@ context:
 - Backend: `domain/push.deliver` (moved out of `due_check`), `domain/broadcast.py`, `routes/broadcast.py`, `HomeOut.can_broadcast`. 788 backend tests green at the last full run, before the review fixes; the broadcast and due-check files (58 tests) reran green after them.
 - Frontend: `routes/LandlordAdmin.tsx` (+css, test), `api/broadcast.ts`, `useSendBroadcast`, link on the Landlord's Task Overview. **Frontend tests were written but not run locally**: vitest cannot start its worker here (reading `node_modules` is far too slow, 60 s start timeout). CI is the first run. `tsc`, eslint and the build were not run either.
 - Guarded lines are named in the tests (`# Guards …` in `test_broadcast.py`, `// Guards …` in `LandlordAdmin.test.tsx`).
-- Matrix row «Send» says «3 pushes»; the right count for that setup is 2 (Anders' two devices, Mari has none). The test asserts 2. The frozen block was not edited: Eirik can correct the row.
+- Matrix row «Send» said «3 pushes»; the right count for that setup is 2 (Anders' two devices, Mari has none). The test asserts 2. Eirik asked for the row to be corrected on 2026-11-19, and it now says 2.
 
 ## Spec Change Log
 
