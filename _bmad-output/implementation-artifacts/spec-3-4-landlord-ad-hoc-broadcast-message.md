@@ -75,6 +75,7 @@ context:
 
 ## Implementation Notes
 
+- **Bekreftet av Eirik 2026-11-19:** alle valgene under «Decisions» i Story 3.4 er godkjent som de står. Den frosne blokken er uendret.
 - Built directly (no implementation subagent): Claude under Eirik's one-hour mandate, 2026-11-19.
 - Backend: `domain/push.deliver` (moved out of `due_check`), `domain/broadcast.py`, `routes/broadcast.py`, `HomeOut.can_broadcast`. 788 backend tests green at the last full run, before the review fixes; the broadcast and due-check files (58 tests) reran green after them.
 - Frontend: `routes/LandlordAdmin.tsx` (+css, test), `api/broadcast.ts`, `useSendBroadcast`, link on the Landlord's Task Overview. **Frontend tests were written but not run locally**: vitest cannot start its worker here (reading `node_modules` is far too slow, 60 s start timeout). CI is the first run. `tsc`, eslint and the build were not run either.

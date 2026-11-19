@@ -76,6 +76,7 @@ context:
 
 ## Implementation Notes
 
+- **Bekreftet av Eirik 2026-11-19:** alle valgene under «Decisions» i Story 3.5 er godkjent som de står. Den frosne blokken er uendret.
 - Built directly by Claude under Eirik's mandate, 2026-11-19. Backend 821 tests green locally before the review fixes; frontend tests, `tsc`, eslint and the build run only in CI (vitest cannot start its worker locally); the migration runs only in CI.
 - A recurring task gets a new instance with a new due day when it is completed, so the cadence phase restarts from that day.
 - Guarded lines are named in the tests (`# Guards …`, `// Guards …`).
