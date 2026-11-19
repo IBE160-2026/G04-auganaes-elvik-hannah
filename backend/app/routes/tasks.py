@@ -27,7 +27,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
 
 from app.clock import utc_today
-from app.domain import task_types, tasks
+from app.domain import photo_evidence, task_types, tasks
 from app.domain.task_types import Classification, Frequency
 from app.permissions.current_user import CurrentUser
 from app.routes.deps import (
@@ -120,6 +120,10 @@ class TaskOut(BaseModel):
     days_until_due: int
     # The latest completion while the open instance is due «later», else null (decision 1).
     completion: CompletionOut | None
+    # Story 4.1 (FR-18): the Landlord requires a photo, and whether this Task may require one
+    # (a Must Task of an eligible catalog type, AD-6). The frontend reads both, never the rule.
+    requires_photo_evidence: bool
+    may_require_photo_evidence: bool
 
 
 class TasksOut(BaseModel):
@@ -163,6 +167,8 @@ def task_out(row: tasks.TaskWithDue, today: date, viewer_id: uuid.UUID) -> TaskO
         due_status=status_,
         days_until_due=(row.due_on - today).days,
         completion=completion,
+        requires_photo_evidence=row.task.requires_photo_evidence,
+        may_require_photo_evidence=photo_evidence.may_require(row.task),
     )
 
 

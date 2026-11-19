@@ -387,6 +387,9 @@ def adjust_task(
         changed = True
     if classification is not None and classification != task.classification:
         task.classification = classification
+        # Story 4.1 (FR-18): only a Must Task may require Photo Evidence.
+        if classification != "must":
+            task.requires_photo_evidence = False
         changed = True
     if changed:
         session.add(task)

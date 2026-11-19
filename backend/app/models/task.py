@@ -21,6 +21,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -29,6 +30,7 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     text,
 )
+from sqlalchemy import false as sa_false
 from sqlmodel import Field, SQLModel
 
 from app.clock import utc_now
@@ -76,6 +78,12 @@ class Task(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    # Story 4.1 (FR-18): the Landlord requires Photo Evidence from Tenants for this Task. Only ever
+    # true for a Must Task of an eligible catalog type (domain/photo_evidence, AD-6).
+    requires_photo_evidence: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=sa_false()),
     )
     # When the Task was removed (UTC); null while active.
     archived_at: datetime | None = Field(

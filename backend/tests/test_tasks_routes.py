@@ -103,6 +103,8 @@ def test_accept_as_is_is_201_with_the_same_body_as_get(client: TestClient, engin
             "due_status",
             "days_until_due",
             "completion",
+            "requires_photo_evidence",
+            "may_require_photo_evidence",
         }
         assert task["completion"] is None
         assert date.fromisoformat(task["due_on"]) == today + timedelta(days=task["frequency_days"])
@@ -397,7 +399,8 @@ def test_a_member_moves_a_task_to_bor_and_every_member_sees_it(
 
     assert response.status_code == 200
     body = response.json()
-    assert body == {**task, "classification": "should"}
+    # A Bør task may no longer require a photo (Story 4.1), so that flag follows the change.
+    assert body == {**task, "classification": "should", "may_require_photo_evidence": False}
     listed = list_tasks(client, jonas, home_id).json()["tasks"]
     musts = [t["name"] for t in listed if t["classification"] == "must"]
     shoulds = [t["name"] for t in listed if t["classification"] == "should"]

@@ -1,5 +1,7 @@
 // Story 3.4 (FR-12, UX-DR12): Landlord Home Admin shell and its broadcast composer.
 // Story 3.5 (FR-13, UX-DR30): the reminder cadence section on the same page.
+// Story 4.1 (FR-18, AD-6): the «Bildebevis» section: one checkbox per task the server says may
+// require a photo.
 // The composer follows the server's can_broadcast; a count confirms in a polite live region and
 // names nobody; a failed send keeps the text and offers «Prøv igjen».
 import { render, screen, waitFor } from '@testing-library/react';
@@ -7,7 +9,15 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { BROADCAST_MAX, sentNotice } from '../api/broadcast';
 import type { Home } from '../api/homes';
-import { OLAS_HOME, fakeApi, json, resetApi, signedInWith } from '../test-utils/fakeApi';
+import {
+  OLAS_HOME,
+  OLAS_TASKS,
+  fakeApi,
+  json,
+  resetApi,
+  signedInWith,
+  tasksPath,
+} from '../test-utils/fakeApi';
 
 const LANDLORD: Home = {
   ...OLAS_HOME,
@@ -18,11 +28,15 @@ const LANDLORD: Home = {
   can_leave: false,
   can_broadcast: true,
   can_set_cadence: true,
+  can_require_photo_evidence: true,
 };
 const TENANCY: Home = { ...LANDLORD, role: 'tenant', can_invite: false, can_broadcast: false };
 
 const path = (home: Home) => `/api/homes/${home.id}/broadcast`;
 const cadencePath = (home: Home) => `/api/homes/${home.id}/notification-cadence`;
+const requirementPath = (home: Home, taskId: string) =>
+  `/api/homes/${home.id}/tasks/${taskId}/photo-evidence-requirement`;
+const SLUKET = OLAS_TASKS[0];
 
 function renderAt(url: string) {
   window.history.pushState({}, '', url);
@@ -272,6 +286,90 @@ describe('Reminder cadence', () => {
 
     await screen.findByLabelText('Melding');
     expect(screen.queryByRole('radio')).toBeNull();
+  });
+});
+
+describe('Photo Evidence', () => {
+  it('lists only the tasks the server says may require a photo', async () => {
+    fakeApi(signedInWith([LANDLORD]));
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+
+    expect(await screen.findByRole('checkbox', { name: 'Krev bilde på «Rens sluket»' })).not.toBeChecked();
+    // Guards the filter on may_require_photo_evidence: the other tasks get no checkbox.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+  });
+
+  it('saves the requirement for that task and shows what the server holds afterwards', async () => {
+    let required = false;
+    const api = fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`GET ${tasksPath(LANDLORD)}`]: () =>
+        json(200, { tasks: OLAS_TASKS.map((t) => ({ ...t, requires_photo_evidence: t === SLUKET && required })) }),
+      [`PUT ${requirementPath(LANDLORD, SLUKET.id)}`]: async (request) => {
+        required = ((await request.json()) as { required: boolean }).required;
+        return json(200, { requires_photo_evidence: required });
+      },
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Krev bilde på «Rens sluket»' }));
+
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Rens sluket/ })).toBeChecked());
+    const [request] = api.calls('PUT', requirementPath(LANDLORD, SLUKET.id));
+    expect(await request.json()).toEqual({ required: true });
+  });
+
+  it('shows the server\'s reason for a 409 and offers no retry', async () => {
+    fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`PUT ${requirementPath(LANDLORD, SLUKET.id)}`]: () =>
+        json(409, { detail: 'Bare Må-oppgaver kan kreve bildebevis.' }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Rens sluket/ }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Bare Må-oppgaver kan kreve bildebevis.');
+    expect(screen.queryByRole('button', { name: 'Prøv igjen' })).toBeNull();
+  });
+
+  it('retries a failed save with «Prøv igjen»', async () => {
+    let attempts = 0;
+    const api = fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`PUT ${requirementPath(LANDLORD, SLUKET.id)}`]: () =>
+        ++attempts === 1 ? json(500, { detail: 'boom' }) : json(200, { requires_photo_evidence: true }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Rens sluket/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Vi fikk ikke lagret kravet om bilde.');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Prøv igjen' }));
+
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(api.calls('PUT', requirementPath(LANDLORD, SLUKET.id))).toHaveLength(2);
+    const [, second] = api.calls('PUT', requirementPath(LANDLORD, SLUKET.id));
+    expect(await second.json()).toEqual({ required: true });
+  });
+
+  it('says so when no task can require a photo', async () => {
+    fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`GET ${tasksPath(LANDLORD)}`]: () =>
+        json(200, { tasks: OLAS_TASKS.map((t) => ({ ...t, may_require_photo_evidence: false })) }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+
+    expect(await screen.findByText('Ingen av oppgavene dine kan kreve bilde ennå.')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+
+  it('is not shown when the server does not allow the caller to require a photo', async () => {
+    fakeApi(signedInWith([{ ...LANDLORD, can_require_photo_evidence: false }]));
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+
+    await screen.findByLabelText('Melding');
+    expect(screen.queryByRole('heading', { name: 'Bildebevis' })).toBeNull();
   });
 });
 

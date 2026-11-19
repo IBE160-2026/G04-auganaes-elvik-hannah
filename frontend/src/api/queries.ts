@@ -26,6 +26,7 @@ import {
 } from './homes';
 import { sendBroadcast } from './broadcast';
 import { saveCadence, type CadenceDays } from './cadence';
+import { setPhotoEvidenceRequirement } from './photoEvidence';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
@@ -405,6 +406,24 @@ export function useSaveCadence(homeId: string) {
   return useMutation({
     mutationFn: (days: CadenceDays) => saveCadence(homeId, days),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: homesKey(session?.user.id) }),
+  });
+}
+
+/**
+ * Story 4.1: one Task's requirement. The tasks are refetched on success and on a 409 or 404, so
+ * the list shows what the server holds (a Task that may no longer require a photo drops out).
+ */
+export function useSetPhotoEvidence(homeId: string) {
+  const queryClient = useQueryClient();
+  const userId = useSession()?.user.id;
+  const refresh = () => queryClient.invalidateQueries({ queryKey: tasksKey(homeId, userId) });
+  return useMutation({
+    mutationFn: ({ taskId, required }: { taskId: string; required: boolean }) =>
+      setPhotoEvidenceRequirement(homeId, taskId, required),
+    onSuccess: refresh,
+    onError: (error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) void refresh();
+    },
   });
 }
 

@@ -621,6 +621,104 @@
         }
       }
     },
+    "/api/homes/{home_id}/tasks/{task_id}/photo-evidence-requirement": {
+      "put": {
+        "tags": [
+          "photo-evidence"
+        ],
+        "summary": "Set Requirement",
+        "operationId": "set_requirement_api_homes__home_id__tasks__task_id__photo_evidence_requirement_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequirementIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequirementOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the Landlord of this Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such Task in this Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Task is not a Must Task of a type that may require a photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/homes/{home_id}/invites": {
       "post": {
         "tags": [
@@ -1901,6 +1999,10 @@
           "can_set_cadence": {
             "type": "boolean",
             "title": "Can Set Cadence"
+          },
+          "can_require_photo_evidence": {
+            "type": "boolean",
+            "title": "Can Require Photo Evidence"
           }
         },
         "type": "object",
@@ -1917,7 +2019,8 @@
           "can_adjust_tasks",
           "can_broadcast",
           "notification_cadence_days",
-          "can_set_cadence"
+          "can_set_cadence",
+          "can_require_photo_evidence"
         ],
         "title": "HomeOut"
       },
@@ -2266,6 +2369,32 @@
         ],
         "title": "RegisterResponse"
       },
+      "RequirementIn": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "required"
+        ],
+        "title": "RequirementIn"
+      },
+      "RequirementOut": {
+        "properties": {
+          "requires_photo_evidence": {
+            "type": "boolean",
+            "title": "Requires Photo Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requires_photo_evidence"
+        ],
+        "title": "RequirementOut"
+      },
       "SetUpTasksRequest": {
         "properties": {
           "tasks": {
@@ -2426,6 +2555,14 @@
                 "type": "null"
               }
             ]
+          },
+          "requires_photo_evidence": {
+            "type": "boolean",
+            "title": "Requires Photo Evidence"
+          },
+          "may_require_photo_evidence": {
+            "type": "boolean",
+            "title": "May Require Photo Evidence"
           }
         },
         "type": "object",
@@ -2439,7 +2576,9 @@
           "due_on",
           "due_status",
           "days_until_due",
-          "completion"
+          "completion",
+          "requires_photo_evidence",
+          "may_require_photo_evidence"
         ],
         "title": "TaskOut"
       },

@@ -38,6 +38,8 @@ const CREATED: Task[] = [
     due_status: 'later',
     days_until_due: 42,
     completion: null,
+    requires_photo_evidence: false,
+    may_require_photo_evidence: false,
   },
   {
     id: '00000000-0000-4000-8000-0000000000d2',
@@ -50,6 +52,8 @@ const CREATED: Task[] = [
     due_status: 'later',
     days_until_due: 60,
     completion: null,
+    requires_photo_evidence: false,
+    may_require_photo_evidence: false,
   },
 ];
 
