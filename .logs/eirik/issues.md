@@ -94,3 +94,5 @@
 - [ ] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Eirik: les og godkjenn Claudes valg i spec 3.4 («Decisions») og rett I/O-raden «3 pushes» til 2
 - [ ] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Eirik: review og merge PR #62 og #64; deretter 3.4 til `done` i `sprint-status.yaml` og Status i `CLAUDE.md`
 - [ ] 2026-11-19 [story-3-4-utleiers-melding](978-2026-11-19-21-35-00-story-3-4-utleiers-melding.md) — Vitest starter ikke lokalt (arbeider-timeout, treg `node_modules`); undersøk før neste story
+- [ ] 2026-11-19 [story-3-5-varslingsfrekvens](977-2026-11-19-22-30-00-story-3-5-varslingsfrekvens.md) — Eirik: les og godkjenn Claudes valg i spec 3.5 («Decisions») og review PR #66
+- [ ] 2026-11-19 [story-3-5-varslingsfrekvens](977-2026-11-19-22-30-00-story-3-5-varslingsfrekvens.md) — Eirik: merge #62, #64, #66 i rekkefølge; bytt basen på #66 til `main` etter #64; så 3.4 og 3.5 til `done` og Status i `CLAUDE.md`
