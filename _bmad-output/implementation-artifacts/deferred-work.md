@@ -115,3 +115,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Time budget for the synchronous broadcast: each device send can wait 10 s, so a Home with many Tenants and slow push services could pass the function limit.
   evidence: Story 3.4 sends in one request (AD-14). Fine for a few Tenants. Same family as the due-check's open time-budget item from Story 3.2.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
+  summary: Mark the Landlord's send confirmation as a demo when the mock sender is active (like the `demo` flag in Story 5.1), so «Sendt til N» is not read as delivered on Vercel without VAPID keys.
+  evidence: Blind Hunter on Story 3.4. README now says it; the UI does not. Low until the hosted demo is shown to someone who sends as Landlord.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
+  summary: Check with a screen reader that a second send with the same count is announced (the live region gets identical text), together with the open screen reader check of the AI popover.
+  evidence: Blind Hunter on Story 3.4. The notice is cleared and set in the same render batch, so the region may not see an empty state.

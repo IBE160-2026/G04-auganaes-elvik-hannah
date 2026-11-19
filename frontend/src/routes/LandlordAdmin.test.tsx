@@ -62,7 +62,7 @@ describe('Landlord Home Admin', () => {
     await userEvent.type(field, '  Rørlegger kommer i morgen.  ');
     await userEvent.click(screen.getByRole('button', { name: 'Send melding' }));
 
-    const notice = await screen.findByText('Sendt til 2 leietakere. 1 har ikke slått på varsler.');
+    const notice = await screen.findByText('Sendt til 2 leietakere. 1 kunne ikke nås med varsel.');
     expect(notice).toHaveAttribute('aria-live', 'polite');
     expect(field).toHaveValue('');
     const [request] = api.calls('POST', path(LANDLORD));
@@ -102,7 +102,9 @@ describe('Landlord Home Admin', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Prøv igjen' }));
 
-    expect(await screen.findByText('Sendt til 1 leietaker.')).toBeInTheDocument();
+    // The retry confirms exactly as a first send does: notice shown and the field cleared.
+    expect(await screen.findByText('Sendt til 1 leietaker.')).toHaveAttribute('aria-live', 'polite');
+    expect(field).toHaveValue('');
     expect(api.calls('POST', path(LANDLORD))).toHaveLength(2);
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -120,17 +122,55 @@ describe('Landlord Home Admin', () => {
     expect(screen.queryByRole('button', { name: 'Prøv igjen' })).toBeNull();
   });
 
-  it('shows no inline error for a 403: the Homes are refetched instead', async () => {
+  it('keeps the text when nobody was reached, and says so', async () => {
     fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`POST ${path(LANDLORD)}`]: () => json(200, { recipients: 0, without_push: 2 }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+    const field = await screen.findByLabelText('Melding');
+    await userEvent.type(field, 'Hei alle');
+    await userEvent.click(screen.getByRole('button', { name: 'Send melding' }));
+
+    expect(await screen.findByText(/Ingen leietakere kunne nås/)).toBeInTheDocument();
+    // Guards `if (result.recipients > 0) setText('')`.
+    expect(field).toHaveValue('Hei alle');
+  });
+
+  it('checks the text again on «Prøv igjen» instead of sending an edited, invalid one', async () => {
+    const api = fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`POST ${path(LANDLORD)}`]: () => json(500, { detail: 'boom' }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+    const field = await screen.findByLabelText('Melding');
+    await userEvent.type(field, 'Hei');
+    await userEvent.click(screen.getByRole('button', { name: 'Send melding' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Prøv igjen' }));
+    expect(api.calls('POST', path(LANDLORD))).toHaveLength(2);
+
+    await userEvent.clear(field);
+    // The text is empty now: a retry must be refused by the same check as a first send.
+    await userEvent.click(screen.getByRole('button', { name: 'Send melding' }));
+    expect(await screen.findByText('Skriv en melding først.')).toBeInTheDocument();
+    expect(api.calls('POST', path(LANDLORD))).toHaveLength(2);
+  });
+
+  it('shows no inline error for a 403: the Homes are refetched instead', async () => {
+    const api = fakeApi({
       ...signedInWith([LANDLORD]),
       [`POST ${path(LANDLORD)}`]: () => json(403, { detail: 'Du har ikke tilgang til dette i dette hjemmet.' }),
     });
     renderAt(`/hjem/${LANDLORD.id}/utleier`);
     await userEvent.type(await screen.findByLabelText('Melding'), 'Hei');
+    const homesBefore = api.calls('GET', '/api/homes').length;
     await userEvent.click(screen.getByRole('button', { name: 'Send melding' }));
 
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Send melding' })).not.toBeNull());
+    // The refetch is what proves the 403 was handled before the no-alert check below.
+    await waitFor(() => expect(api.calls('GET', '/api/homes').length).toBeGreaterThan(homesBefore));
+    await waitFor(() => expect(api.calls('POST', path(LANDLORD))).toHaveLength(1));
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Prøv igjen' })).toBeNull();
   });
 });
 
@@ -138,8 +178,9 @@ describe('sentNotice', () => {
   it('names nobody, says one Tenant in the singular and adds who has no push', () => {
     expect(sentNotice({ recipients: 1, without_push: 0 })).toBe('Sendt til 1 leietaker.');
     expect(sentNotice({ recipients: 3, without_push: 0 })).toBe('Sendt til 3 leietakere.');
-    expect(sentNotice({ recipients: 0, without_push: 2 })).toBe(
-      'Sendt til 0 leietakere. 2 har ikke slått på varsler.',
+    expect(sentNotice({ recipients: 2, without_push: 2 })).toBe(
+      'Sendt til 2 leietakere. 2 kunne ikke nås med varsel.',
     );
+    expect(sentNotice({ recipients: 0, without_push: 2 })).toContain('Ingen leietakere kunne nås');
   });
 });

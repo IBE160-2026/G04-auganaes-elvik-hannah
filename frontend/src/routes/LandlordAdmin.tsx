@@ -47,8 +47,8 @@ function Composer({ home }: { home: Home }) {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
+  // One path for «Send melding» and «Prøv igjen»: both validate, and both confirm the same way.
+  function attempt() {
     const problem = validateBroadcast(text);
     setFieldError(problem);
     setNotice('');
@@ -56,9 +56,15 @@ function Composer({ home }: { home: Home }) {
     send.mutate(text, {
       onSuccess: (result) => {
         setNotice(sentNotice(result));
-        setText('');
+        // Nobody was reached: the text stays so the Landlord can try again.
+        if (result.recipients > 0) setText('');
       },
     });
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    attempt();
   }
 
   const failure =
@@ -99,7 +105,7 @@ function Composer({ home }: { home: Home }) {
           </p>
           {/* Nothing to retry when the Home has no Tenants (409): the message would be refused again. */}
           {!(send.error instanceof ApiError && send.error.status === 409) && (
-            <button type="button" className="landlord-admin__retry" onClick={() => send.mutate(text)}>
+            <button type="button" className="landlord-admin__retry" onClick={attempt}>
               Prøv igjen
             </button>
           )}

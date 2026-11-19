@@ -74,7 +74,7 @@ FR-10: Due/overdue push notifications. The system sends a push notification to r
 
 FR-11: Fairness-based targeted notification. When completion attribution (FR-7) shows a Member has none of a recurring shared task's last 3 completions (at least two current Members, at least three completed instances), the system targets a reminder to that Member only, while the task is open and due, at most once per task instance.
 
-FR-12: Landlord ad-hoc broadcast message. A Landlord can send a free-form reminder message (1 to 300 characters) to all current Tenants of a specific Home, at once. The Landlord is told how many Tenants were reached, and how many have no device that could receive it. A Home with no Tenants refuses the message.
+FR-12: Landlord ad-hoc broadcast message. A Landlord can send a free-form reminder message (1 to 300 characters) to all current Tenants of a specific Home, at once. The Landlord is told how many Tenants were reached, and how many could not be reached. A Home with no Tenants refuses the message. The message is not stored and is not limited by the cadence setting (FR-13).
 
 FR-13: Landlord-controlled notification cadence. A Landlord can configure how strictly/often Tenants of a Home are reminded about due/overdue Must tasks, independent of the task's Frequency.
 
@@ -1109,7 +1109,7 @@ So that I can flag something without waiting for the next scheduled check.
 
 **Given** a Home with no current Tenants, or Tenants with no device that took the push
 **When** the Landlord sends
-**Then** a Home with no Tenants refuses with a clear text, and otherwise the composer adds how many Tenants have no device ("M har ikke slått på varsler")
+**Then** a Home with no Tenants refuses with a clear text, otherwise the composer adds how many Tenants could not be reached ("M kunne ikke nås med varsel"), and when nobody was reached it does not say "Sendt" and keeps the text
 
 **Given** this is the first story that needs the Landlord Home Admin screen
 **When** it is built

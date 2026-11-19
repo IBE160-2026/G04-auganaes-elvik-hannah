@@ -2,7 +2,7 @@
 title: 'Story 3.4: Landlord ad-hoc broadcast message'
 type: 'feature'
 created: '2026-11-19'
-status: 'in-progress'
+status: 'in-review'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: d7f9dbe4e944cf5cbc96267516e1bcb9d812a339
@@ -75,9 +75,36 @@ context:
 
 ## Implementation Notes
 
+- Built directly (no implementation subagent): Claude under Eirik's one-hour mandate, 2026-11-19.
+- Backend: `domain/push.deliver` (moved out of `due_check`), `domain/broadcast.py`, `routes/broadcast.py`, `HomeOut.can_broadcast`. 788 backend tests green at the last full run, before the review fixes; the broadcast and due-check files (58 tests) reran green after them.
+- Frontend: `routes/LandlordAdmin.tsx` (+css, test), `api/broadcast.ts`, `useSendBroadcast`, link on the Landlord's Task Overview. **Frontend tests were written but not run locally**: vitest cannot start its worker here (reading `node_modules` is far too slow, 60 s start timeout). CI is the first run. `tsc`, eslint and the build were not run either.
+- Guarded lines are named in the tests (`# Guards …` in `test_broadcast.py`, `// Guards …` in `LandlordAdmin.test.tsx`).
+- Matrix row «Send» says «3 pushes»; the right count for that setup is 2 (Anders' two devices, Mari has none). The test asserts 2. The frozen block was not edited: Eirik can correct the row.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Three reviewers (Blind Hunter, Edge Case Hunter, Verification Gap), 2026-11-19.
+
+| Finding | Verdict | Evidence / route |
+|---|---|---|
+| «Prøv igjen» had no `onSuccess`: no notice, text not cleared after a retry (Blind, Edge) | high | Read in `LandlordAdmin.tsx`; patched: one `attempt()` for send and retry |
+| Retry skipped `validateBroadcast` (Edge) | medium | patched with the same `attempt()`; test added |
+| Nobody reached: «Sendt til 0 leietakere» and the text cleared (Edge, Blind) | medium | patched: text kept, copy says nobody was reached; PRD FR-12, epics AC updated |
+| 403 test could pass before the 403 arrived (Verification Gap) | medium | patched: waits for the Homes refetch, then asserts no alert |
+| «har ikke slått på varsler» wrong when a send failed (Blind) | medium | patched: «kunne ikke nås med varsel» in UI, PRD and epics |
+| `BROADCAST_MESSAGES.unknown` unused (Blind) | low | patched: removed |
+| Failed-send test did not name its line and could not tell «failed» from «gone»; no SSRF test on the broadcast path; two 403 tests lacked guard comments (Blind) | medium | patched: tests added or strengthened in `test_broadcast.py` |
+| PRD-drift: message not stored, no cadence interaction, no limit (Blind) | low | patched: one sentence in FR-12 and epics; rate limit and time budget stay in deferred-work |
+| README: how to observe a mock broadcast (Blind) | low | patched: README sentence |
+| I/O matrix «3 pushes» is wrong, should be 2 (Edge) | low | not patched: the fix edits the frozen block; noted in Implementation Notes and the PR |
+| Double send (Blind, Edge) | false | The retry button only exists after a failure and the error resets on `mutate`, so it is gone while pending; the primary button ignores clicks while pending |
+| JS `trim()` vs Python `strip()` for U+FEFF (Edge) | low | rejected: cosmetic, fix is a new rule on both sides |
+| Tenant leaves between the read and the send (Edge) | low | rejected: one push at most to someone who just left; same class as the cron race |
+| Live region with identical text (Blind) | low | deferred (screen reader check) |
+| Demo marking of the confirmation under the mock sender (Blind) | low | deferred |
+| Time budget of the synchronous send (Blind) | medium, known | already in deferred-work from the spec |
 
 ## Verification
 

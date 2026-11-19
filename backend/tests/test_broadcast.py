@@ -163,18 +163,22 @@ def test_a_household_member_may_not_send(client: TestClient, session: Session) -
 
     response = post(client, session, hanne, household.id, "Hei")
 
+    # Guards the Landlord alias: a Household Member of the Home has a Membership, but no right.
     assert response.status_code == 403
     assert endpoints_sent() == []
 
 
 def test_a_stranger_gets_the_same_403(client: TestClient, session: Session) -> None:
     home_id, _kari = landlord_home(session)
-    add_tenant(session, home_id, "Anders", "anders")
+    tenant = add_tenant(session, home_id, "Anders", "anders")
     stranger = new_user(session, "Fremmed")
 
     response = post(client, session, stranger, home_id, "Hei")
+    tenant_response = post(client, session, tenant, home_id, "Hei")
 
+    # Guards require_role's single answer: no Membership gives the same 403 as the wrong Role.
     assert response.status_code == 403
+    assert response.json() == tenant_response.json()
     assert endpoints_sent() == []
 
 
