@@ -424,6 +424,13 @@ export function useUploadPhotoEvidence(homeId: string) {
       await queryClient.cancelQueries({ queryKey: key });
       queryClient.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? task : t)));
     },
+    // A 409 (the Landlord dropped the requirement meanwhile) or a 404 (the Task is gone): the list
+    // is refetched, so a stale upload box does not stay.
+    onError: (error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    },
   });
 }
 

@@ -24,9 +24,10 @@ const JPEG_QUALITY = 0.8;
  * when the browser cannot decode or draw it (the server then accepts or refuses it as it is).
  */
 export async function prepareImage(file: Blob): Promise<Blob> {
+  if (typeof createImageBitmap !== 'function') return file;
+  let bitmap: ImageBitmap | undefined;
   try {
-    if (typeof createImageBitmap !== 'function') return file;
-    const bitmap = await createImageBitmap(file);
+    bitmap = await createImageBitmap(file);
     const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
@@ -34,11 +35,12 @@ export async function prepareImage(file: Blob): Promise<Blob> {
     const context = canvas.getContext('2d');
     if (!context) return file;
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
     const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY));
     return jpeg ?? file;
   } catch {
     return file;
+  } finally {
+    bitmap?.close();
   }
 }
 

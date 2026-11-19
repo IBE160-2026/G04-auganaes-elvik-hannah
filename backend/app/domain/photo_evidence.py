@@ -20,16 +20,17 @@ from sqlmodel import Session, select
 from app.clock import to_utc, utc_now
 from app.domain import tasks
 from app.models.membership import Membership, Role
-from app.models.photo_evidence import PhotoEvidence
+from app.models.photo_evidence import DESCRIPTION_MAX_LENGTH, PhotoEvidence
 from app.models.task import Task, TaskInstance
 from app.models.user import User
-from app.storage import PhotoStore
+from app.storage import PhotoStore, StorageError
 
 NOT_ELIGIBLE = "Denne oppgavetypen kan ikke kreve bildebevis."
 NOT_MUST = "Bare Må-oppgaver kan kreve bildebevis."
 NOT_REQUIRED = "Denne oppgaven krever ikke bilde."
-NOT_JPEG = "Bildet må være en JPEG-fil."
-TOO_LARGE = "Bildet er for stort."
+NOT_JPEG = "Bildet må være en JPEG-fil. Ta et nytt bilde eller velg en annen fil."
+TOO_LARGE = "Bildet er for stort. Velg et mindre bilde."
+STORE_FAILED = "Vi fikk ikke lagret bildet. Prøv igjen."
 
 # Vercel's request body limit is 4.5 MB; the photo is the whole body, so this keeps clear of it.
 MAX_PHOTO_BYTES = 3_500_000
@@ -146,25 +147,49 @@ def complete_with_photo(
     Checks the photo, stores it, updates the Task's one row and completes through
     `tasks.complete_task_instance` (AD-3). An instance that is already completed (another Member,
     a retry) stores nothing and changes nothing: the first completer and the photo they sent stand.
-    Raises InvalidPhoto, PhotoNotRequired and tasks.TaskNotFound (Task not in this Home, archived,
-    or the instance is not the Task's).
+    The Task, then the requirement, then the instance are checked before the photo, so a missing
+    Task is a 404 whatever the body is. Raises tasks.TaskNotFound (Task not in this Home, archived,
+    or the instance is not the Task's), PhotoNotRequired, InvalidPhoto and StorageError.
     """
     if membership.role != "tenant":
         raise ValueError(f"role {membership.role!r} does not upload Photo Evidence")
-    check_photo(data)
     now = to_utc(now) if now is not None else utc_now()
-    task = tasks.active_task(session, membership.home_id, task_id)
+    # Locks the Task and the instance first (the order complete_task_instance uses), so two
+    # parallel uploads for one instance serialize: the second finds it completed and stores
+    # nothing. Postgres only; SQLite ignores FOR UPDATE.
+    task = session.exec(
+        select(Task)
+        .where(Task.id == task_id, Task.home_id == membership.home_id, tasks.is_active())
+        .with_for_update()
+    ).first()
+    if task is None:
+        session.rollback()
+        raise tasks.TaskNotFound
     if not task.requires_photo_evidence:
+        session.rollback()
         raise PhotoNotRequired
     instance = session.exec(
-        select(TaskInstance).where(TaskInstance.id == instance_id, TaskInstance.task_id == task.id)
+        select(TaskInstance)
+        .where(TaskInstance.id == instance_id, TaskInstance.task_id == task.id)
+        .with_for_update()
     ).first()
     if instance is None:
+        session.rollback()
         raise tasks.TaskNotFound
     if instance.completed_at is None:
+        try:
+            check_photo(data)
+        except InvalidPhoto:
+            session.rollback()
+            raise
         user = session.get(User, membership.user_id)
         assert user is not None
-        store.put(evidence_key(task.id), data)
+        try:
+            store.put(evidence_key(task.id), data)
+        except StorageError:
+            session.rollback()
+            raise
+        description = describe(user.name, now.date())[:DESCRIPTION_MAX_LENGTH]
         evidence = session.get(PhotoEvidence, task.id)
         if evidence is None:
             evidence = PhotoEvidence(
@@ -172,15 +197,14 @@ def complete_with_photo(
                 task_instance_id=instance.id,
                 uploaded_by_user_id=user.id,
                 uploaded_at=now,
-                description=describe(user.name, now.date()),
+                description=description,
             )
         else:
             evidence.task_instance_id = instance.id
             evidence.uploaded_by_user_id = user.id
             evidence.uploaded_at = now
-            evidence.description = describe(user.name, now.date())
-        # Pending until complete_task_instance commits it, or rolls it back with the completion
-        # when the instance was completed first by someone else.
+            evidence.description = description
+        # Pending until complete_task_instance commits it with the completion.
         session.add(evidence)
     return tasks.complete_task_instance(
         session, membership, task.id, instance_id, now=now, photo_attached=True

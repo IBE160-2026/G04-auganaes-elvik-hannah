@@ -80,3 +80,26 @@ def test_the_blob_store_writes_private_with_overwrite_and_reads_none_when_missin
         )
     ]
     assert store.read(KEY) is None
+
+
+def test_a_failed_write_is_a_storage_error_and_leaves_no_temp_file(tmp_path: Path) -> None:
+    from app.storage import StorageError
+
+    blocker = tmp_path / "tasks"
+    blocker.write_text("a file where the folder should be")
+    store = LocalPhotoStore(tmp_path)
+
+    # Guards the OSError mapping: the route turns it into a 503, not an unhandled 500.
+    with pytest.raises(StorageError):
+        store.put(KEY, b"x")
+    assert [p.name for p in tmp_path.rglob("*.tmp")] == []
+
+
+def test_two_writes_to_one_key_do_not_share_a_temporary_file(tmp_path: Path) -> None:
+    store = LocalPhotoStore(tmp_path)
+    store.put(KEY, b"one")
+    store.put(KEY, b"two")
+
+    # Guards the unique temporary name: nothing is left over and the last write wins.
+    assert store.read(KEY) == b"two"
+    assert list((tmp_path / "tasks").rglob("*.tmp")) == []

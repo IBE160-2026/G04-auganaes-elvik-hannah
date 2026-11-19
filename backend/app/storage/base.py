@@ -3,6 +3,10 @@
 from typing import Protocol
 
 
+class StorageError(Exception):
+    """The store could not write or read a photo (full or read-only disk, Blob outage)."""
+
+
 class PhotoStore(Protocol):
     def put(self, key: str, data: bytes) -> None:
         """Stores `data` under `key`, replacing whatever was there."""

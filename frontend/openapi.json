@@ -825,6 +825,16 @@
               }
             }
           },
+          "503": {
+            "description": "Photo not saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {

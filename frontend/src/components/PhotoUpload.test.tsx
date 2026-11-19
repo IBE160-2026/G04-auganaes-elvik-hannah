@@ -120,13 +120,38 @@ describe('Photo Evidence upload', () => {
     expect(screen.queryByRole('button', { name: 'Prøv igjen' })).toBeNull();
   });
 
-  it('never ticks the task through the plain completion route', async () => {
+  it('offers no checkbox for the task and so never sends the plain completion', async () => {
     const api = tenantServer({ [`POST ${completionPath}`]: () => json(409, { detail: 'x' }) });
     renderAt(`/hjem/${OLAS_TENANCY.id}`);
 
     await screen.findByRole('link', { name: 'Last opp bilde' });
 
+    // Guards `needsPhoto`: no checkbox carries this task's name, so nothing can post a completion.
+    expect(screen.queryByRole('checkbox', { name: /Rens sluket/ })).toBeNull();
     expect(api.calls('POST', completionPath)).toHaveLength(0);
+  });
+
+  it('shows no upload for a Tenant when the task needs no photo', async () => {
+    fakeApi({
+      ...signedInWith([OLAS_TENANCY]),
+      [`GET ${tasksPath(OLAS_TENANCY)}`]: () => json(200, { tasks: OLAS_TASKS }),
+    });
+    renderAt(detailUrl);
+
+    await screen.findByRole('heading', { level: 1, name: REQUIRED.name });
+    // Guards `task.requires_photo_evidence` in TaskDetail.
+    expect(screen.queryByRole('heading', { name: 'Bildebevis' })).toBeNull();
+  });
+
+  it('keeps the result visible after the answer completes the task', async () => {
+    tenantServer({ [`POST ${uploadPath}`]: () => json(200, DONE) });
+    renderAt(detailUrl);
+
+    await userEvent.upload(await screen.findByLabelText('Ta eller velg bilde'), photo());
+
+    // The task now has a completion, and the component must not unmount before it says so.
+    expect(await screen.findByText('Bilde lastet opp. Oppgaven er fullført.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ta eller velg bilde')).toBeNull();
   });
 
   it('prepareImage gives the file back when the browser cannot decode it', async () => {

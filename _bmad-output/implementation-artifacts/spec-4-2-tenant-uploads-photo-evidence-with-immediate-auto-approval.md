@@ -2,7 +2,7 @@
 title: 'Story 4.2: Tenant uploads Photo Evidence with immediate auto-approval'
 type: 'feature'
 created: '2026-11-19'
-status: 'in-progress'
+status: 'in-review'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: b84ad25709ebd7f769e3437f99903b3cc3a16b11
@@ -81,9 +81,35 @@ context:
 
 ## Implementation Notes
 
+- Built directly by Claude under Eirik's mandate, 2026-11-19. Backend 874 tests green locally before the review fixes (882 after); frontend, `tsc`, eslint and the migration run only in CI. The Blob adapter is tested only with fakes.
+- Review changed the order in `complete_with_photo`: Task row, requirement, instance row (locked, Postgres), then the photo check, the store and the evidence row, then `complete_task_instance`. A missing Task is a 404 whatever the body is.
+- Review added: a streamed body read with a running size cap (`read_photo_body`), a plain `def` route, `StorageError` mapped to 503 «Vi fikk ikke lagret bildet.», a unique temporary file name in the local store, and `PhotoUpload` staying mounted after the answer so the result is announced.
+- Without `BLOB_READ_WRITE_TOKEN` on Vercel the disk is read-only, so every upload answers 503 until the Blob store is connected. README says so.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Three reviewers (Blind Hunter, Edge Case Hunter, Verification Gap), 2026-11-19.
+
+| Finding | Verdict | Evidence / route |
+|---|---|---|
+| The success text vanished: `TaskDetail` hid `PhotoUpload` as soon as the answer gave the task a completion (Blind, Edge) | high | patched: the component stays mounted and hides only the control; a test keeps the result visible |
+| Two parallel uploads could both pass an unlocked check and overwrite the photo (Blind, Edge, Verification Gap) | medium | patched: Task and instance rows locked before the store (Postgres); the race itself is untested on SQLite and listed in deferred work |
+| Body read in full before the size was known (no or false Content-Length) (Blind, Edge) | medium | patched: streamed with a running cap; chunked test added |
+| `async def` route doing blocking database and storage work (Blind, Edge) | medium | patched: body read in an async dependency, route is a plain `def` |
+| A failing store gave an unhandled 500 (Edge) | medium | patched: `StorageError` and a 503 with a Norwegian message; test added |
+| Error order differed from the matrix: a bad body on a missing task gave 415 (Edge) | low | patched: Task and requirement are checked first; test added |
+| Local temporary file name shared by parallel writes (Edge) | low | patched: unique name; cleanup on failure; two tests |
+| Size check in `check_photo` untested (the route's header check hid it); «no route returns a photo» tested paths no route uses; «never ticks» test never clicked; vacuous assert (Verification Gap, Blind) | medium | patched: direct `check_photo` test, route enumeration, checkbox absence assertion, assert removed |
+| `capture="environment"` hid the gallery on many phones (Blind) | low | patched: attribute removed |
+| Refusal messages gave no next step; bitmap not closed on failure; stale upload box after a 409 (Blind, Edge) | low | patched |
+| PRD-drift: §9 «only AI and push leave the system» was false with a photo store; upload for a task without requirement, retention after turning off or archiving, what the description holds (Blind, Edge, Verification Gap) | medium | patched: PRD, Revision log row |
+| Photo stored before the commit, so a failed commit leaves a newer photo under the key (Blind, Edge, Verification Gap) | medium, known | accepted in the spec (decision 6), now stated in the AD-5 note and in deferred work |
+| Description keeps the uploader's name and anonymisation would not remove it (Blind, Edge) | low | deferred |
+| Only the JPEG signature is checked (Edge) | low | deferred |
+| Description could overflow 200 characters if the name limit grows (Edge) | low | patched: cut at the column length |
+| README bullet long; PRD «Landlord retrieves the photo» not yet met (Blind, Edge) | low | rejected as to structure; the Revision log row says retrieval is Story 4.3 |
 
 ## Verification
 

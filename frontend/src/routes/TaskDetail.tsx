@@ -91,9 +91,7 @@ function Detail({ home, task }: { home: Home; task: TaskView }) {
         {task.name}
       </h1>
       <QuickAnswer homeId={home.id} task={task} />
-      {home.role === 'tenant' && task.requires_photo_evidence && !task.pending && !task.completion && (
-        <PhotoUpload home={home} task={task} />
-      )}
+      {home.role === 'tenant' && task.requires_photo_evidence && <PhotoUpload home={home} task={task} />}
       {home.can_adjust_tasks ? <AdjustForm home={home} task={task} /> : <LockedFields task={task} />}
       <dl className="task-detail__facts">
         <div>

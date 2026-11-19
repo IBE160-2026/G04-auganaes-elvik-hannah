@@ -28,6 +28,11 @@ export function PhotoUpload({ home, task }: { home: Home; task: Task }) {
     event.target.value = '';
   }
 
+  // The control and its note only while the task is open. The component stays mounted when the
+  // server's answer completes the task, so the result below is still announced.
+  const open = !task.completion && !task.pending;
+  if (!open && !done) return null;
+
   // A 403 shows nothing inline: the global handler refetches and the guards route.
   const failure =
     upload.error instanceof ApiError && upload.error.status === 403 ? null : (upload.error?.message ?? null);
@@ -38,17 +43,18 @@ export function PhotoUpload({ home, task }: { home: Home; task: Task }) {
       <h2 id={`photo-upload-${task.id}`} className="photo-upload__title">
         Bildebevis
       </h2>
-      <p className="photo-upload__note">
-        Utleieren krever et bilde for å fullføre denne oppgaven. Oppgaven er fullført med en gang
-        bildet er lastet opp.
-      </p>
+      {!done && (
+        <p className="photo-upload__note">
+          Utleieren krever et bilde for å fullføre denne oppgaven. Oppgaven er fullført med en
+          gang bildet er lastet opp.
+        </p>
+      )}
       {!done && (
         <label className="photo-upload__pick">
           <span>Ta eller velg bilde</span>
           <input
             type="file"
             accept="image/*"
-            capture="environment"
             disabled={upload.isPending}
             onChange={onChange}
           />

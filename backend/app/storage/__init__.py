@@ -7,11 +7,11 @@ history (FR-19).
 """
 
 from app.config import blob_is_configured, get_photo_storage_dir
-from app.storage.base import PhotoStore
+from app.storage.base import PhotoStore, StorageError
 from app.storage.blob import BlobPhotoStore
 from app.storage.local import LocalPhotoStore
 
-__all__ = ["BlobPhotoStore", "LocalPhotoStore", "PhotoStore", "get_photo_store"]
+__all__ = ["BlobPhotoStore", "LocalPhotoStore", "PhotoStore", "StorageError", "get_photo_store"]
 
 
 def get_photo_store() -> PhotoStore:

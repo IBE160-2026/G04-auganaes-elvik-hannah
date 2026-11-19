@@ -139,3 +139,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Show a Tenant who uploaded the text that was saved with the photo, or confirm the Landlord's view (Story 4.3) is the only place it appears.
   evidence: Story 4.2 saves the description but no screen shows it yet.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
+  summary: Scrub or derive the uploader's name in the saved description when account deletion and anonymisation (PRD §5) are built.
+  evidence: Blind Hunter and Edge Case Hunter on Story 4.2. `photo_evidence.description` keeps the display name at upload time, so anonymising the user row would not remove it.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
+  summary: Check that a JPEG upload is decodable (end marker or a decode) before storing it, and test two parallel uploads against Postgres.
+  evidence: Edge Case Hunter on Story 4.2. Only the JPEG signature is checked, and the row lock that serializes parallel uploads does nothing on SQLite, so it is not exercised by the tests.

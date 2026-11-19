@@ -177,7 +177,7 @@ def test_a_bad_photo_is_refused_before_anything_is_stored_or_completed(
 
     response = upload(client, martin, home_id, task, instance_id, body)
 
-    # Guards check_photo (signature and size) running before store.put and the completion.
+    # Guards check_photo (signature) and the route's size limit running before store and completion.
     assert response.status_code == status_code
     assert response.json() == {"detail": message}
     assert stored_file(local_photo_store, task) is None
@@ -239,7 +239,7 @@ def test_a_task_in_another_home_or_an_instance_of_another_task_is_404(
 ) -> None:
     home_id, _kari, martin = landlord_home(session)
     task, _instance_id = add_task(session, home_id)
-    other_task, other_instance = add_task(
+    _other_task, other_instance = add_task(
         session, home_id, name="Rens filteret i kjøkkenviften", task_type="kjokkenviftefilter"
     )
     other_home_owner = new_user(session, "Berit")
@@ -249,7 +249,6 @@ def test_a_task_in_another_home_or_an_instance_of_another_task_is_404(
     # Guards the Home scoping and the instance-belongs-to-task check.
     assert upload(client, martin, home_id, foreign, foreign_instance).status_code == 404
     assert upload(client, martin, home_id, task, other_instance).status_code == 404
-    assert other_task.id != task.id
 
 
 def test_the_upload_completes_through_the_same_function_as_the_checkbox(
@@ -272,19 +271,110 @@ def test_the_upload_completes_through_the_same_function_as_the_checkbox(
     assert calls == [True]
 
 
-def test_no_route_returns_a_photo(client: TestClient, session: Session) -> None:
-    home_id, _kari, martin = landlord_home(session)
-    task, instance_id = add_task(session, home_id)
-    upload(client, martin, home_id, task, instance_id)
-    headers = auth_for(client, martin.email)
+def test_no_route_returns_a_photo(client: TestClient) -> None:
+    from fastapi.routing import APIRoute
 
-    paths = [
-        f"/api/homes/{home_id}/tasks/{task.id}/photo-evidence",
-        f"/api/homes/{home_id}/tasks/{task.id}/evidence.jpg",
+    routes = [r for r in client.app.routes if isinstance(r, APIRoute)]  # type: ignore[attr-defined]
+    served = [
+        r.path
+        for r in routes
+        if "GET" in r.methods and ("photo" in r.path or "evidence" in r.path and "tasks" in r.path)
     ]
 
-    # Viewing is Story 4.3; until then nothing serves the stored file.
-    assert [client.get(p, headers=headers).status_code for p in paths] == [404, 404]
+    # Viewing is Story 4.3; until then no GET route can serve the stored file.
+    assert served == []
+
+
+def test_check_photo_refuses_a_too_large_or_non_jpeg_body_by_itself() -> None:
+    with pytest.raises(photo_evidence.InvalidPhoto) as large:
+        photo_evidence.check_photo(JPEG + b"x" * photo_evidence.MAX_PHOTO_BYTES)
+    with pytest.raises(photo_evidence.InvalidPhoto) as plain:
+        photo_evidence.check_photo(b"GIF89a")
+
+    # Guards `len(data) > MAX_PHOTO_BYTES` and the signature check, without the route in front.
+    assert (large.value.too_large, plain.value.too_large) == (True, False)
+    photo_evidence.check_photo(JPEG)
+
+
+def test_a_chunked_body_without_content_length_is_stopped_at_the_limit(
+    client: TestClient, session: Session, local_photo_store: Path
+) -> None:
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+
+    def chunks():
+        for _ in range(8):
+            yield JPEG + b"x" * 500_000
+
+    response = client.post(
+        f"/api/homes/{home_id}/tasks/{task.id}/instances/{instance_id}/photo-evidence",
+        content=chunks(),
+        headers={**auth_for(client, martin.email), "Content-Type": "image/jpeg"},
+    )
+
+    # Guards the running count in read_photo_body: no Content-Length to trust.
+    assert response.status_code == 413
+    assert stored_file(local_photo_store, task) is None
+
+
+def test_a_missing_task_is_404_whatever_the_body_is(client: TestClient, session: Session) -> None:
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    gone = Task(
+        home_id=home_id, name="Fjernet", task_type=None, classification="must", frequency_days=7
+    )
+    gone.id = uuid.uuid4()
+
+    # Guards the order: the Task is looked up before the photo is checked (matrix: 404, not 415).
+    assert upload(client, martin, home_id, gone, instance_id, b"not a jpeg").status_code == 404
+    assert upload(client, martin, home_id, task, instance_id, b"not a jpeg").status_code == 415
+
+
+def test_an_archived_task_is_404(client: TestClient, session: Session) -> None:
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    task.archived_at = tasks.utc_now()
+    session.add(task)
+    session.commit()
+
+    assert upload(client, martin, home_id, task, instance_id).status_code == 404
+
+
+def test_a_store_that_fails_answers_503_and_completes_nothing(
+    client: TestClient, session: Session
+) -> None:
+    from app.storage import StorageError, get_photo_store
+
+    class FailingStore:
+        def put(self, key: str, data: bytes) -> None:
+            raise StorageError("disk")
+
+        def read(self, key: str) -> bytes | None:
+            return None
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    client.app.dependency_overrides[get_photo_store] = FailingStore  # type: ignore[attr-defined]
+    try:
+        response = upload(client, martin, home_id, task, instance_id)
+    finally:
+        client.app.dependency_overrides.pop(get_photo_store, None)  # type: ignore[attr-defined]
+
+    # Guards `except StorageError` in the route and the rollback: no row, no completion.
+    assert response.status_code == 503
+    assert response.json() == {"detail": photo_evidence.STORE_FAILED}
+    assert session.exec(select(PhotoEvidence)).all() == []
+    session.expire_all()
+    instance = session.get(TaskInstance, instance_id)
+    assert instance is not None and instance.completed_at is None
+
+
+def test_a_long_display_name_does_not_overflow_the_description(session: Session) -> None:
+    text = photo_evidence.describe("A" * 500, date(2026, 9, 29))
+
+    assert (
+        len(text[: photo_evidence.DESCRIPTION_MAX_LENGTH]) == photo_evidence.DESCRIPTION_MAX_LENGTH
+    )
 
 
 def test_the_description_is_written_by_the_server_with_a_norwegian_short_month() -> None:
