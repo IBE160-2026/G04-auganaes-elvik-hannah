@@ -3,7 +3,7 @@
 // answered, and only then does the task show as done (the list is replaced by the server's Task).
 // A failure shows the message with «Prøv igjen» at the control, keeping the chosen file. The
 // server writes the accessible description; nothing here asks for one or shows a filename.
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { ApiError } from '../api/errors';
 import type { Home } from '../api/homes';
 import { PHOTO_UPLOAD_MESSAGES } from '../api/photoEvidence';
@@ -12,11 +12,12 @@ import './PhotoUpload.css';
 
 export function PhotoUpload({ home, task }: { home: Home; task: TaskView }) {
   const upload = useUploadPhotoEvidence(home.id);
-  const chosen = useRef<File | null>(null);
+  // The chosen file is state, not a ref, so «Prøv igjen» can read it while rendering.
+  const [chosen, setChosen] = useState<File | null>(null);
   const [done, setDone] = useState(false);
 
   function send(file: File) {
-    chosen.current = file;
+    setChosen(file);
     upload.mutate({ task, file }, { onSuccess: () => setDone(true) });
   }
 
@@ -64,8 +65,8 @@ export function PhotoUpload({ home, task }: { home: Home; task: TaskView }) {
           <p className="auth-form__error" role="alert">
             {failure}
           </p>
-          {retryable && chosen.current && (
-            <button type="button" className="photo-upload__retry" onClick={() => send(chosen.current as File)}>
+          {retryable && chosen && (
+            <button type="button" className="photo-upload__retry" onClick={() => send(chosen)}>
               Prøv igjen
             </button>
           )}
