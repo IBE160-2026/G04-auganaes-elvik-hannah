@@ -17,12 +17,11 @@ from sqlalchemy import case, delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from app.domain import tasks
+from app.domain import push, tasks
 from app.models.due_notification import DueNotification
 from app.models.membership import Membership
-from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
-from app.push import PushMessage, PushTarget, Sender, is_allowed_endpoint
+from app.push import PushMessage, Sender
 
 logger = logging.getLogger(__name__)
 
@@ -141,28 +140,6 @@ def run_due_check(session: Session, sender: Sender, today: date) -> DueCheckResu
         members += 1
         task_count += len(claimed)
         message = build_message(claimed, today)
-        subscriptions = session.exec(
-            select(
-                PushSubscription.id,
-                PushSubscription.endpoint,
-                PushSubscription.p256dh,
-                PushSubscription.auth,
-            )
-            .where(PushSubscription.user_id == user_id)
-            .order_by(col(PushSubscription.created_at), col(PushSubscription.id))
-        ).all()
-        gone: list[uuid.UUID] = []
-        for sub_id, endpoint, p256dh, auth in subscriptions:
-            if not is_allowed_endpoint(endpoint):
-                logger.warning("Hoppet over push-adresse utenfor tillatelseslisten.")
-                continue
-            result = sender.send(PushTarget(endpoint, p256dh, auth), message)
-            if result == "sent":
-                pushes += 1
-            elif result == "gone":
-                gone.append(sub_id)
-        if gone:
-            session.execute(delete(PushSubscription).where(col(PushSubscription.id).in_(gone)))
-            session.commit()
+        pushes += push.deliver(session, sender, user_id, message)
     logger.info("Due-check: %d medlemmer, %d oppgaver, %d push.", members, task_count, pushes)
     return DueCheckResult(members, task_count, pushes)
