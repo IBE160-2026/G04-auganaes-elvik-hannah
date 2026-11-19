@@ -53,7 +53,7 @@ function Composer({ home }: { home: Home }) {
     setFieldError(problem);
     setNotice('');
     if (problem) return;
-    send.mutate(text, {
+    send.mutate(text.trim(), {
       onSuccess: (result) => {
         setNotice(sentNotice(result));
         // Nobody was reached: the text stays so the Landlord can try again.
