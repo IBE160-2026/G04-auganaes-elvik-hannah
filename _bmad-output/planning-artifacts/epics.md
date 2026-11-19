@@ -20,6 +20,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
 
+> **Revision 2026-11-19:** Story 3.4 builds the Landlord Home Admin shell (the open point about screens without an owning story is settled for this screen: the first story that needs it builds it) and adds acceptance criteria for the message length, the empty Home and the count of Tenants without a device. No story is added or renumbered.
+
 > **Revision 2026-11-12:** The teacher's PRD feedback (see `sprint-change-proposal-2026-11-12.md`): Trinn 2 is split into Must and If time permits with a cut order, the FR-11 rule is concrete (Story 3.3), AI failure, daily limit and call content are acceptance criteria (Stories 5.1 and 5.2), and "unit type" is replaced by the Home's name and active Must tasks (Story 5.3). No story is added or renumbered.
 
 ### Known open points (from the readiness check, 2026-10-11)
@@ -72,7 +74,7 @@ FR-10: Due/overdue push notifications. The system sends a push notification to r
 
 FR-11: Fairness-based targeted notification. When completion attribution (FR-7) shows a Member has none of a recurring shared task's last 3 completions (at least two current Members, at least three completed instances), the system targets a reminder to that Member only, while the task is open and due, at most once per task instance.
 
-FR-12: Landlord ad-hoc broadcast message. A Landlord can send a free-form reminder message to all Tenants of a specific Home.
+FR-12: Landlord ad-hoc broadcast message. A Landlord can send a free-form reminder message (1 to 300 characters) to all current Tenants of a specific Home, at once. The Landlord is told how many Tenants were reached, and how many have no device that could receive it. A Home with no Tenants refuses the message.
 
 FR-13: Landlord-controlled notification cadence. A Landlord can configure how strictly/often Tenants of a Home are reminded about due/overdue Must tasks, independent of the task's Frequency.
 
@@ -1098,6 +1100,20 @@ So that I can flag something without waiting for the next scheduled check.
 **Given** the broadcast send fails server-side
 **When** the Landlord sees the result
 **Then** the composer shows an inline error with a retry affordance rather than silently discarding the message
+
+*Added 2026-11-19 (Story 3.4 spec, decisions made under Eirik's mandate and reviewed in the PR):*
+
+**Given** a message of 0 characters (after trimming) or more than 300 characters
+**When** the Landlord sends it
+**Then** nothing is sent and the composer says why
+
+**Given** a Home with no current Tenants, or Tenants with no device that took the push
+**When** the Landlord sends
+**Then** a Home with no Tenants refuses with a clear text, and otherwise the composer adds how many Tenants have no device ("M har ikke slått på varsler")
+
+**Given** this is the first story that needs the Landlord Home Admin screen
+**When** it is built
+**Then** Story 3.4 builds the shell at `/hjem/<id>/utleier` (reached from the Landlord's Task Overview); Stories 3.5, 4.1 and 6.1 add their sections to it, and a non-Landlord who opens it is sent back to the Home
 
 *Added 2026-11-08 (Sprint Change Proposal, AD-16):*
 

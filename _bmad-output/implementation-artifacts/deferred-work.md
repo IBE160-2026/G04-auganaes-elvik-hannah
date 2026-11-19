@@ -109,3 +109,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
   summary: Add a test that the one-task push path (`/hjem/<home>/oppgaver/<task>`) matches a route in `frontend/src/App.tsx`.
   evidence: Code review of Story 3.2 (Verification Gap), low. The backend builds the path and the frontend defines the route; only string literals tie them together.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
+  summary: Decide whether a Landlord needs a limit on how many broadcasts can be sent per Home per day.
+  evidence: Story 3.4 decision 3: none built. A Landlord can send many messages and every Tenant device gets each one. No FR asks for a limit; add one if the PRD does.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
+  summary: Time budget for the synchronous broadcast: each device send can wait 10 s, so a Home with many Tenants and slow push services could pass the function limit.
+  evidence: Story 3.4 sends in one request (AD-14). Fine for a few Tenants. Same family as the due-check's open time-budget item from Story 3.2.
