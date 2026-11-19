@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-19-2026 23:00
+last_updated: 11-19-2026 23:30
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -72,8 +72,8 @@ development_status:
   3-5-landlord-controlled-notification-cadence: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-landlord-requires-photo-evidence-on-eligible-must-tasks: backlog
+  epic-4: in-progress
+  4-1-landlord-requires-photo-evidence-on-eligible-must-tasks: in-progress
   4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval: backlog
   4-3-landlord-reviews-evidence-auto-replacing-photo-storage: backlog
   epic-4-retrospective: optional
