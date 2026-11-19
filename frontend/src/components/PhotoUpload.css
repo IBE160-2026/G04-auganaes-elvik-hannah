@@ -1,0 +1,36 @@
+/* Story 4.2: the Tenant's photo upload on Task Detail. One column at every width. */
+.photo-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.photo-upload__title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-title);
+  line-height: var(--line-height-title);
+}
+
+.photo-upload__note,
+.photo-upload__status {
+  color: var(--color-ink-secondary);
+}
+
+.photo-upload__pick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-weight: var(--font-weight-bold);
+}
+
+.photo-upload__retry {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+}

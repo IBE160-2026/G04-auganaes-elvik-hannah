@@ -59,3 +59,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Story 4.2: bildebevis lagret lokalt uten Blob-token
+.photo-evidence/

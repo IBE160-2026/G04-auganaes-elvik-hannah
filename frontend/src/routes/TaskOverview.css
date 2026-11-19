@@ -253,3 +253,12 @@
   background: var(--color-surface-raised);
   box-shadow: var(--shadow-card);
 }
+
+/* Story 4.2: «Last opp bilde» where a Tenant's checkbox would be. */
+.task-overview__photo {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}

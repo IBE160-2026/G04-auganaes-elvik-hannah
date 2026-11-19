@@ -20,6 +20,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
 
+> **Revision 2026-11-19 (Story 4.2):** Story 4.2 adds the Tenant-only rule, the JPEG and size rule, the already-completed case and that viewing is Story 4.3. No story is added or renumbered.
+
 > **Revision 2026-11-19 (Story 4.1):** Story 4.1 adds the refusals for custom, not eligible and Should tasks, removal of the requirement on a change to Should, and states that enforcement is Story 4.2. No story is added or renumbered.
 
 > **Revision 2026-11-19 (Story 3.5):** Story 3.5 adds the options (daily default, every second day, weekly), the reminder-day rule counted from the due day, and that the cadence applies to Tenants and Must tasks only. No story is added or renumbered.
@@ -1246,6 +1248,24 @@ So that I'm never blocked waiting on my Landlord.
 **Given** no `BLOB_READ_WRITE_TOKEN` is configured (local running)
 **When** a photo is uploaded
 **Then** it is stored through the local filesystem adapter under the same fixed per-task key, so Photo Evidence can be run and tested without external accounts (FR-22, AD-15)
+
+*Added 2026-11-19 (Story 4.2 spec, decisions made under Eirik's mandate and reviewed in the PR):*
+
+**Given** a Landlord or Household Member
+**When** they complete a task that requires Photo Evidence
+**Then** it completes as before: the requirement is for Tenants only
+
+**Given** a photo that is not a JPEG or is over 3.5 MB
+**When** it is uploaded
+**Then** the server refuses it with a clear message and the task stays open; the browser shrinks the picture to at most 1600 px as JPEG before sending
+
+**Given** the task's instance was already completed by someone else
+**When** a Tenant uploads
+**Then** nothing is stored and the first completer stands
+
+**Given** this story
+**When** it is done
+**Then** no route serves a photo: viewing is Story 4.3
 
 ### Story 4.3: Landlord Reviews Evidence & Auto-Replacing Photo Storage
 

@@ -346,6 +346,7 @@ function TaskRow({ home, task }: { home: Home; task: TaskView }) {
   // Set at once, so a double tap before the next render sends one request.
   const sending = useRef(false);
   const done = task.pending || task.completion !== null;
+  const needsPhoto = home.role === 'tenant' && task.requires_photo_evidence && !done;
   const note = task.pending ? PENDING_COMPLETION_TEXT : task.completion && completionText(task.completion);
   // Done meanwhile (another Member, or a later tick): nothing left to report.
   const error = done ? null : completeError(complete.error, task.name);
@@ -366,7 +367,13 @@ function TaskRow({ home, task }: { home: Home; task: TaskView }) {
   return (
     <div className={`task-overview__card${done ? ' task-overview__card--done' : ''}`}>
       <div className="task-overview__card-main">
-        {/* A label, so the whole 44×44 area ticks the box, not only the drawn box. */}
+        {needsPhoto ? (
+          // Story 4.2 (FR-18): a Tenant cannot tick this one; the photo is uploaded on Task Detail.
+          <Link to={`/hjem/${home.id}/oppgaver/${task.id}`} className="task-overview__photo">
+            Last opp bilde
+          </Link>
+        ) : (
+        /* A label, so the whole 44×44 area ticks the box, not only the drawn box. */
         <label className="task-overview__check">
           <input
             type="checkbox"
@@ -376,6 +383,7 @@ function TaskRow({ home, task }: { home: Home; task: TaskView }) {
             onChange={tick}
           />
         </label>
+        )}
         <Link to={`/hjem/${home.id}/oppgaver/${task.id}`} className="task-overview__row">
           <span className="task-overview__row-top">
             <span className="task-overview__name">{task.name}</span>

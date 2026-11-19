@@ -3,6 +3,7 @@
 import logging
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,9 @@ DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 DEV_VAPID_PUBLIC_KEY = (
     "BENY7bYG7NNnXpiNfxTonfWM7tgRr5PnqDjwEUBAvyd4_bOFdz1wxFF4Cfkuq9sf787Iug-qKOA8kYxkoNV6ow0"
 )
+
+# Story 4.2 (FR-22): where Photo Evidence is kept when no Blob token is set, relative to backend/.
+DEFAULT_PHOTO_STORAGE_DIR = ".photo-evidence"
 
 # Story 3.2: the contact address in the VAPID claim when VAPID_SUBJECT is not set.
 DEFAULT_VAPID_SUBJECT = "mailto:husly@example.com"
@@ -128,6 +132,16 @@ def get_vapid_private_key() -> str | None:
 def get_vapid_subject() -> str:
     """Story 3.2: the `sub` claim push services may use to reach the sender. Generic by default."""
     return _env("VAPID_SUBJECT") or DEFAULT_VAPID_SUBJECT
+
+
+def blob_is_configured() -> bool:
+    """Story 4.2 (AD-5, AD-15): photos go to the private Blob store only with a token."""
+    return _env("BLOB_READ_WRITE_TOKEN") is not None
+
+
+def get_photo_storage_dir() -> Path:
+    """Story 4.2: the local folder for photos when there is no Blob token."""
+    return Path(_env("PHOTO_STORAGE_DIR") or DEFAULT_PHOTO_STORAGE_DIR)
 
 
 def get_cron_secret() -> str | None:

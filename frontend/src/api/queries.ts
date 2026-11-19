@@ -26,7 +26,7 @@ import {
 } from './homes';
 import { sendBroadcast } from './broadcast';
 import { saveCadence, type CadenceDays } from './cadence';
-import { setPhotoEvidenceRequirement } from './photoEvidence';
+import { prepareImage, setPhotoEvidenceRequirement, uploadPhotoEvidence } from './photoEvidence';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
@@ -406,6 +406,24 @@ export function useSaveCadence(homeId: string) {
   return useMutation({
     mutationFn: (days: CadenceDays) => saveCadence(homeId, days),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: homesKey(session?.user.id) }),
+  });
+}
+
+/**
+ * Story 4.2 (AD-11): a Tenant completes a Task with a photo. Pessimistic on purpose: nothing is
+ * shown as done until the server has answered, and the Task it answers with replaces the cached
+ * one. A failure leaves the list as it was; the control shows the message and a retry.
+ */
+export function useUploadPhotoEvidence(homeId: string) {
+  const queryClient = useQueryClient();
+  const { key } = useTasksScope(homeId);
+  return useMutation({
+    mutationFn: async ({ task, file }: { task: Task; file: Blob }) =>
+      uploadPhotoEvidence(homeId, task, await prepareImage(file)),
+    onSuccess: async (task: Task) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? task : t)));
+    },
   });
 }
 

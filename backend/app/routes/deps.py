@@ -34,6 +34,8 @@ Inviter = Annotated[Membership, Depends(require_role(*sorted(homes.INVITER_ROLES
 # Story 1.8 (decisions 1 and 2): who may leave, and who may remove.
 Leaver = Annotated[Membership, Depends(require_role(*sorted(homes.LEAVER_ROLES)))]
 Landlord = Annotated[Membership, Depends(require_role("landlord"))]
+# Story 4.2: the Tenant who uploads Photo Evidence.
+Tenant = Annotated[Membership, Depends(require_role("tenant"))]
 # Story 2.1: who may set up a Home's Tasks.
 TaskSetter = Annotated[Membership, Depends(require_role(*sorted(tasks.SETUP_ROLES)))]
 # Story 2.3: who may adjust a Task's Må/Bør and Frequency.

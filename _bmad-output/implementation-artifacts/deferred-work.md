@@ -130,3 +130,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
   summary: Tell the Landlord when a change of a task to Bør removed its Photo Evidence requirement.
   evidence: Blind Hunter on Story 4.1. A household editor or the Landlord changing Must to Should silently drops the requirement (FR-18 decision 3).
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
+  summary: Run the Blob adapter against a real private store and confirm `put_blob` with `allow_overwrite` and `get_blob` behave as `BlobPhotoStore` assumes.
+  evidence: The adapter is written from the SDK signatures and tested only with fakes. It cannot be exercised offline; a store has to be created in Vercel first.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
+  summary: Make a photo that was stored but whose completion then failed impossible to leave behind, for example by writing to a temporary key first.
+  evidence: Story 4.2 decision 6: the photo is stored before the completion commits, so a failed commit leaves the new photo under the key until the next upload.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
+  summary: Show a Tenant who uploaded the text that was saved with the photo, or confirm the Landlord's view (Story 4.3) is the only place it appears.
+  evidence: Story 4.2 saves the description but no screen shows it yet.
