@@ -235,6 +235,37 @@ describe('Reminder cadence', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('drops the old error when another option is chosen', async () => {
+    fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`PUT ${cadencePath(LANDLORD)}`]: () => json(500, { detail: 'boom' }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+    await userEvent.click(await screen.findByRole('radio', { name: 'Annenhver dag' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+    await screen.findByRole('alert');
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Én gang i uken' }));
+
+    // Guards `save.reset()` in the radio's onChange.
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows no inline error for a 403: the Homes are refetched instead', async () => {
+    const api = fakeApi({
+      ...signedInWith([LANDLORD]),
+      [`PUT ${cadencePath(LANDLORD)}`]: () => json(403, { detail: 'Du har ikke tilgang.' }),
+    });
+    renderAt(`/hjem/${LANDLORD.id}/utleier`);
+    await userEvent.click(await screen.findByRole('radio', { name: 'Annenhver dag' }));
+    const homesBefore = api.calls('GET', '/api/homes').length;
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    await waitFor(() => expect(api.calls('GET', '/api/homes').length).toBeGreaterThan(homesBefore));
+    expect(api.calls('PUT', cadencePath(LANDLORD))).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('is not shown when the server does not allow the caller to set it', async () => {
     fakeApi(signedInWith([{ ...LANDLORD, can_set_cadence: false }]));
     renderAt(`/hjem/${LANDLORD.id}/utleier`);

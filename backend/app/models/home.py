@@ -26,7 +26,8 @@ class Home(SQLModel, table=True):
         # Alembic check ignores CHECK constraints; tests/test_homes.py covers this one.
         CheckConstraint("type IN ('household', 'landlord')", name="ck_homes_type"),
         CheckConstraint(
-            "notification_cadence_days IN (1, 2, 7)", name="ck_homes_notification_cadence_days"
+            f"notification_cadence_days IN ({', '.join(str(d) for d in CADENCE_OPTIONS)})",
+            name="ck_homes_notification_cadence_days",
         ),
     )
 

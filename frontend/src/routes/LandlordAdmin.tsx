@@ -15,7 +15,7 @@ import {
   validateBroadcast,
 } from '../api/broadcast';
 import type { Home } from '../api/homes';
-import { CADENCE_MESSAGES, CADENCE_OPTIONS } from '../api/cadence';
+import { CADENCE_MESSAGES, CADENCE_OPTIONS, type CadenceDays } from '../api/cadence';
 import { useHomes, useSaveCadence, useSendBroadcast } from '../api/queries';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
@@ -125,7 +125,8 @@ function Composer({ home }: { home: Home }) {
 
 function CadenceSection({ home }: { home: Home }) {
   const save = useSaveCadence(home.id);
-  const [days, setDays] = useState(home.notification_cadence_days);
+  // Seeded once from the server's value; a change made elsewhere shows after the next visit.
+  const [days, setDays] = useState<CadenceDays>(home.notification_cadence_days as CadenceDays);
   const [notice, setNotice] = useState('');
 
   function attempt() {
@@ -146,7 +147,9 @@ function CadenceSection({ home }: { home: Home }) {
     >
       <h2 className="landlord-admin__subtitle">Påminnelser til leietakerne</h2>
       <fieldset className="landlord-admin__fieldset">
-        <legend className="landlord-admin__label">Hvor ofte skal de minnes på Må-oppgaver som må gjøres?</legend>
+        <legend className="landlord-admin__label">
+          Hvor ofte skal leietakerne minnes på Må-oppgaver?
+        </legend>
         {CADENCE_OPTIONS.map((option) => (
           <label key={option.days} className="landlord-admin__option">
             <input
@@ -157,6 +160,8 @@ function CadenceSection({ home }: { home: Home }) {
               onChange={() => {
                 setDays(option.days);
                 setNotice('');
+                // An old error belongs to the value that failed, not to this choice.
+                save.reset();
               }}
             />
             {option.label}
@@ -164,7 +169,8 @@ function CadenceSection({ home }: { home: Home }) {
         ))}
       </fieldset>
       <p className="landlord-admin__note">
-        Gjelder bare leietakere og Må-oppgaver. Første påminnelse kommer på fristdagen, og endrer ikke hvor ofte oppgaven skal gjøres.
+        Gjelder bare leietakere og Må-oppgaver. Første påminnelse kommer på fristdagen. Det endrer
+        ikke hvor ofte oppgaven skal gjøres.
       </p>
       <PrimaryButton type="submit" pending={save.isPending}>
         Lagre

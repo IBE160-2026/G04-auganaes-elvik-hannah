@@ -5,6 +5,7 @@ Each test that guards a rule names the line it guards (review convention, Epic 2
 
 import uuid
 from datetime import date, timedelta
+from typing import get_args
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,11 +14,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.domain import cadence, due_check, homes
-from app.models.home import Home
+from app.models.due_notification import DueNotification
+from app.models.home import CADENCE_OPTIONS, Home
 from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
 from app.models.user import User
 from app.push import MockSender
+from app.routes.cadence import CadenceIn
 from tests.helpers import auth_for, new_user
 
 TODAY = date(2026, 11, 19)
@@ -143,6 +146,7 @@ def test_a_new_home_is_on_the_daily_cadence(session: Session) -> None:
 
     home = session.get(Home, home_id)
     assert home is not None
+    # Guards DEFAULT_CADENCE_DAYS: a Home that never set one keeps FR-10's daily reminder.
     assert home.notification_cadence_days == 1
 
 
@@ -253,8 +257,14 @@ def test_a_household_member_and_a_stranger_get_the_same_403(
         headers=auth_for(client, stranger.email),
     )
 
+    # Guards require_role's single answer: no Membership gives the same 403 as the wrong Role,
+    # and the Home is left alone.
     assert response.status_code == 403
     assert response.json() == tenant.json()
+    session.expire_all()
+    home = session.get(Home, home_id)
+    assert home is not None
+    assert home.notification_cadence_days == 1
 
 
 def test_a_household_home_member_may_not_change_it(client: TestClient, session: Session) -> None:
@@ -267,4 +277,49 @@ def test_a_household_home_member_may_not_change_it(client: TestClient, session: 
         headers=auth_for(client, hanne.email),
     )
 
+    # Guards the Landlord alias: a Household Member has a Membership but not the right.
     assert response.status_code == 403
+    session.expire_all()
+    stored = session.get(Home, household.id)
+    assert stored is not None
+    assert stored.notification_cadence_days == 1
+
+
+def test_the_route_the_database_and_the_domain_offer_the_same_options() -> None:
+    literal = get_args(CadenceIn.model_fields["days"].annotation)
+    constraint = next(
+        c
+        for c in Home.__table__.constraints
+        if c.name == "ck_homes_notification_cadence_days"  # type: ignore[attr-defined]
+    )
+
+    # Guards the options being written once: adding one to CADENCE_OPTIONS must reach the route.
+    assert literal == CADENCE_OPTIONS
+    assert all(str(days) in str(constraint.sqltext) for days in CADENCE_OPTIONS)
+
+
+def test_a_skipped_day_writes_no_claim_and_the_next_cadence_day_sends(session: Session) -> None:
+    home_id, _kari, _anders = landlord_home(session)
+    add_task(session, home_id, "Rens sluket", 3)
+    set_days(session, home_id, 2)
+
+    off_day = MockSender()
+    due_check.run_due_check(session, off_day, TODAY)
+    off_claims = session.exec(select(DueNotification)).all()
+    on_day = MockSender()
+    due_check.run_due_check(session, on_day, TODAY + timedelta(days=1))
+
+    # Guards the filter running before the claim: the off day claims nothing for the Tenant
+    # (only the Landlord's daily claim exists), and the next day is not blocked by it.
+    assert [t.endpoint.removeprefix(FCM) for t, _ in off_day.sent] == ["kari"]
+    assert len(off_claims) == 1
+    assert sorted(t.endpoint.removeprefix(FCM) for t, _ in on_day.sent) == ["anders", "kari"]
+
+
+def test_a_task_due_in_the_future_is_not_reminded_whatever_the_cadence(session: Session) -> None:
+    home_id, _kari, _anders = landlord_home(session)
+    add_task(session, home_id, "Rens sluket", -7)
+    set_days(session, home_id, 7)
+
+    # Guards `due_on <= today`: 7 % 7 == 0 would otherwise let a task due next week through.
+    assert reminded(session) == {}

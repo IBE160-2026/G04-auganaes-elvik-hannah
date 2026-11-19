@@ -25,7 +25,7 @@ import {
   type Homes,
 } from './homes';
 import { sendBroadcast } from './broadcast';
-import { saveCadence } from './cadence';
+import { saveCadence, type CadenceDays } from './cadence';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
@@ -403,7 +403,7 @@ export function useSaveCadence(homeId: string) {
   const queryClient = useQueryClient();
   const session = useSession();
   return useMutation({
-    mutationFn: (days: number) => saveCadence(homeId, days),
+    mutationFn: (days: CadenceDays) => saveCadence(homeId, days),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: homesKey(session?.user.id) }),
   });
 }
