@@ -378,6 +378,8 @@ export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Comp
         due_status: 'later',
         days_until_due: 30,
         completion: null,
+        requires_photo_evidence: false,
+        may_require_photo_evidence: Boolean(entry?.photo_evidence_eligible) && body.classification === 'must',
       };
       // Must first, otherwise in the order they came (the real server also sorts by due date).
       stored = [...stored, created].sort(
