@@ -160,6 +160,10 @@ jobs:
                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
                "created_at) SELECT :h, t.home_id, t.task_type, 'Annet navn', 'should', 7, now() "
                "FROM tasks t WHERE t.archived_at IS NULL AND t.task_type IS NOT NULL LIMIT 1"),
+              # Story 3.5: a Home's reminder cadence is one of the three options (0 would divide by zero).
+              ("ck_homes_notification_cadence_days",
+               "INSERT INTO homes (id, name, type, notification_cadence_days, created_at) "
+               "VALUES (:h, 'x', 'landlord', 3, now())"),
               ("uq_tasks_active_home_id_lower_name",
                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
                "created_at) SELECT :h, t.home_id, NULL, upper(t.name), 'should', 7, now() "

@@ -9,6 +9,7 @@
 // Story 5.1: answerHandler answers the «?» POST (answer, error, limit, failure).
 // Story 3.1: fakePush stubs the browser's push APIs; pushServer answers /api/push.
 // Story 3.4: Homes carry can_broadcast (only a Landlord's is true).
+// Story 3.5: and notification_cadence_days with can_set_cadence.
 // Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
@@ -155,6 +156,8 @@ export const OLAS_HOME: Home = {
   has_tasks: true,
   can_adjust_tasks: true,
   can_broadcast: false,
+  notification_cadence_days: 1,
+  can_set_cadence: false,
 };
 
 // Story 2.3: a Tenant's Home, set up by the Landlord; Ola may read but not adjust its Tasks.

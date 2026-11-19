@@ -23,7 +23,7 @@ from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
 from app.clock import UtcDatetime
-from app.domain import broadcast, homes, tasks
+from app.domain import broadcast, cadence, homes, tasks
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
 from app.models.membership import Role
 from app.permissions.current_user import CurrentUser
@@ -63,6 +63,9 @@ class HomeOut(BaseModel):
     can_adjust_tasks: bool
     # Story 3.4: whether the caller may send a broadcast to the Tenants (the Landlord).
     can_broadcast: bool
+    # Story 3.5: how often Tenants are reminded about due Må tasks, and who may change it.
+    notification_cadence_days: int
+    can_set_cadence: bool
 
 
 class HomesOut(BaseModel):
@@ -89,6 +92,8 @@ def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
         has_tasks=has_tasks,
         can_adjust_tasks=tasks.can_adjust_tasks(member_home.role),
         can_broadcast=broadcast.can_broadcast(member_home.role),
+        notification_cadence_days=home.notification_cadence_days,
+        can_set_cadence=cadence.can_set_cadence(member_home.role),
     )
 
 

@@ -18,7 +18,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.domain import push, tasks
+from app.domain.cadence import reminder_day
 from app.models.due_notification import DueNotification
+from app.models.home import Home
 from app.models.membership import Membership
 from app.models.task import Task, TaskInstance
 from app.push import PushMessage, Sender
@@ -79,8 +81,12 @@ def _due_by_member(session: Session, today: date) -> dict[uuid.UUID, list[DueTas
             Task.home_id,
             Task.name,
             TaskInstance.due_on,
+            Membership.role,
+            Task.classification,
+            Home.notification_cadence_days,
         )
         .join(Task, col(Task.home_id) == col(Membership.home_id))
+        .join(Home, col(Home.id) == col(Membership.home_id))
         .join(TaskInstance, col(TaskInstance.task_id) == col(Task.id))
         .where(tasks.is_active(), tasks.is_open(), col(TaskInstance.due_on) <= today)
         .order_by(
@@ -91,7 +97,10 @@ def _due_by_member(session: Session, today: date) -> dict[uuid.UUID, list[DueTas
         )
     ).all()
     by_member: dict[uuid.UUID, list[DueTask]] = {}
-    for user_id, instance_id, task_id, home_id, name, due_on in rows:
+    for user_id, instance_id, task_id, home_id, name, due_on, role, classification, days in rows:
+        # Story 3.5 (FR-13): a Tenant's reminders about Må tasks follow the Landlord's cadence.
+        if role == "tenant" and classification == "must" and not reminder_day(due_on, today, days):
+            continue
         by_member.setdefault(user_id, []).append(
             DueTask(instance_id, task_id, home_id, name, due_on)
         )

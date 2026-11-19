@@ -22,6 +22,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-12 | Story 3.1 built: FR-10 states the per-device registration, the 10-device cap, silent registration, best-effort removal at sign-out and the blocked-push note; account data lists the stored push devices | `spec-3-1-push-notification-permission-device-registration.md` |
 | 2026-11-13 | Story 3.2 built: FR-10 states who is notified and which tasks count, one notification per task instance, Member and day, the refusal without the secret, the allowed push services and removal of gone devices; account data lists the claimed notifications | `spec-3-2-due-overdue-push-notifications-via-due-check-job.md` |
 | 2026-11-19 | Story 3.4 built: FR-12 states who receives and who can send, the 1–300 character limit, what the Landlord is told (a count of Tenants reached and of Tenants who could not be reached), that the text is kept when nobody was reached, the refusal for a Home with no Tenants, that nothing is stored or limited by cadence, and that a failed send is not retried by the system | `spec-3-4-landlord-ad-hoc-broadcast-message.md` |
+| 2026-11-19 | Story 3.5 built: FR-13 states the three options and the daily default, that a Tenant is reminded on the due day and then every whole interval after it in UTC days, that it applies to Tenants and Must tasks only, and that only the Landlord can change it | `spec-3-5-landlord-controlled-notification-cadence.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -230,7 +231,7 @@ The system sends a push notification to relevant Members when a task instance be
 
 **Consequences (testable):**
 - A Member with at least one due or overdue task receives one push notification per day from the daily morning due-check (scheduled around 07:00–08:00 Norwegian time; the platform may start it up to 59 minutes late), covering all of that Member's due and overdue tasks.
-- Every current Member of a Home, whatever their Role, is notified; a user who has left a Home gets nothing from it. A task counts when it is open, active and due today or earlier; a task due later does not. The notification names the tasks (the first few, then a count); a notification about one task opens its Task Detail and one about several opens Task Overview. An overdue task is included again the next day until it is done.
+- Every current Member of a Home, whatever their Role, is notified (a Tenant's reminders about Must tasks follow the Landlord's cadence, FR-13); a user who has left a Home gets nothing from it. A task counts when it is open, active and due today or earlier; a task due later does not. The notification names the tasks (the first few, then a count); a notification about one task opens its Task Detail and one about several opens Task Overview. An overdue task is included again the next day until it is done.
 - The same task instance is never notified to the same Member twice on one day, even if the due-check runs twice or at the same time. If a send fails it is not retried that day. Only the daily due-check may start the scan, and a call without the correct secret is refused (only when running locally with no push keys and no secret set can the job be run by hand, FR-22).
 - A push address the server stores must belong to a known push service, so the server never sends to an arbitrary address. A device the push service reports as gone is removed. A push a device does not receive within a day expires, and a new daily push replaces the previous Husly reminder in the notification tray. With no push keys configured, the due-check records what it would have sent instead of sending (FR-22).
 - A Member turns push on per device from Settings, which shows the browser's permission (granted, denied, not asked, unsupported). Each device is registered on its own, so a second device never replaces the first, and a Member has at most 10 registered devices (an 11th replaces the one registered longest ago). When permission is already granted, opening Settings registers the device without a new prompt. A device belongs to one Member at a time: signing out removes it on a best-effort basis, and otherwise it moves to the next Member who registers it, so a Member who closes the app without signing out may still have reminders reach that browser until then.
@@ -257,7 +258,10 @@ A Landlord can configure how strictly/often Tenants of a Home are reminded about
 
 **Consequences (testable):**
 - Changing the configured cadence changes the reminder frequency for all Tenants of that Home going forward, without changing the underlying task Frequency (FR-8/FR-9).
-- Cadence options are whole-day intervals (for example daily, every second day, weekly), since reminders are sent by the daily due-check; no option promises more than one reminder per day.
+- Cadence options are whole-day intervals, since reminders are sent by the daily due-check; no option promises more than one reminder per day.
+- The options are daily (the default for every Home, and what Tenants got before the setting existed), every second day and weekly. A Tenant is reminded about an open Must task on its due day and then on every day that is a whole number of intervals after it, counted in UTC days (FR-9).
+- The cadence applies only to Tenants and only to Must tasks. Household Members, the Landlord and Should tasks keep the daily reminder of FR-10, and the Landlord's broadcast (FR-12) is not affected.
+- Only the Home's Landlord can change it; a failed save shows an error with a retry.
 
 ### 4.5 AI Assistant
 

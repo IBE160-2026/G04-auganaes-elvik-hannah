@@ -215,6 +215,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/notification-cadence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Cadence */
+        put: operations["set_cadence_api_homes__home_id__notification_cadence_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homes/{home_id}/invites": {
         parameters: {
             query?: never;
@@ -498,6 +515,19 @@ export interface components {
             /** Without Push */
             without_push: number;
         };
+        /** CadenceIn */
+        CadenceIn: {
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 1 | 2 | 7;
+        };
+        /** CadenceOut */
+        CadenceOut: {
+            /** Notification Cadence Days */
+            notification_cadence_days: number;
+        };
         /** CompletionOut */
         CompletionOut: {
             /**
@@ -578,6 +608,10 @@ export interface components {
             can_adjust_tasks: boolean;
             /** Can Broadcast */
             can_broadcast: boolean;
+            /** Notification Cadence Days */
+            notification_cadence_days: number;
+            /** Can Set Cadence */
+            can_set_cadence: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -1233,6 +1267,50 @@ export interface operations {
             };
             /** @description The Home has no Tenants */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_cadence_api_homes__home_id__notification_cadence_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CadenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CadenceOut"];
+                };
+            };
+            /** @description Not the Landlord of this Home */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
