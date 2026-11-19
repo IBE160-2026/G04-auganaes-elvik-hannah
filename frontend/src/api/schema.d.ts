@@ -232,6 +232,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/tasks/{task_id}/photo-evidence-requirement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Requirement */
+        put: operations["set_requirement_api_homes__home_id__tasks__task_id__photo_evidence_requirement_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homes/{home_id}/invites": {
         parameters: {
             query?: never;
@@ -612,6 +629,8 @@ export interface components {
             notification_cadence_days: number;
             /** Can Set Cadence */
             can_set_cadence: boolean;
+            /** Can Require Photo Evidence */
+            can_require_photo_evidence: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -731,6 +750,16 @@ export interface components {
             /** Joined Home Id */
             joined_home_id?: string | null;
         };
+        /** RequirementIn */
+        RequirementIn: {
+            /** Required */
+            required: boolean;
+        };
+        /** RequirementOut */
+        RequirementOut: {
+            /** Requires Photo Evidence */
+            requires_photo_evidence: boolean;
+        };
         /** SetUpTasksRequest */
         SetUpTasksRequest: {
             /** Tasks */
@@ -799,6 +828,10 @@ export interface components {
             /** Days Until Due */
             days_until_due: number;
             completion: components["schemas"]["CompletionOut"] | null;
+            /** Requires Photo Evidence */
+            requires_photo_evidence: boolean;
+            /** May Require Photo Evidence */
+            may_require_photo_evidence: boolean;
         };
         /** TaskTypeOut */
         TaskTypeOut: {
@@ -1311,6 +1344,69 @@ export interface operations {
             };
             /** @description Not the Landlord of this Home */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_requirement_api_homes__home_id__tasks__task_id__photo_evidence_requirement_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequirementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementOut"];
+                };
+            };
+            /** @description Not the Landlord of this Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description The Task is not a Must Task of a type that may require a photo */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

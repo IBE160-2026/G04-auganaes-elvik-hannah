@@ -121,3 +121,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Check with a screen reader that a second send with the same count is announced (the live region gets identical text), together with the open screen reader check of the AI popover.
   evidence: Blind Hunter on Story 3.4. The notice is cleared and set in the same render batch, so the region may not see an empty state.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
+  summary: Decide whether a Tenant should see on Task Detail that the Landlord requires a photo, before Story 4.2 adds the upload.
+  evidence: Story 4.1 stores the requirement but shows it only to the Landlord. Until 4.2 a Tenant can still complete the task without a photo, so the setting has no effect.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
+  summary: Show a Norwegian message with a retry when a request fails without a response (offline), in the Landlord Home Admin sections of Stories 3.4, 3.5 and 4.1.
+  evidence: Edge Case Hunter on Story 4.1. A thrown network error is not an ApiError, so its raw text is shown and some retry buttons are hidden. One fix in `api/client.ts` or `errors.ts` would cover all three.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
+  summary: Tell the Landlord when a change of a task to Bør removed its Photo Evidence requirement.
+  evidence: Blind Hunter on Story 4.1. A household editor or the Landlord changing Must to Should silently drops the requirement (FR-18 decision 3).

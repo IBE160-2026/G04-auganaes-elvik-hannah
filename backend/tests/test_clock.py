@@ -68,6 +68,7 @@ def test_home_out_serialises_created_at_with_a_zone() -> None:
         can_broadcast=False,
         notification_cadence_days=1,
         can_set_cadence=False,
+        can_require_photo_evidence=False,
     )
     assert has_zone(home.model_dump(mode="json")["created_at"])
 

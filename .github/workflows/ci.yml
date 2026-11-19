@@ -164,6 +164,11 @@ jobs:
               ("ck_homes_notification_cadence_days",
                "INSERT INTO homes (id, name, type, notification_cadence_days, created_at) "
                "VALUES (:h, 'x', 'landlord', 3, now())"),
+              # Story 4.1: only a Must Task may require Photo Evidence.
+              ("ck_tasks_photo_evidence_must",
+               "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
+               "requires_photo_evidence, created_at) "
+               "SELECT :h, h.id, NULL, 'x', 'should', 7, true, now() FROM homes h LIMIT 1"),
               ("uq_tasks_active_home_id_lower_name",
                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
                "created_at) SELECT :h, t.home_id, NULL, upper(t.name), 'should', 7, now() "
@@ -179,6 +184,20 @@ jobs:
                       raise AssertionError(f"{name} slapp gjennom")
                   finally:
                       c.rollback()
+          EOF
+      # Story 4.1: alembic check may not compare server defaults, so prove the migrated column is
+      # NOT NULL with a false default (an existing Task must start without a requirement).
+      - name: tasks.requires_photo_evidence er NOT NULL med standard false i migrert skjema
+        run: |
+          uv run python - <<'EOF'
+          from sqlalchemy import create_engine, text
+          from app.config import get_database_url
+          with create_engine(get_database_url()).connect() as c:
+              row = c.execute(text(
+                  "SELECT column_default, is_nullable FROM information_schema.columns "
+                  "WHERE table_name = 'tasks' AND column_name = 'requires_photo_evidence'"
+              )).one()
+          assert row == ("false", "NO"), row
           EOF
       # Story 2.4: the partial index covers open instances only; a completed one may share the
       # open one's date (completed on setup day).

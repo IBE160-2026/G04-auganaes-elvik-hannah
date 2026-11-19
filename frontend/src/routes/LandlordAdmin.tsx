@@ -1,7 +1,9 @@
 // Story 3.4 (FR-12, UX-DR12): Landlord Home Admin, first built here as a shell with the
 // broadcast composer. Story 3.5 (FR-13) adds the reminder cadence: a radio group of whole-day
 // options saved with «Lagre», confirmed in a polite live region, a failed save shown inline with
-// «Prøv igjen» at the action (UX-DR30). Whether the caller may send is the
+// «Prøv igjen» at the action (UX-DR30). Story 4.1 (FR-18) adds «Bildebevis»: one checkbox per Må task
+// the server says may require a photo, saved on change, with the server's own reason on a 409.
+// Whether the caller may send is the
 // server's can_broadcast, never decided here, so a Tenant or Household Member is sent back to the
 // Home. A send confirms with a count in an aria-live="polite" region and names nobody. A failed
 // send keeps the text and offers «Prøv igjen». A 403 shows no inline error: the global handler in
@@ -16,7 +18,8 @@ import {
 } from '../api/broadcast';
 import type { Home } from '../api/homes';
 import { CADENCE_MESSAGES, CADENCE_OPTIONS, type CadenceDays } from '../api/cadence';
-import { useHomes, useSaveCadence, useSendBroadcast } from '../api/queries';
+import { useHomes, useSaveCadence, useSendBroadcast, useSetPhotoEvidence, useTasks } from '../api/queries';
+import type { Task } from '../api/tasks';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import './AuthForm.css';
@@ -38,6 +41,7 @@ export function LandlordAdmin() {
       <p className="landlord-admin__lead">{home.name}</p>
       <Composer key={home.id} home={home} />
       {home.can_set_cadence && <CadenceSection key={home.id} home={home} />}
+      {home.can_require_photo_evidence && <PhotoEvidenceSection key={home.id} home={home} />}
       <Link to={`/hjem/${home.id}`} className="landlord-admin__link">
         Tilbake til hjemmet
       </Link>
@@ -189,5 +193,87 @@ function CadenceSection({ home }: { home: Home }) {
         {notice}
       </p>
     </form>
+  );
+}
+
+function PhotoEvidenceSection({ home }: { home: Home }) {
+  const tasks = useTasks(home.id);
+  // A requirement the server would no longer allow is still listed, so it can be turned off.
+  const eligible =
+    tasks.data?.filter((task) => task.may_require_photo_evidence || task.requires_photo_evidence) ??
+    [];
+
+  return (
+    <section className="landlord-admin__section" aria-labelledby="landlord-admin-photo">
+      <h2 id="landlord-admin-photo" className="landlord-admin__subtitle">
+        Bildebevis
+      </h2>
+      <p className="landlord-admin__note">
+        Du kan kreve bilde på Må-oppgaver der det går an å se at det er gjort, uten å vise noe
+        privat. Kravet lagres nå, men leietakeren stoppes først når opplasting av bilde er på plass.
+      </p>
+      {tasks.isError ? (
+        <>
+          <p className="auth-form__error" role="alert">
+            Vi fikk ikke hentet oppgavene.
+          </p>
+          <button type="button" className="landlord-admin__retry" onClick={() => void tasks.refetch()}>
+            Prøv igjen
+          </button>
+        </>
+      ) : !tasks.data ? (
+        <p className="landlord-admin__note">Henter oppgaver …</p>
+      ) : eligible.length === 0 ? (
+        <p className="landlord-admin__note">Ingen av oppgavene dine kan kreve bilde ennå.</p>
+      ) : (
+        <ul className="landlord-admin__list">
+          {eligible.map((task) => (
+            <PhotoEvidenceRow key={task.id} home={home} task={task} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// Its own mutation per row, so rows never share or reset each other's pending state or error.
+function PhotoEvidenceRow({ home, task }: { home: Home; task: Task }) {
+  const set = useSetPhotoEvidence(home.id);
+  const checked = set.isPending ? set.variables.required : task.requires_photo_evidence;
+  const failure =
+    set.error instanceof ApiError && set.error.status === 403
+      ? null
+      : (set.error?.message ?? null);
+
+  return (
+    <li className="landlord-admin__row">
+      <label className="landlord-admin__option">
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={set.isPending}
+          onChange={() => set.mutate({ taskId: task.id, required: !checked })}
+        />
+        <span>
+          Krev bilde på «{task.name}»
+        </span>
+      </label>
+      {failure && (
+        <>
+          <p className="auth-form__error" role="alert">
+            {failure}
+          </p>
+          {!(set.error instanceof ApiError && set.error.status === 409) && (
+            <button
+              type="button"
+              className="landlord-admin__retry"
+              onClick={() => set.mutate({ taskId: task.id, required: !task.requires_photo_evidence })}
+            >
+              Prøv igjen
+            </button>
+          )}
+        </>
+      )}
+    </li>
   );
 }

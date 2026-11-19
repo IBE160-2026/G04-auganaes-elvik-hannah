@@ -79,3 +79,19 @@
   gap: var(--space-2);
   min-height: var(--tap-min);
 }
+
+/* Story 4.1: the Photo Evidence checkboxes, one row per Task. */
+.landlord-admin__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landlord-admin__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

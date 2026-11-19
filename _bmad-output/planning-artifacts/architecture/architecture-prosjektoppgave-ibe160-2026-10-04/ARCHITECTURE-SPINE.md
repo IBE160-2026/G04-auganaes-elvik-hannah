@@ -85,7 +85,7 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Binds:** FR-18, PRD Privacy Constraints
 - **Stage:** Trinn 2
 - **Prevents:** a direct API call letting a Landlord require Photo Evidence on a privacy-sensitive task type, bypassing a UI-only restriction.
-- **Rule:** Task types carry a system-seeded `photo_evidence_eligible` flag, not Landlord-editable. The endpoint that sets FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible. A custom Task (no catalog key, FR-24) is never eligible. Eligibility is read from the catalog by key, so a Task without a key has none. `[ADDED 2026-11-09]`
+- **Rule:** Task types carry a system-seeded `photo_evidence_eligible` flag, not Landlord-editable. The endpoint that sets FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible. A custom Task (no catalog key, FR-24) is never eligible. Eligibility is read from the catalog by key, so a Task without a key has none. `[ADDED 2026-11-09]` *Note 2026-11-19 (Story 4.1):* the requirement is one boolean column on `tasks` (`requires_photo_evidence`), set by `PUT /api/homes/{home_id}/tasks/{task_id}/photo-evidence-requirement` for the Landlord only. Turning it on needs a Must task of an eligible catalog type (409 otherwise), and a change to Should clears it. The `PhotoEvidence` row of AD-5 (the photo) comes with Story 4.2.
 
 ### AD-7 — Auth: in-memory access token + httpOnly refresh cookie, same origin
 

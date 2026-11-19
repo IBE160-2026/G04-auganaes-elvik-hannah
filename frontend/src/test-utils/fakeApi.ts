@@ -10,6 +10,7 @@
 // Story 3.1: fakePush stubs the browser's push APIs; pushServer answers /api/push.
 // Story 3.4: Homes carry can_broadcast (only a Landlord's is true).
 // Story 3.5: and notification_cadence_days with can_set_cadence.
+// Story 4.1: Homes carry can_require_photo_evidence; tasks carry requires_ and may_require_photo_evidence.
 // Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';
 import { setSession } from '../api/session';
@@ -158,6 +159,7 @@ export const OLAS_HOME: Home = {
   can_broadcast: false,
   notification_cadence_days: 1,
   can_set_cadence: false,
+  can_require_photo_evidence: false,
 };
 
 // Story 2.3: a Tenant's Home, set up by the Landlord; Ola may read but not adjust its Tasks.
@@ -204,6 +206,8 @@ export const OLAS_TASKS: Task[] = [
     due_status: 'later',
     days_until_due: 29,
     completion: null,
+    requires_photo_evidence: false,
+    may_require_photo_evidence: true,
   },
   {
     id: '00000000-0000-4000-8000-0000000000c2',
@@ -216,6 +220,8 @@ export const OLAS_TASKS: Task[] = [
     due_status: 'overdue',
     days_until_due: -2,
     completion: null,
+    requires_photo_evidence: false,
+    may_require_photo_evidence: false,
   },
   {
     id: '00000000-0000-4000-8000-0000000000c3',
@@ -228,6 +234,8 @@ export const OLAS_TASKS: Task[] = [
     due_status: 'due_soon',
     days_until_due: 1,
     completion: null,
+    requires_photo_evidence: false,
+    may_require_photo_evidence: false,
   },
 ];
 
@@ -370,6 +378,8 @@ export function taskServer(tasks: readonly Task[] = OLAS_TASKS, completion: Comp
         due_status: 'later',
         days_until_due: 30,
         completion: null,
+        requires_photo_evidence: false,
+        may_require_photo_evidence: Boolean(entry?.photo_evidence_eligible) && body.classification === 'must',
       };
       // Must first, otherwise in the order they came (the real server also sorts by due date).
       stored = [...stored, created].sort(

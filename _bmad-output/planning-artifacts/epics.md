@@ -20,6 +20,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
 
+> **Revision 2026-11-19 (Story 4.1):** Story 4.1 adds the refusals for custom, not eligible and Should tasks, removal of the requirement on a change to Should, and states that enforcement is Story 4.2. No story is added or renumbered.
+
 > **Revision 2026-11-19 (Story 3.5):** Story 3.5 adds the options (daily default, every second day, weekly), the reminder-day rule counted from the due day, and that the cadence applies to Tenants and Must tasks only. No story is added or renumbered.
 
 > **Revision 2026-11-19:** Story 3.4 builds the Landlord Home Admin shell (the open point about screens without an owning story is settled for this screen: the first story that needs it builds it) and adds acceptance criteria for the message length, the empty Home and the count of Tenants without a device. No story is added or renumbered.
@@ -1192,6 +1194,20 @@ So that I can trust completion was actually done without visiting in person.
 **Given** a Household Member (non-Landlord) Home
 **When** Photo Evidence is considered
 **Then** no Photo Evidence requirement option is exposed at all — that tier remains fully trust-based
+
+*Added 2026-11-19 (Story 4.1 spec, decisions made under Eirik's mandate and reviewed in the PR):*
+
+**Given** a custom task, or a Should task of an eligible type
+**When** the Landlord tries to require Photo Evidence
+**Then** the server refuses with a clear message (one for a custom or non-eligible task, one for a Should task); turning the requirement off is always allowed
+
+**Given** a task with the requirement
+**When** it is changed to Should
+**Then** the requirement is removed and is not restored by changing it back to Must
+
+**Given** this story only stores the requirement
+**When** a Tenant completes such a task
+**Then** nothing is enforced yet; stopping a completion without a photo is Story 4.2 (FR-19)
 
 ### Story 4.2: Tenant Uploads Photo Evidence with Immediate Auto-Approval
 
