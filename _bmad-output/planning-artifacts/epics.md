@@ -20,6 +20,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
 
+> **Revision 2026-11-19 (Story 3.5):** Story 3.5 adds the options (daily default, every second day, weekly), the reminder-day rule counted from the due day, and that the cadence applies to Tenants and Must tasks only. No story is added or renumbered.
+
 > **Revision 2026-11-19:** Story 3.4 builds the Landlord Home Admin shell (the open point about screens without an owning story is settled for this screen: the first story that needs it builds it) and adds acceptance criteria for the message length, the empty Home and the count of Tenants without a device. No story is added or renumbered.
 
 > **Revision 2026-11-12:** The teacher's PRD feedback (see `sprint-change-proposal-2026-11-12.md`): Trinn 2 is split into Must and If time permits with a cut order, the FR-11 rule is concrete (Story 3.3), AI failure, daily limit and call content are acceptance criteria (Stories 5.1 and 5.2), and "unit type" is replaced by the Home's name and active Must tasks (Story 5.3). No story is added or renumbered.
@@ -76,7 +78,7 @@ FR-11: Fairness-based targeted notification. When completion attribution (FR-7) 
 
 FR-12: Landlord ad-hoc broadcast message. A Landlord can send a free-form reminder message (1 to 300 characters) to all current Tenants of a specific Home, at once. The Landlord is told how many Tenants were reached, and how many could not be reached. A Home with no Tenants refuses the message. The message is not stored and is not limited by the cadence setting (FR-13).
 
-FR-13: Landlord-controlled notification cadence. A Landlord can configure how strictly/often Tenants of a Home are reminded about due/overdue Must tasks, independent of the task's Frequency.
+FR-13: Landlord-controlled notification cadence. A Landlord can configure how strictly/often Tenants of a Home are reminded about due/overdue Must tasks, independent of the task's Frequency. The options are daily (the default), every second day and weekly. A Tenant is reminded about an open Must task on its due day and then every whole interval after it, in UTC days; the setting applies to Tenants and Must tasks only.
 
 FR-14: Contextual quick-answer. Any task offers a "?" affordance that returns an immediate, task-specific answer to a how-to question, always with a visible AI-can-be-wrong / chemical-caution disclaimer. A failed or slow call (over 10 seconds) shows an error and can be retried; at most 20 AI calls per user per day; only the task's name, catalog type and the user's question are sent.
 
@@ -1150,6 +1152,16 @@ So that I can match reminder pressure to how seriously that property needs it.
 **Given** a cadence save fails server-side
 **When** the Landlord sees the result
 **Then** an inline error with a retry affordance shows at the action — not a silent failure (UX-DR30)
+
+*Added 2026-11-19 (Story 3.5 spec, decisions made under Eirik's mandate and reviewed in the PR):*
+
+**Given** the cadence is every second day or weekly
+**When** the due-check runs
+**Then** a Tenant is reminded about an open Must task on its due day and on days that are a whole number of intervals after it; Should tasks, Household Members and the Landlord keep the daily reminder
+
+**Given** this story is built on Story 3.4's Landlord Home Admin shell
+**When** it is shown
+**Then** the cadence section sits on the same page (`/hjem/<id>/utleier`) and is shown only when the server says the caller may set it
 
 ## Epic 4: Photo Evidence
 

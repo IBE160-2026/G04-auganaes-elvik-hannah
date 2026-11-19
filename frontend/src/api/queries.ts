@@ -25,6 +25,7 @@ import {
   type Homes,
 } from './homes';
 import { sendBroadcast } from './broadcast';
+import { saveCadence } from './cadence';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
@@ -395,6 +396,16 @@ export function useInvite(token: string) {
 
 export function useSendBroadcast(homeId: string) {
   return useMutation({ mutationFn: (message: string) => sendBroadcast(homeId, message) });
+}
+
+/** The Homes are refetched on success, so the saved cadence shows wherever Home is read. */
+export function useSaveCadence(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  return useMutation({
+    mutationFn: (days: number) => saveCadence(homeId, days),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: homesKey(session?.user.id) }),
+  });
 }
 
 export function useCreateInvite(homeId: string) {

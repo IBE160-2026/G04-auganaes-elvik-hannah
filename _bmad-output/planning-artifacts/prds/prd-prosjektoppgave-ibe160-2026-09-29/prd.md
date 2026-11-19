@@ -22,6 +22,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-12 | Story 3.1 built: FR-10 states the per-device registration, the 10-device cap, silent registration, best-effort removal at sign-out and the blocked-push note; account data lists the stored push devices | `spec-3-1-push-notification-permission-device-registration.md` |
 | 2026-11-13 | Story 3.2 built: FR-10 states who is notified and which tasks count, one notification per task instance, Member and day, the refusal without the secret, the allowed push services and removal of gone devices; account data lists the claimed notifications | `spec-3-2-due-overdue-push-notifications-via-due-check-job.md` |
 | 2026-11-19 | Story 3.4 built: FR-12 states who receives and who can send, the 1–300 character limit, what the Landlord is told (a count of Tenants reached and of Tenants who could not be reached), that the text is kept when nobody was reached, the refusal for a Home with no Tenants, that nothing is stored or limited by cadence, and that a failed send is not retried by the system | `spec-3-4-landlord-ad-hoc-broadcast-message.md` |
+| 2026-11-19 | Story 3.5 built: FR-13 states the three options and the daily default, that a Tenant is reminded on the due day and then every whole interval after it in UTC days, that it applies to Tenants and Must tasks only, and that only the Landlord can change it | `spec-3-5-landlord-controlled-notification-cadence.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -258,6 +259,9 @@ A Landlord can configure how strictly/often Tenants of a Home are reminded about
 **Consequences (testable):**
 - Changing the configured cadence changes the reminder frequency for all Tenants of that Home going forward, without changing the underlying task Frequency (FR-8/FR-9).
 - Cadence options are whole-day intervals (for example daily, every second day, weekly), since reminders are sent by the daily due-check; no option promises more than one reminder per day.
+- The options are daily (the default for every Home, and what Tenants got before the setting existed), every second day and weekly. A Tenant is reminded about an open Must task on its due day and then on every day that is a whole number of intervals after it, counted in UTC days (FR-9).
+- The cadence applies only to Tenants and only to Must tasks. Household Members, the Landlord and Should tasks keep the daily reminder of FR-10, and the Landlord's broadcast (FR-12) is not affected.
+- Only the Home's Landlord can change it; a failed save shows an error with a retry.
 
 ### 4.5 AI Assistant
 
