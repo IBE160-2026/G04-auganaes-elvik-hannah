@@ -102,6 +102,10 @@
 - [x] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Story 4.3 (utleier ser bildet) er neste; start i ny terminal fra `main` (løst 2026-11-20: bygget i PR #76)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: bekreft en ekte push til en enhet på Production, og se første cron-kjøring 06:00 UTC (Settings → Cron Jobs)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Se over `.env.local` i prosjektmappen: `vercel blob create-store` overskrev den (git-ignorert)
-- [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Merge PR #76 (Story 4.3) når CI er grønn; så `done` i `sprint-status.yaml` på `main`
+- [x] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Merge PR #76 (Story 4.3) når CI er grønn; så `done` i `sprint-status.yaml` på `main` (løst 2026-11-20)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Blob-cache kan gi gammelt bilde i opptil 60 s etter erstatning (AD-5, `deferred-work.md`)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: vurder å slette gamle preview-deployments i Vercel (75 % funksjonslagring brukt)
+- [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: B1 ekte push og første cron-kjøring 06:00 UTC; B2 avgjør push-pålitelighet; A3 skjermlesersjekk; A4 Blob-cache (anbefales godtatt)
+- [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: skal nudgen (FR-11) erstatte eller komme i tillegg til den vanlige påminnelsen?
+- [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Story 5.2 (KI-chat) er neste; start i ny terminal fra `main`
+
