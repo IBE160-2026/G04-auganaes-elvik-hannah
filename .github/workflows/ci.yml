@@ -84,13 +84,16 @@ jobs:
       # Story 1.3: plus the example Home with Mari and Jonas as its two Members.
       # Story 1.4: plus Kari's Landlord Home, which Anders joined through one invite link.
       # Story 2.1: plus eight Tasks in each Home, each with one TaskInstance.
-      # Story 2.4: plus Jonas's one completion, which adds the next instance (17 instances), and
-      # Story 3.3: Mari's three completions of the floor task, one more instance each (20).
+      # Story 2.4 and 3.3: plus one instance per completion the seed makes (Jonas's one, Mari's
+      # three), so the expected numbers come from the seed constants and a seed change cannot
+      # break this step (Epic 3 retro, B3).
       - name: Seed er idempotent (fire brukere, to hjem, fire medlemskap, én lenke, 16 oppgaver)
         run: |
           uv run python - <<'EOF'
           from sqlalchemy import create_engine, text
           from app.config import get_database_url
+          from app.domain.task_types import TASK_TYPES
+          from app.seed.tasks import EXAMPLE_HISTORY
           from app.seed.users import EXAMPLE_USERS
           with create_engine(get_database_url()).connect() as c:
               n = c.execute(text("SELECT count(*) FROM users")).scalar_one()
@@ -101,7 +104,9 @@ jobs:
               instances = c.execute(text("SELECT count(*) FROM task_instances")).scalar_one()
           assert n == len(EXAMPLE_USERS) == 4, n
           assert (homes, members, links) == (2, 4, 1), (homes, members, links)
-          assert (tasks, instances) == (16, 20), (tasks, instances)
+          expected_tasks = 2 * len(TASK_TYPES)
+          expected_instances = expected_tasks + 1 + len(EXAMPLE_HISTORY[3])
+          assert (tasks, instances) == (expected_tasks, expected_instances), (tasks, instances)
           EOF
       # Story 1.5 (FR-3, decision 2): the same "never mixed" check as the tests, on Postgres.
       - name: Ingen hjem blander roller (FR-3)
