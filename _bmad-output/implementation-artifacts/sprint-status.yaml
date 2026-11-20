@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-20-2026 20:55
+last_updated: 11-20-2026 22:10
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -70,7 +70,7 @@ development_status:
   3-3-fairness-based-targeted-notification: done
   3-4-landlord-ad-hoc-broadcast-message: done
   3-5-landlord-controlled-notification-cadence: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   epic-4: in-progress
   4-1-landlord-requires-photo-evidence-on-eligible-must-tasks: done
@@ -233,3 +233,26 @@ action_items:
     owner: "Eirik"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md"
+  - id: "epic-3-retro-item-21-smoke-test-real-push-before-the-demo-ena"
+    epic: 3
+    action: "Smoke-test real push before the demo: enable notifications on a device
+      in Production, send a Landlord message, and read Cron Jobs after the first 06:00
+      UTC run (B1)"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-2026-11-20.md"
+  - id: "epic-3-retro-item-22-decide-which-push-reliability-items-to-b"
+    epic: 3
+    action: "Decide which push reliability items to build or cut: time budget and
+      per-Member isolation, 401/403 stale devices, pushsubscriptionchange, ON DELETE,
+      the _claim race test, batching in apply_nudges (B2)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-2026-11-20.md"
+  - id: "epic-3-retro-item-23-make-the-ci-seed-count-step-read-its-num"
+    epic: 3
+    action: "Make the CI seed-count step read its numbers from the seed constants
+      so a seed change cannot break CI (B3)"
+    owner: "Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-2026-11-20.md"
