@@ -155,13 +155,16 @@ def test_an_upload_for_a_task_that_needs_no_photo_is_409_and_stores_nothing(
     assert stored_file(local_photo_store, task) is None
 
 
+# Short ids on purpose: a bytes value in a parameter id would put the whole body in the test name.
 @pytest.mark.parametrize(
     ("body", "status_code", "message"),
     [
-        (b"\x89PNG\r\n\x1a\n" + b"x" * 100, 415, photo_evidence.NOT_JPEG),
-        (b"", 415, photo_evidence.NOT_JPEG),
-        (b"just text", 415, photo_evidence.NOT_JPEG),
-        (JPEG + b"x" * photo_evidence.MAX_PHOTO_BYTES, 413, photo_evidence.TOO_LARGE),
+        pytest.param(b"\x89PNG\r\n\x1a\n" + b"x" * 100, 415, photo_evidence.NOT_JPEG, id="png"),
+        pytest.param(b"", 415, photo_evidence.NOT_JPEG, id="empty"),
+        pytest.param(b"just text", 415, photo_evidence.NOT_JPEG, id="text"),
+        pytest.param(
+            JPEG + b"x" * photo_evidence.MAX_PHOTO_BYTES, 413, photo_evidence.TOO_LARGE, id="large"
+        ),
     ],
 )
 def test_a_bad_photo_is_refused_before_anything_is_stored_or_completed(
