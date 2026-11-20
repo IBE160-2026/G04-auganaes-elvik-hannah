@@ -80,7 +80,7 @@ development_status:
 
   epic-5: in-progress
   5-1-contextual-quick-answer: done
-  5-2-escalate-to-full-ai-chat: backlog
+  5-2-escalate-to-full-ai-chat: review
   5-3-ai-generated-onboarding-guide-for-new-tenants: backlog
   epic-5-retrospective: optional
 

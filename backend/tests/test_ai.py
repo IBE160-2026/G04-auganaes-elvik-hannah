@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 import httpx
 import pytest
@@ -196,7 +197,7 @@ def test_the_provider_gets_only_name_type_and_question(session: Session) -> None
     assert provider.requests == [
         AiRequest("Rens sluket", "rens-sluket", "Hvordan gjør jeg «Rens sluket»?")
     ]
-    assert AiRequest._fields == ("task_name", "task_type", "question")
+    assert AiRequest._fields == ("task_name", "task_type", "question", "history")
 
 
 def test_low_confidence_keeps_the_disclaimer(session: Session) -> None:
@@ -401,3 +402,70 @@ def test_a_failure_never_logs_the_key_or_the_request(
     assert answer.status == "error"
     assert "hemmelig-nokkel" not in caplog.text and "Hemmelig spørsmål" not in caplog.text
     assert "ConnectError" in caplog.text
+
+
+# --- Story 5.2: the chat keeps earlier turns and the Task as context (FR-15) ------------------
+
+HISTORY = (
+    ai.ChatTurn("user", "Hvordan gjør jeg «Rens sluket»?"),
+    ai.ChatTurn("assistant", "Ta bort sil og rens med natron."),
+)
+
+
+def test_the_history_reaches_the_provider_with_the_new_question_last(session: Session) -> None:
+    user = new_user(session)
+    provider = Recording(ProviderAnswer("ok", "Svar"))
+    ask(session, user.id, provider, question="Og hvis det lukter?", history=HISTORY)
+    request = provider.requests[0]
+    assert request.history == HISTORY and request.question == "Og hvis det lukter?"
+    assert (request.task_name, request.task_type) == ("Rens sluket", "rens-sluket")
+
+
+def test_a_follow_up_is_one_counted_call_like_any_other(session: Session) -> None:
+    user = new_user(session)
+    ask(session, user.id, Recording(ProviderAnswer("ok", "a")))
+    ask(session, user.id, Recording(ProviderAnswer("ok", "b")), question="Mer?", history=HISTORY)
+    assert calls_today(session, user.id, DAY) == 2
+
+
+def test_the_gemini_body_is_the_history_then_the_question_with_the_task_in_the_first_turn() -> None:
+    body = gemini(lambda r: reply()).build_body(
+        AiRequest("Rens sluket", "rens-sluket", "Og hvis det lukter?", HISTORY)
+    )
+    contents = body["contents"]
+    assert [c["role"] for c in contents] == ["user", "model", "user"]
+    texts = [c["parts"][0]["text"] for c in contents]
+    assert texts[0].startswith("Oppgave: Rens sluket\nOppgavetype: rens-sluket\n")
+    assert "Hvordan gjør jeg" in texts[0]
+    # The Task header is on the first turn only; the rest are the plain messages.
+    assert texts[1] == HISTORY[1].text and texts[2] == "Og hvis det lukter?"
+    assert "Oppgave:" not in texts[1] + texts[2]
+    # Nothing from the history reaches the system instruction.
+    assert "natron" not in json.dumps(body["systemInstruction"])
+
+
+def test_a_quick_answer_has_one_user_turn_as_in_5_1() -> None:
+    body = gemini(lambda r: reply()).build_body(AiRequest("Rens sluket", "rens-sluket", "Hei"))
+    assert len(body["contents"]) == 1 and body["contents"][0]["role"] == "user"
+
+
+def test_the_mock_answers_a_follow_up_with_the_task_name_and_a_first_message_as_before() -> None:
+    provider = MockProvider()
+    first = provider.ask(AiRequest("Rens sluket", "rens-sluket", "Hei"))
+    follow = provider.ask(AiRequest("Rens sluket", "rens-sluket", "Mer?", HISTORY))
+    assert first.answer == mock_answers.BY_TASK_TYPE["rens-sluket"]
+    assert follow.answer == mock_answers.follow_up_for("Rens sluket")
+    assert "«Rens sluket»" in follow.answer and "Demo-svar" in follow.answer
+
+
+def test_the_default_question_is_the_one_the_frontend_shows_for_it() -> None:
+    # frontend/src/api/ai.ts `defaultQuestion` repeats this wording for the chat's first turn.
+    assert service.default_question("Rens sluket") == "Hvordan gjør jeg «Rens sluket»?"
+    ts = (Path(__file__).parents[2] / "frontend/src/api/ai.ts").read_text(encoding="utf-8")
+    assert "`Hvordan gjør jeg «${taskName}»?`" in ts
+
+
+def test_the_frontends_fallback_disclaimer_is_the_servers_text() -> None:
+    # The chat shows the disclaimer before any answer has brought the server's own (FR-15).
+    ts = (Path(__file__).parents[2] / "frontend/src/api/ai.ts").read_text(encoding="utf-8")
+    assert json.dumps(ai.DISCLAIMER, ensure_ascii=False)[1:-1] in ts

@@ -564,6 +564,8 @@ export interface components {
         AskRequest: {
             /** Question */
             question?: string | null;
+            /** History */
+            history?: components["schemas"]["HistoryEntry"][];
         };
         /** AuthResponse */
         AuthResponse: {
@@ -659,6 +661,19 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HistoryEntry
+         * @description One earlier message of a chat: the user's own question or the AI's answer to it.
+         */
+        HistoryEntry: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Text */
+            text: string;
         };
         /** HomeOut */
         HomeOut: {

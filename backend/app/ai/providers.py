@@ -44,13 +44,22 @@ RESPONSE_SCHEMA = {
 }
 
 
+class ChatTurn(NamedTuple):
+    """One earlier message of a chat (Story 5.2): the user's own question or the AI's answer."""
+
+    role: Literal["user", "assistant"]
+    text: str
+
+
 class AiRequest(NamedTuple):
-    """Everything a provider may see (FR-14)."""
+    """Everything a provider may see (FR-14, FR-15)."""
 
     task_name: str
     # The catalog key, or None for a custom Task.
     task_type: str | None
     question: str
+    # Earlier completed turns of a chat, oldest first; empty for the quick-answer.
+    history: tuple[ChatTurn, ...] = ()
 
 
 class ProviderAnswer(NamedTuple):
@@ -69,6 +78,8 @@ class MockProvider:
     demo = True
 
     def ask(self, request: AiRequest) -> ProviderAnswer:
+        if request.history:
+            return ProviderAnswer("ok", mock_answers.follow_up_for(request.task_name))
         return ProviderAnswer("ok", mock_answers.answer_for(request.task_type))
 
 
@@ -83,15 +94,24 @@ class GeminiProvider:
         self._transport = transport
 
     def build_body(self, request: AiRequest) -> dict:
-        # The question only ever goes in the user content, never in the system instruction.
-        user_text = (
-            f"Oppgave: {request.task_name}\n"
-            f"Oppgavetype: {request.task_type or 'egendefinert'}\n"
-            f"Spørsmål: {request.question}"
+        # The question only ever goes in the user content, never in the system instruction. The
+        # Task header opens the first user turn, so a follow-up keeps its context (FR-15).
+        header = (
+            f"Oppgave: {request.task_name}\nOppgavetype: {request.task_type or 'egendefinert'}\n"
         )
+        turns = [*request.history, ChatTurn("user", request.question)]
+        contents = [
+            {
+                "role": "model" if turn.role == "assistant" else "user",
+                "parts": [{"text": turn.text}],
+            }
+            for turn in turns
+        ]
+        first = contents[0]["parts"][0]
+        first["text"] = f"{header}Spørsmål: {first['text']}"
         return {
             "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+            "contents": contents,
             "generationConfig": {
                 "responseMimeType": "application/json",
                 "responseSchema": RESPONSE_SCHEMA,

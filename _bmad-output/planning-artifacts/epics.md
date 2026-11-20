@@ -1403,7 +1403,7 @@ So that I can get unstuck right when I need it.
 
 **Given** a Member taps "?" on a task, whatever their Role
 **When** the popover opens
-**Then** it asks at once with a default question about the task, and a field lets the Member ask their own question of at most 300 characters
+**Then** it asks at once with a default question about the task; the Member asks something else in the chat (Story 5.2), so the popover has no question field of its own (changed 2026-11-20)
 
 **Given** a question that is not about the task or housework
 **When** the AI answers
@@ -1446,6 +1446,20 @@ So that I can ask follow-up questions about the same task.
 **Given** AI Chat
 **When** it calls the backend
 **Then** it uses the same shared AI service (AD-4) as the quick-answer — not a separate implementation
+
+*Built 2026-11-20 (Story 5.2 spec):*
+
+**Given** an answer in the popover that says something (not a failed one)
+**When** the Member taps "Ask more" («Spør mer»)
+**Then** the chat page opens with that exchange and the Task's name, and each message sends the earlier completed exchanges again (at most five), because the service stores no chat
+
+**Given** a chat message fails
+**When** it was made
+**Then** it stays in the chat with a retry, still counts toward the 20, and is not sent along as an earlier message
+
+**Given** a chat opened by its link, with no popover answer
+**When** the Member sends the first message
+**Then** it is answered with the Task as context and no earlier messages
 
 ### Story 5.3: AI-Generated Onboarding Guide for New Tenants
 

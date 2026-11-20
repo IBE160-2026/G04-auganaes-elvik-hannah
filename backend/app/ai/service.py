@@ -19,6 +19,7 @@ from app.ai.providers import (
     AI_TIMEOUT_SECONDS,
     AiProvider,
     AiRequest,
+    ChatTurn,
     ProviderAnswer,
     select_provider,
 )
@@ -35,6 +36,10 @@ DISCLAIMER = (
 )
 ERROR_TEXT = "Vi fikk ikke svar fra KI-tjenesten akkurat nå."
 QUESTION_MAX_LENGTH = 300
+# A chat's earlier turns (Story 5.2): at most 10 entries (five exchanges), the AI's answers longer
+# than a question may be.
+HISTORY_MAX_ENTRIES = 10
+HISTORY_ANSWER_MAX_LENGTH = 2000
 
 
 class DeadlineExceeded(Exception):
@@ -93,11 +98,15 @@ def answer_question(
     task_name: str,
     task_type: str | None,
     question: str | None = None,
+    history: tuple[ChatTurn, ...] = (),
     *,
     provider: AiProvider | None = None,
     today: date | None = None,
 ) -> AiAnswer:
-    """Counts the call, asks the provider, and returns the answer. Raises only LimitReached."""
+    """Counts the call, asks the provider, and returns the answer. Raises only LimitReached.
+
+    `history` is a chat's earlier completed turns, already validated by the route (Story 5.2).
+    """
     day = today if today is not None else utc_today()
     # Before counting, so a provider that cannot be built never spends one of the user's calls.
     chosen = provider if provider is not None else select_provider()
@@ -105,7 +114,7 @@ def answer_question(
         raise LimitReached(ai_usage.next_reset(day))
 
     asked = (question or "").strip() or default_question(task_name)
-    request = AiRequest(task_name, task_type, asked)
+    request = AiRequest(task_name, task_type, asked, history)
     try:
         result = _ask_within(chosen, request, AI_TIMEOUT_SECONDS)
     except DeadlineExceeded:

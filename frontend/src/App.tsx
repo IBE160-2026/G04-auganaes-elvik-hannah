@@ -15,6 +15,7 @@ import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
 import { Settings } from './routes/Settings';
 import { SignIn } from './routes/SignIn';
+import { TaskChat } from './routes/TaskChat';
 import { TaskDetail } from './routes/TaskDetail';
 import { TaskOverview } from './routes/TaskOverview';
 import { TaskSetup } from './routes/TaskSetup';
@@ -83,6 +84,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <TaskDetail />
+          </RequireAuth>
+        }
+      />
+      {/* Story 5.2: the AI chat, opened from the «?» popover. */}
+      <Route
+        path="/hjem/:homeId/oppgaver/:taskId/chat"
+        element={
+          <RequireAuth>
+            <TaskChat />
           </RequireAuth>
         }
       />

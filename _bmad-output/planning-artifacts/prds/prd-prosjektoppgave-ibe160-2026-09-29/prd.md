@@ -27,6 +27,8 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-19 | Story 4.2 built: FR-19 states that a Tenant is refused without a photo, the JPEG and size rule, the description the system writes, the upload shown as done only after the answer, and that an already completed instance keeps its first completer, the refusals and the failed save, what the saved description holds and that the photo stays after the requirement is turned off or the task is archived; Privacy Constraints state the private store and the external photo store; the Landlord's retrieval of the photo (FR-19) is built with Story 4.3 | `spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md` |
 | 2026-11-20 | Story 4.3 built: FR-19 states who can view the photo and how (through the backend, never cached, no storage address), the «no photo yet» message and that the uploader gets no view; the Blob adapter now uses the SDK's synchronous calls, since the asynchronous ones stored nothing | `spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md` |
 | 2026-11-20 | Story 3.3 built: FR-11 states that the targeted reminder replaces the regular one on the first day the rule holds, that later days remind everyone, who counts (not the Landlord, not former Members, not a Member who joined after the completions), that the Landlord keeps the regular reminder, and the cases with no targeted reminder (including cadence and no device) | `spec-3-3-fairness-based-targeted-notification.md` |
+| 2026-11-20 | Story 5.2 built: FR-15 states that each chat message counts toward the 20, what a chat sends besides the question (the user's earlier questions and the AI's answers, at most five exchanges), that nothing is stored, and how a failed message behaves; FR-14's data rule points to it | `spec-5-2-escalate-to-full-ai-chat.md` |
+| 2026-11-20 | Story 5.2 walkthrough: the quick-answer has no question field of its own; the user's own questions are typed in the chat (FR-14, Eirik's decision) | `spec-5-2-escalate-to-full-ai-chat.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -286,10 +288,10 @@ Any task offers a "?" affordance that returns an immediate, task-specific answer
 - Every AI-generated answer displays a visible disclaimer that the AI can be wrong and that the user should exercise caution, particularly with chemical products (for example, cleaning agents).
 - With no AI API key configured, the quick-answer still returns an answer in the same structure from mock data, so the feature can be run and tested without external accounts (FR-22).
 - If the AI call fails or takes longer than 10 seconds, "?" shows an error message (status "error") and can be retried; the task view and completion keep working.
-- Only the task's name, its catalog type and the user's own question are sent to the AI service — no names, e-mail addresses or Home names. The UI says the question goes to an external AI service.
+- Only the task's name, its catalog type and the user's own question are sent to the AI service (the chat also sends the earlier messages of that chat, FR-15) — no names, e-mail addresses or Home names. The UI says the question goes to an external AI service.
 - A user can make at most 20 AI calls per day (quick answers and chat together). The day is a UTC day. Every call that reaches the AI provider counts, also when it fails or times out, so a retry after an error uses up one of the 20; a refused call does not count. Beyond the limit, "?" says so plainly and tells when the count restarts (00:00 UTC, shown in the user's local time). The limit also applies to the mock answers, so it can be tested offline.
 - The AI answers only questions about the task and housework (cleaning, maintenance, equipment and cleaning products in the home); a question about which cleaner suits a surface is always in scope, and any other question gets a short answer that the assistant only helps with housework.
-- Tapping "?" asks at once with a default question about the task; the user can also type their own question of at most 300 characters. Every Role, including Tenants, can use "?".
+- Tapping "?" asks at once with a default question about the task; the user asks something else in the chat (FR-15), where a question is at most 300 characters. Every Role, including Tenants, can use "?".
 
 #### FR-15: Escalate to full AI chat
 From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions. Realizes UJ-1.
@@ -297,7 +299,9 @@ From the quick-answer, a user can open a full conversational chat with the AI as
 **Consequences (testable):**
 - The chat retains the originating task as context for at least the first follow-up question.
 - The chat carries the same AI-can-be-wrong / chemical-caution disclaimer as the quick-answer (FR-14), visible at least once per session.
-- The chat follows the same timeout, data and daily-limit rules as the quick-answer (FR-14).
+- The chat follows the same timeout, data and daily-limit rules as the quick-answer (FR-14). Every chat message is one AI call and counts toward the same 20 a day.
+- Besides the task's name, its catalog type and the new question, a chat sends the user's own earlier questions and the AI's answers to them (at most five exchanges, the oldest dropped first, each question at most 300 characters). The service keeps no chat: nothing is stored, so closing the chat page ends it, and a reload keeps only the exchange carried over from the quick-answer. An earlier answer longer than 2000 characters is cut to that length before it is sent again.
+- A message that fails stays in the chat with a retry, and is not sent along as an earlier message. A user can open the chat from any answer that says something, whatever their Role, or by its link, and then it starts empty. The disclaimer is visible in the chat before the first answer too.
 
 **Feature-specific NFRs:**
 - The AI assistant can answer chemical-related how-to questions (for example, which cleaner suits which surface); every such answer surfaces the disclaimer above rather than being scoped out. No numeric accuracy bound is set for this round — the disclaimer is the product's chosen mitigation, not a claim of verified correctness.
