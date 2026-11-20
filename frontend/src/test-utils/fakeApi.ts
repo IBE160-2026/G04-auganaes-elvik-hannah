@@ -10,6 +10,7 @@
 // Story 3.1: fakePush stubs the browser's push APIs; pushServer answers /api/push.
 // Story 3.4: Homes carry can_broadcast (only a Landlord's is true).
 // Story 3.5: and notification_cadence_days with can_set_cadence.
+// Story 4.2: the Tenant's photo upload is answered per test (POST …/instances/<id>/photo-evidence).
 // Story 4.1: Homes carry can_require_photo_evidence; tasks carry requires_ and may_require_photo_evidence.
 // Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';

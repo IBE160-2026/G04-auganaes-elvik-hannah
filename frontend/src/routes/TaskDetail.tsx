@@ -29,6 +29,7 @@ import {
   type TaskChanges,
 } from '../api/tasks';
 import { ConfirmAction } from '../components/ConfirmAction';
+import { PhotoUpload } from '../components/PhotoUpload';
 import { QuickAnswer } from '../components/QuickAnswer';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
@@ -90,6 +91,7 @@ function Detail({ home, task }: { home: Home; task: TaskView }) {
         {task.name}
       </h1>
       <QuickAnswer homeId={home.id} task={task} />
+      {home.role === 'tenant' && task.requires_photo_evidence && <PhotoUpload home={home} task={task} />}
       {home.can_adjust_tasks ? <AdjustForm home={home} task={task} /> : <LockedFields task={task} />}
       <dl className="task-detail__facts">
         <div>

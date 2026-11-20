@@ -106,6 +106,15 @@ class TaskNotFound(Exception):
     """No Task with this id in the Membership's Home."""
 
 
+PHOTO_REQUIRED = "Utleieren krever bilde. Last opp et bilde for å fullføre."
+
+
+class PhotoRequired(Exception):
+    """A Tenant tried to complete a Task that requires Photo Evidence without a photo (FR-18)."""
+
+    message = PHOTO_REQUIRED
+
+
 class TasksNotSetUp(Exception):
     """The Home's Task Setup has not run; a Task cannot be added before it (Story 2.6)."""
 
@@ -516,10 +525,13 @@ def complete_task_instance(
     task_id: uuid.UUID,
     instance_id: uuid.UUID,
     now: datetime | None = None,
+    photo_attached: bool = False,
 ) -> TaskWithDue:
     """Mark one instance completed by the Membership's User and add the next one (FR-7, FR-9).
 
-    The only completion path (AD-3); the checkbox and, in Epic 4, the photo upload call it.
+    The only completion path (AD-3); the checkbox and the photo upload (Story 4.2) call it. A
+    Tenant may not complete a Task that requires Photo Evidence unless `photo_attached` (set by
+    the upload path alone): PhotoRequired. Other Roles complete as before.
     `membership` is what require_role returned: any Member may complete. `now` is when the server
     received the completion (defaults to now, UTC); the next open instance is due on its UTC date
     + the Task's Frequency, whatever the old due date was.
@@ -552,6 +564,9 @@ def complete_task_instance(
         # Nothing written; ends the transaction and releases the locks.
         session.rollback()
         return _row(session, task)
+    if task.requires_photo_evidence and membership.role == "tenant" and not photo_attached:
+        session.rollback()
+        raise PhotoRequired
     instance.completed_at = now
     instance.completed_by_user_id = membership.user_id
     session.add(instance)

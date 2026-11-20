@@ -333,4 +333,7 @@ def complete_task(
         row = tasks.complete_task_instance(session, member, task_id, instance_id)
     except tasks.TaskNotFound:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND) from None
+    except tasks.PhotoRequired as exc:
+        # Story 4.2 (FR-18): a Tenant must upload a photo instead.
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=exc.message) from None
     return task_out(row, utc_today(), member.user_id)

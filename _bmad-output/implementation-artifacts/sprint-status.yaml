@@ -74,7 +74,7 @@ development_status:
 
   epic-4: in-progress
   4-1-landlord-requires-photo-evidence-on-eligible-must-tasks: done
-  4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval: backlog
+  4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval: review
   4-3-landlord-reviews-evidence-auto-replacing-photo-storage: backlog
   epic-4-retrospective: optional
 

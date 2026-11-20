@@ -7,6 +7,7 @@ address fail, so the suite provably runs offline. libpq and DNS lookups are not 
 import ipaddress
 import socket
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -62,6 +63,15 @@ def mock_ai(monkeypatch: pytest.MonkeyPatch) -> None:
     """Story 5.1 (AD-15): the tests always use the mock AI provider, whatever the shell has set."""
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_MODEL", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def local_photo_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """Story 4.2 (FR-22, AD-15): photos always go to a temporary folder, never to Blob."""
+    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
+    folder = tmp_path / "photos"
+    monkeypatch.setenv("PHOTO_STORAGE_DIR", str(folder))
+    return folder
 
 
 @pytest.fixture
