@@ -156,3 +156,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-3-fairness-based-targeted-notification.md`
   summary: Add a test that drives `fairness._claim` into its `IntegrityError` branch (a parallel run inserted the nudge row), and batch the per-instance history queries in `apply_nudges`.
   evidence: Verification Gap and Blind Hunter on Story 3.3. The race path and the N+1 queries are untested and unbudgeted; they sit with the 3.2 time-budget item.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
+  summary: The chat stream has no auto-scroll to the newest message and no maximum height, so after several exchanges the input can sit below the fold; do the screen-reader pass together with the popover (A3).
+  evidence: Blind Hunter on Story 5.2; the stream is a plain growing `div`. Cosmetic for five exchanges, but the `role="log"` announces content the user may not see.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
+  summary: A failed chat message is shown from the mutation state, so sending a different message instead of pressing «Prøv igjen» removes it from the transcript; keep failed messages as their own list items if this matters.
+  evidence: Blind Hunter on Story 5.2; the retry and the history rule (a failed turn is never sent) hold, only the transcript forgets the failed line.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
+  summary: Smoke test a follow-up with history against real Gemini on Preview: multi-turn `contents` with plain-text model turns must still give the JSON schema answer within 10 s.
+  evidence: Verification Gap on Story 5.2; the Gemini provider is covered only over `httpx.MockTransport` and no key exists locally.

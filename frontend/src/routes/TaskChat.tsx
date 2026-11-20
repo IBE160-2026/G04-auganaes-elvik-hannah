@@ -11,6 +11,7 @@ import { Link, Navigate, useLocation, useParams } from 'react-router';
 import {
   AI_MESSAGES,
   AiLimitError,
+  FALLBACK_DISCLAIMER,
   QUESTION_MAX_LENGTH,
   historyOf,
   type Answer,
@@ -108,7 +109,7 @@ function Chat({ home, task }: { home: Home; task: { id: string; name: string } }
   const failed = ask.isError || ask.data?.status === 'error';
   // The newest answer in hand, a failed one included: its disclaimer is shown all the same.
   const newest: Answer | undefined = ask.data ?? exchanges.at(-1)?.answer;
-  const disclaimer = newest?.disclaimer;
+  const disclaimer = newest?.disclaimer ?? FALLBACK_DISCLAIMER;
   const demo = newest?.demo;
 
   return (
@@ -119,12 +120,10 @@ function Chat({ home, task }: { home: Home; task: { id: string; name: string } }
       <Link to={`/hjem/${home.id}/oppgaver/${task.id}`} className="task-chat__link">
         {AI_MESSAGES.backToTask(task.name)}
       </Link>
-      {disclaimer && (
-        <div className="task-chat__notes">
-          <p className="task-chat__disclaimer">{disclaimer}</p>
-          <p className="task-chat__note">{demo ? AI_MESSAGES.demo : AI_MESSAGES.external}</p>
-        </div>
-      )}
+      <div className="task-chat__notes">
+        <p className="task-chat__disclaimer">{disclaimer}</p>
+        {newest && <p className="task-chat__note">{demo ? AI_MESSAGES.demo : AI_MESSAGES.external}</p>}
+      </div>
       <div className="task-chat__stream" role="log" aria-live="polite" aria-label={AI_MESSAGES.chatLabel(task.name)}>
         {exchanges.length === 0 && !ask.isPending && !failed && (
           <p className="task-chat__empty">{AI_MESSAGES.chatEmpty(task.name)}</p>

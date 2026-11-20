@@ -34,6 +34,15 @@ export const AI_MESSAGES = {
 } as const;
 
 export const QUESTION_MAX_LENGTH = 300;
+/** The server's limit on an earlier answer in a chat's history. */
+export const HISTORY_ANSWER_MAX_LENGTH = 2000;
+/**
+ * The server's disclaimer text, for a chat that has no answer yet (empty chat, or a first message
+ * that failed without one). Every answer brings the server's own, which replaces this; a test on
+ * the backend keeps the two equal (AD-4).
+ */
+export const FALLBACK_DISCLAIMER =
+  'KI kan ta feil. Vær forsiktig, særlig med kjemikalier og rengjøringsmidler: les og følg alltid instruksjonene på produktet.';
 /** The server accepts at most this many earlier entries (five exchanges). */
 export const HISTORY_MAX_ENTRIES = 10;
 
@@ -45,12 +54,13 @@ export function defaultQuestion(taskName: string): string {
 
 /**
  * The earlier turns to send with the next message: the completed exchanges, flattened. The oldest
- * pairs are dropped past the server's limit, so the list keeps alternating user, assistant.
+ * pairs are dropped past the server's limit, so the list keeps alternating user, assistant. An
+ * answer longer than the server accepts is cut: it is context only, and a 422 would stick the chat.
  */
 export function historyOf(exchanges: Exchange[]): ChatTurn[] {
   const turns = exchanges.flatMap<ChatTurn>((e) => [
     { role: 'user', text: e.question },
-    { role: 'assistant', text: e.answer.answer },
+    { role: 'assistant', text: e.answer.answer.slice(0, HISTORY_ANSWER_MAX_LENGTH) },
   ]);
   return turns.slice(Math.max(0, turns.length - HISTORY_MAX_ENTRIES));
 }

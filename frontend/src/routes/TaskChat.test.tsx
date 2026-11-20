@@ -3,7 +3,15 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
-import { AI_MESSAGES, HISTORY_MAX_ENTRIES, defaultQuestion, formatReset } from '../api/ai';
+import {
+  AI_MESSAGES,
+  FALLBACK_DISCLAIMER,
+  HISTORY_ANSWER_MAX_LENGTH,
+  HISTORY_MAX_ENTRIES,
+  defaultQuestion,
+  formatReset,
+  historyOf,
+} from '../api/ai';
 import {
   DISCLAIMER,
   OLAS_HOME,
@@ -130,7 +138,8 @@ describe('The chat', () => {
     const { bodies } = setUp(['ok']);
     renderAt(chatPath(OLAS_HOME));
     expect(await screen.findByText(AI_MESSAGES.chatEmpty(MUST.name))).toBeInTheDocument();
-    expect(screen.queryByText(DISCLAIMER)).not.toBeInTheDocument();
+    // The disclaimer is there before any answer, from the fallback (AD-4: the server's text).
+    expect(screen.getByText(FALLBACK_DISCLAIMER)).toBeVisible();
     await say('Hva med kalk?');
     expect(await screen.findByText(ANSWER)).toBeInTheDocument();
     expect(bodies).toEqual([{ question: 'Hva med kalk?' }]);
@@ -169,6 +178,8 @@ describe('The chat', () => {
     const { bodies } = setUp(['ok']);
     await escalate();
     await say('   ');
+    // The request would leave asynchronously, so give a wrongly sent one time to arrive.
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(bodies).toHaveLength(1);
   });
 
@@ -199,13 +210,34 @@ describe('The chat', () => {
     },
   );
 
-  it('keeps the disclaimer when the very first message fails', async () => {
-    setUp(['error']);
+  it.each([['error' as const], ['network' as const], ['limit' as const]])(
+    'keeps a disclaimer visible, outside the live region, when the very first message fails (%s)',
+    async (outcome) => {
+      setUp([outcome]);
+      renderAt(chatPath(OLAS_HOME));
+      await screen.findByText(AI_MESSAGES.chatEmpty(MUST.name));
+      await say('Hei');
+      await waitFor(() => expect(screen.queryByTestId('answer-skeleton')).not.toBeInTheDocument());
+      const shown = screen.getByText(outcome === 'error' ? DISCLAIMER : FALLBACK_DISCLAIMER);
+      expect(shown).toBeVisible();
+      expect(screen.getByRole('log').contains(shown)).toBe(false);
+    },
+  );
+
+  it('cuts an earlier answer longer than the server accepts, so the next message is not refused', async () => {
+    const { bodies } = setUp(['ok']);
     renderAt(chatPath(OLAS_HOME));
     await screen.findByText(AI_MESSAGES.chatEmpty(MUST.name));
+    const long = 'x'.repeat(HISTORY_ANSWER_MAX_LENGTH + 500);
+    expect(historyOf([{ question: 'Q', answer: { status: 'ok', answer: long, disclaimer: DISCLAIMER, demo: false } }])[1].text).toHaveLength(
+      HISTORY_ANSWER_MAX_LENGTH,
+    );
     await say('Hei');
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText(DISCLAIMER)).toBeVisible();
+    expect(bodies).toHaveLength(1);
+  });
+
+  it('shows the default question with the same wording the server uses', () => {
+    expect(defaultQuestion('Rens sluket')).toBe('Hvordan gjør jeg «Rens sluket»?');
   });
 
   it('says when the daily limit restarts in the stream, and keeps the conversation', async () => {

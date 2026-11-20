@@ -242,11 +242,13 @@ def bad_histories() -> dict[str, dict]:
         "ends-with-user": {"question": "Mer?", "history": [*TURNS, user]},
         "starts-with-assistant": {"question": "Mer?", "history": [assistant, user]},
         "same-role-twice": {"question": "Mer?", "history": [user, user]},
-        "eleven": {"question": "Mer?", "history": [*pairs, user]},
+        # Twelve is the shortest list over the limit that still alternates, so only the length
+        # bound (HISTORY_MAX_ENTRIES) can refuse it.
         "twelve": {"question": "Mer?", "history": [*pairs, *TURNS]},
         "long-user": {"question": "Mer?", "history": [{**user, "text": "x" * 301}, assistant]},
         "long-answer": {"question": "Mer?", "history": [user, {**assistant, "text": "x" * 2001}]},
         "empty-text": {"question": "Mer?", "history": [{**user, "text": ""}, assistant]},
+        "blank-text": {"question": "Mer?", "history": [{**user, "text": "   "}, assistant]},
         "bad-role": {"question": "Mer?", "history": [{**user, "role": "system"}, assistant]},
     }
 

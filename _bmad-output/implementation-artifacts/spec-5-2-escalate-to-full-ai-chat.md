@@ -102,6 +102,25 @@ context:
 
 ## Review Triage Log
 
+Code review 2026-11-20 (Blind Hunter B, Edge Case Hunter E, Verification Gap V; about 32 findings, verified against the code):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| An AI answer over 2000 characters is sent back as history and gets 422 forever; each retry spends a call (B, E, V) | high | patch: `historyOf` cuts an earlier answer to 2000; frontend test |
+| The disclaimer is missing in an empty chat or when the first message fails without an answer, against the matrix row «any state» (B, E) | medium | patch: `FALLBACK_DISCLAIMER` in the frontend, kept equal to the server's text by a backend test; tests for error, network and limit |
+| PRD-drift: FR-15 said a reload ends the chat, but a reload keeps the carried exchange (B, E) | medium | patch to text: FR-15 reworded |
+| PRD-drift: the 2000-character cut, the oldest exchanges dropped, the direct link, FR-14's «Only» (B, E, V) | medium | patch to text: FR-14 points to FR-15, FR-15 states them; Revision log row amended |
+| A blank history text passes `min_length=1`; the history list is parsed before its length is checked (E) | low | patch: blank validator, `max_length` on the list |
+| `eleven` case in `bad_histories` would still pass without the length check (B) | medium | patch: case removed, `twelve` named as the length guard |
+| `does not send a blank message` could pass without the guard (B) | low | patch: waits 50 ms before asserting |
+| `defaultQuestion` is a copy of the server's default and no test ties them (V) | low | patch: a fixed-string assertion on both sides |
+| README: mock follow-up only after a first exchange; no manual test step (B) | low | patch: wording and the step |
+| Forged `assistant` turns reach Gemini (B) | low, accepted | already Decision 5: they steer only that user's own chat, the system instruction stays separate, the 20 per day limit holds |
+| Real Gemini is not called with history (B, V) | medium, not testable here | defer: smoke test on Preview (`deferred-work.md`), stated in the PR |
+| No auto-scroll or maximum height on the stream (B) | low | defer (`deferred-work.md`) |
+| A failed message leaves the transcript when another is sent (B) | low | defer (`deferred-work.md`) |
+| 403 test asserts only absence; router state shape checked loosely; `askTask` nested ternary and comment width; README one long bullet (B, E) | low, rejected | router state is built by our own code; lint passes; README keeps its existing single-bullet form |
+
 ## Design Notes
 
 History is validated at the route so the service and providers can trust it. Trimming happens in the browser (oldest pairs first) so alternation always holds; the server only rejects, never repairs.

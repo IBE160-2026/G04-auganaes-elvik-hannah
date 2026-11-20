@@ -2046,6 +2046,7 @@
               "$ref": "#/components/schemas/HistoryEntry"
             },
             "type": "array",
+            "maxItems": 10,
             "title": "History"
           }
         },

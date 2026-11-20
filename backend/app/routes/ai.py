@@ -30,6 +30,8 @@ class HistoryEntry(BaseModel):
 
     @model_validator(mode="after")
     def user_text_is_a_question(self) -> "HistoryEntry":
+        if not self.text.strip():
+            raise ValueError("a message in the history is blank")
         if self.role == "user" and len(self.text) > ai.service.QUESTION_MAX_LENGTH:
             raise ValueError("a user message in the history is too long")
         return self
@@ -40,7 +42,9 @@ class AskRequest(BaseModel):
     question: str | None = Field(default=None, max_length=ai.service.QUESTION_MAX_LENGTH)
     # Story 5.2 (FR-15): a chat's earlier completed turns, oldest first. The server stores none of
     # it; the browser sends it again with each message.
-    history: list[HistoryEntry] = Field(default_factory=list)
+    history: list[HistoryEntry] = Field(
+        default_factory=list, max_length=ai.service.HISTORY_MAX_ENTRIES
+    )
 
     @model_validator(mode="after")
     def history_is_whole_exchanges(self) -> "AskRequest":
@@ -48,8 +52,6 @@ class AskRequest(BaseModel):
         non-blank question. The server rejects a bad list and never repairs it."""
         if not self.history:
             return self
-        if len(self.history) > ai.service.HISTORY_MAX_ENTRIES:
-            raise ValueError("the history is too long")
         roles = [entry.role for entry in self.history]
         if roles != ["user", "assistant"] * (len(roles) // 2) or len(roles) % 2:
             raise ValueError("the history must alternate user and assistant, ending with assistant")

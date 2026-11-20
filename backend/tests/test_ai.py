@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 import httpx
 import pytest
@@ -455,3 +456,16 @@ def test_the_mock_answers_a_follow_up_with_the_task_name_and_a_first_message_as_
     assert first.answer == mock_answers.BY_TASK_TYPE["rens-sluket"]
     assert follow.answer == mock_answers.follow_up_for("Rens sluket")
     assert "«Rens sluket»" in follow.answer and "Demo-svar" in follow.answer
+
+
+def test_the_default_question_is_the_one_the_frontend_shows_for_it() -> None:
+    # frontend/src/api/ai.ts `defaultQuestion` repeats this wording for the chat's first turn.
+    assert service.default_question("Rens sluket") == "Hvordan gjør jeg «Rens sluket»?"
+    ts = (Path(__file__).parents[2] / "frontend/src/api/ai.ts").read_text(encoding="utf-8")
+    assert "`Hvordan gjør jeg «${taskName}»?`" in ts
+
+
+def test_the_frontends_fallback_disclaimer_is_the_servers_text() -> None:
+    # The chat shows the disclaimer before any answer has brought the server's own (FR-15).
+    ts = (Path(__file__).parents[2] / "frontend/src/api/ai.ts").read_text(encoding="utf-8")
+    assert json.dumps(ai.DISCLAIMER, ensure_ascii=False)[1:-1] in ts
