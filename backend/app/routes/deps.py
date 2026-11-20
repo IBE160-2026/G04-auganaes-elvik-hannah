@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.db import get_session
-from app.domain import homes, tasks
+from app.domain import homes, onboarding, tasks
 from app.models.membership import ROLES, Membership
 from app.permissions.require_role import require_role
 
@@ -40,3 +40,5 @@ Tenant = Annotated[Membership, Depends(require_role("tenant"))]
 TaskSetter = Annotated[Membership, Depends(require_role(*sorted(tasks.SETUP_ROLES)))]
 # Story 2.3: who may adjust a Task's Må/Bør and Frequency.
 TaskAdjuster = Annotated[Membership, Depends(require_role(*sorted(tasks.ADJUST_ROLES)))]
+# Story 5.3: who may read a Landlord Home's onboarding guide (a Tenant or the Landlord).
+GuideViewer = Annotated[Membership, Depends(require_role(*sorted(onboarding.VIEWER_ROLES)))]

@@ -25,10 +25,14 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
+from sqlmodel import Session
 
+from app import ai
 from app.clock import utc_today
-from app.domain import photo_evidence, task_types, tasks
+from app.domain import onboarding, photo_evidence, task_types, tasks
 from app.domain.task_types import Classification, Frequency
+from app.models.home import Home
+from app.models.membership import Membership
 from app.permissions.current_user import CurrentUser
 from app.routes.deps import (
     TASK_NOT_FOUND,
@@ -186,6 +190,18 @@ def list_task_types(_user: CurrentUser) -> TaskTypesOut:
     )
 
 
+def write_onboarding_guide(session: Session, setter: Membership) -> None:
+    """Story 5.3 (FR-16): once the Tasks are committed, a Landlord Home gets its guide
+    introduction, written by the AI service and stored. Best effort: the service never raises, so
+    the setup is never undone by it. Household Homes have no Tenants and get none."""
+    home = session.get(Home, setter.home_id)
+    if home is not None and home.type == "landlord":
+        intro = ai.generate_guide_intro(
+            session, setter.user_id, onboarding.must_tasks(session, setter.home_id)
+        )
+        onboarding.store_guide(session, setter.home_id, intro.text, intro.source)
+
+
 @router.post(
     "/homes/{home_id}/tasks/setup",
     status_code=status.HTTP_201_CREATED,
@@ -211,6 +227,7 @@ def set_up_tasks(body: SetUpTasksRequest, setter: TaskSetter, session: SessionDe
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from None
     except tasks.TasksAlreadySetUp:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_SET_UP) from None
+    write_onboarding_guide(session, setter)
     return tasks_out(created, setter.user_id)
 
 

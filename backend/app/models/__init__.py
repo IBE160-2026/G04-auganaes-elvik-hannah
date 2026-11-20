@@ -6,6 +6,7 @@ from app.models.fairness_nudge import FairnessNudge
 from app.models.home import Home
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
+from app.models.onboarding_guide import OnboardingGuide
 from app.models.photo_evidence import PhotoEvidence
 from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
@@ -18,6 +19,7 @@ __all__ = [
     "Home",
     "InviteLink",
     "Membership",
+    "OnboardingGuide",
     "PhotoEvidence",
     "PushSubscription",
     "Task",

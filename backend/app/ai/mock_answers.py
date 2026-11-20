@@ -57,3 +57,11 @@ def follow_up_for(task_name: str) -> str:
         "ferdigskrevet og svarer ikke på selve spørsmålet. Ta det steg for steg, bruk et mildt "
         "middel først og les instruksjonene på produktet."
     )
+
+
+# Story 5.3: the demo introduction to an onboarding guide (the mock does not read the tasks).
+GUIDE_DEMO = (
+    "Demo-tekst: uten KI-nøkkel er denne velkomsten ferdigskrevet. I Husly ser du hjemmets "
+    "oppgaver samlet. Må er de viktigste, og Bør er fint å få gjort. Kryss av en oppgave når den "
+    "er gjort, så ser alle i hjemmet det. Du får påminnelser, og du kan spørre KI om hjelp."
+)

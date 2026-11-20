@@ -175,6 +175,10 @@ jobs:
                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
                "requires_photo_evidence, created_at) "
                "SELECT :h, h.id, NULL, 'x', 'should', 7, true, now() FROM homes h LIMIT 1"),
+              # Story 5.3: an onboarding guide says where its introduction came from.
+              ("ck_onboarding_guides_source",
+               "INSERT INTO onboarding_guides (home_id, intro, source, created_at) "
+               "SELECT h.id, 'x', 'manuell', now() FROM homes h LIMIT 1"),
               ("uq_tasks_active_home_id_lower_name",
                "INSERT INTO tasks (id, home_id, task_type, name, classification, frequency_days, "
                "created_at) SELECT :h, t.home_id, NULL, upper(t.name), 'should', 7, now() "

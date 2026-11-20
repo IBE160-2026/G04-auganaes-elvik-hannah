@@ -23,7 +23,7 @@ from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
 from app.clock import UtcDatetime
-from app.domain import broadcast, cadence, homes, photo_evidence, tasks
+from app.domain import broadcast, cadence, homes, onboarding, photo_evidence, tasks
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
 from app.models.membership import Role
 from app.permissions.current_user import CurrentUser
@@ -68,6 +68,9 @@ class HomeOut(BaseModel):
     can_set_cadence: bool
     # Story 4.1: whether the caller may require Photo Evidence on a Task (the Landlord).
     can_require_photo_evidence: bool
+    # Story 5.3: whether the caller may read the onboarding guide (a Tenant or the Landlord of a
+    # Home that has Tasks).
+    can_view_guide: bool
 
 
 class HomesOut(BaseModel):
@@ -97,6 +100,7 @@ def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
         notification_cadence_days=home.notification_cadence_days,
         can_set_cadence=cadence.can_set_cadence(member_home.role),
         can_require_photo_evidence=photo_evidence.can_require_photo_evidence(member_home.role),
+        can_view_guide=has_tasks and onboarding.can_view_guide(member_home.role),
     )
 
 

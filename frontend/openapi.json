@@ -1789,6 +1789,125 @@
         }
       }
     },
+    "/api/homes/{home_id}/onboarding-guide": {
+      "get": {
+        "tags": [
+          "onboarding"
+        ],
+        "summary": "Get Guide",
+        "operationId": "get_guide_api_homes__home_id__onboarding_guide_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a Tenant or the Landlord of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Home has no Tasks yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/homes/{home_id}/onboarding-guide/dismiss": {
+      "post": {
+        "tags": [
+          "onboarding"
+        ],
+        "summary": "Dismiss Guide",
+        "operationId": "dismiss_guide_api_homes__home_id__onboarding_guide_dismiss_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "home_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Home Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Not a Tenant of this Home, or no such Home",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/push/config": {
       "get": {
         "tags": [
@@ -2276,6 +2395,82 @@
         ],
         "title": "EvidenceOut"
       },
+      "GuideOut": {
+        "properties": {
+          "home_name": {
+            "type": "string",
+            "title": "Home Name"
+          },
+          "intro": {
+            "type": "string",
+            "title": "Intro"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "demo",
+              "fallback"
+            ],
+            "title": "Source"
+          },
+          "must_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/GuideTaskOut"
+            },
+            "type": "array",
+            "title": "Must Tasks"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "title": "Dismissed"
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "home_name",
+          "intro",
+          "source",
+          "must_tasks",
+          "dismissed",
+          "disclaimer",
+          "demo"
+        ],
+        "title": "GuideOut"
+      },
+      "GuideTaskOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "frequency_days": {
+            "type": "integer",
+            "title": "Frequency Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "frequency_days"
+        ],
+        "title": "GuideTaskOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2382,6 +2577,10 @@
           "can_require_photo_evidence": {
             "type": "boolean",
             "title": "Can Require Photo Evidence"
+          },
+          "can_view_guide": {
+            "type": "boolean",
+            "title": "Can View Guide"
           }
         },
         "type": "object",
@@ -2399,7 +2598,8 @@
           "can_broadcast",
           "notification_cadence_days",
           "can_set_cadence",
-          "can_require_photo_evidence"
+          "can_require_photo_evidence",
+          "can_view_guide"
         ],
         "title": "HomeOut"
       },
