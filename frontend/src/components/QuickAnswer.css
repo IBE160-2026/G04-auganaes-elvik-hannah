@@ -7,6 +7,7 @@
 
 .quick-answer__toggle,
 .quick-answer__retry,
+.quick-answer__more,
 .quick-answer__ask {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
@@ -24,7 +25,8 @@
   align-self: flex-start;
 }
 
-.quick-answer__retry {
+.quick-answer__retry,
+.quick-answer__more {
   align-self: flex-start;
 }
 

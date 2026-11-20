@@ -1,0 +1,148 @@
+/* Story 5.2: the AI chat page. Shares the look of the quick-answer popover (QuickAnswer.css). */
+.task-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.task-chat__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-display);
+  line-height: var(--line-height-display);
+}
+
+.task-chat__link {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-primary);
+}
+
+.task-chat__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.task-chat__disclaimer,
+.task-chat__note,
+.task-chat__empty,
+.task-chat__unsure,
+.task-chat__text {
+  margin: 0;
+}
+
+.task-chat__disclaimer {
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-warning);
+}
+
+.task-chat__note,
+.task-chat__label,
+.task-chat__who {
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  color: var(--color-ink-secondary);
+}
+
+.task-chat__stream {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.task-chat__message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.task-chat__message--you {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-base);
+}
+
+.task-chat__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-chat__row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.task-chat__input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-ink-secondary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-ink-primary);
+  font: inherit;
+}
+
+.task-chat__button {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.task-chat__button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.task-chat__retry {
+  align-self: flex-start;
+}
+
+.task-chat__skeleton {
+  display: block;
+  height: var(--space-5);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-base);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .task-chat__skeleton {
+    animation: task-chat-pulse 1.2s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes task-chat-pulse {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.5;
+  }
+}
+
+.task-chat__visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

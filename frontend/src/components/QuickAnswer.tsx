@@ -3,8 +3,10 @@
 // line (not a spinner) while it waits, announced with aria-live="polite", and the answer the same
 // way. The disclaimer and the line about the external AI service come with every answer. A failed
 // or slow call is said plainly with a retry; nothing here touches completing the Task.
+// Story 5.2 (FR-15): once an answer is shown, «Spør mer» pushes into the chat with that exchange.
 import { useId, useRef, useState, type FormEvent } from 'react';
-import { AI_MESSAGES, AiLimitError, QUESTION_MAX_LENGTH, type Answer } from '../api/ai';
+import { useNavigate } from 'react-router';
+import { AI_MESSAGES, AiLimitError, QUESTION_MAX_LENGTH, defaultQuestion, type Answer } from '../api/ai';
 import { ApiError } from '../api/errors';
 import { useAskTask } from '../api/queries';
 import './QuickAnswer.css';
@@ -13,6 +15,7 @@ type QuickAnswerProps = { homeId: string; task: { id: string; name: string } };
 
 export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
   const ask = useAskTask(homeId);
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   // The last question, so «Prøv igjen» asks the same thing.
@@ -39,6 +42,18 @@ export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
     send(question);
   }
 
+  // The chat continues from an answer that says something; a failed one has nothing to continue.
+  const answer = ask.data;
+  const continuable = answer && answer.status !== 'error' ? answer : null;
+
+  function askMore() {
+    if (!continuable) return;
+    const question = lastQuestion.current ?? defaultQuestion(task.name);
+    navigate(`/hjem/${homeId}/oppgaver/${task.id}/chat`, {
+      state: { exchanges: [{ question, answer: continuable }] },
+    });
+  }
+
   return (
     <section className="quick-answer">
       <button
@@ -62,6 +77,11 @@ export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
             <Result answer={ask.data} error={ask.error} onRetry={() => send(lastQuestion.current)} />
           )}
         </div>
+        {continuable && !ask.isPending && (
+          <button type="button" className="quick-answer__more" onClick={askMore}>
+            {AI_MESSAGES.askMore}
+          </button>
+        )}
         <form className="quick-answer__form" onSubmit={submit} noValidate>
           <label className="quick-answer__label" htmlFor={inputId}>
             {AI_MESSAGES.questionLabel}
