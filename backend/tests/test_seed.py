@@ -22,6 +22,7 @@ from app import seed
 from app.clock import utc_now
 from app.domain import homes, task_types, tasks
 from app.domain.accounts import authenticate, register
+from app.models.fairness_nudge import FairnessNudge
 from app.models.home import Home
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
@@ -47,7 +48,7 @@ MARI, JONAS, KARI, ANDERS = (user.email for user in EXAMPLE_USERS[:4])
 
 # What a full seed gives: users, Homes, Memberships, invite links, Tasks, TaskInstances (one
 # completed by Jonas plus its next instance, Story 2.4).
-FULL = (4, 2, 4, 1, 16, 17)
+FULL = (4, 2, 4, 1, 16, 20)
 MODELS = (User, Home, Membership, InviteLink, Task, TaskInstance)
 # The same without the tasks step.
 HOMES_ONLY = FULL[:4]
@@ -147,8 +148,11 @@ def test_fresh_db_has_jonas_completing_the_kettle_two_days_ago(
         step(session)
 
     listed = tasks.tasks_of(session, own_home(session, MARI, EXAMPLE_HOME_NAME).id)
-    done = [row for row in listed if row.last_completion is not None]
-    assert [row.task.task_type for row in done] == ["avkalk-vannkoker"]
+    done = [
+        row
+        for row in listed
+        if row.last_completion is not None and row.task.task_type == "avkalk-vannkoker"
+    ]
     [row] = done
     assert row.last_completion is not None
     jonas = by_email(session, JONAS)
@@ -465,3 +469,32 @@ def test_default_url_is_allowed() -> None:
 
 def test_alembic_ini_path_exists() -> None:
     assert seed.ALEMBIC_INI.is_file()
+
+
+def test_fresh_db_gives_the_fairness_demo_history_and_the_due_check_nudges_jonas(
+    session: Session,
+) -> None:
+    from app.domain import due_check
+    from app.models.push_subscription import PushSubscription
+    from app.push import MockSender
+
+    for step in seed.STEPS:
+        step(session)
+    jonas, mari = by_email(session, JONAS), by_email(session, MARI)
+    for user in (mari, jonas):
+        endpoint = f"https://fcm.googleapis.com/fcm/send/{user.email}"
+        session.add(PushSubscription(user_id=user.id, endpoint=endpoint, p256dh="k", auth="a"))
+    session.commit()
+    sender = MockSender()
+
+    due_check.run_due_check(session, sender, utc_now().date())
+
+    # Guards `_seed_history` and the backdated Memberships (FR-11): Mari did the last three
+    # completions of the floor task, so its reminder goes to Jonas alone and Mari gets none for it.
+    titles = {t.endpoint.rsplit("/", 1)[1]: m for t, m in sender.sent}
+    jonas_text = titles[JONAS].title + " " + titles[JONAS].body
+    mari = titles.get(MARI)
+    mari_text = f"{mari.title} {mari.body}" if mari else ""
+    assert "Støvsug og vask gulvene" in jonas_text or "oppgaver venter" in jonas_text
+    assert "Støvsug og vask gulvene" not in mari_text
+    assert count(session, FairnessNudge) == 1

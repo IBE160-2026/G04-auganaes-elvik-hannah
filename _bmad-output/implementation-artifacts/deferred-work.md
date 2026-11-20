@@ -153,3 +153,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
   summary: Map any non-SDK exception from the Blob read (network, timeout) to `StorageError`, and add a test that the photo-serving route guard also catches a GET under another path name.
   evidence: Edge Case Hunter on Story 4.3; the adapter catches only `BlobError` and `BlobNotFoundError`, and the route guard filters on «evidence» and «tasks» in the path.
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-3-fairness-based-targeted-notification.md`
+  summary: Add a test that drives `fairness._claim` into its `IntegrityError` branch (a parallel run inserted the nudge row), and batch the per-instance history queries in `apply_nudges`.
+  evidence: Verification Gap and Blind Hunter on Story 3.3. The race path and the N+1 queries are untested and unbudgeted; they sit with the 3.2 time-budget item.
