@@ -9,6 +9,7 @@
 // tick still on its way merged in as on the overview; completing from here comes with Epic 4.
 // Story 2.6 (FR-24): whoever may adjust Tasks also sees «Fjern oppgaven», an inline confirmation
 // that archives the Task and lands on the overview with «Fjernet «X».».
+// Story 4.3 (FR-19): the Landlord also sees the Task's current photo, with the server's description.
 // Story 5.1 (FR-14): «Spør KI» under the title opens the quick-answer popover, for every Role.
 import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
@@ -29,6 +30,7 @@ import {
   type TaskChanges,
 } from '../api/tasks';
 import { ConfirmAction } from '../components/ConfirmAction';
+import { PhotoEvidenceView } from '../components/PhotoEvidenceView';
 import { PhotoUpload } from '../components/PhotoUpload';
 import { QuickAnswer } from '../components/QuickAnswer';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -92,6 +94,7 @@ function Detail({ home, task }: { home: Home; task: TaskView }) {
       </h1>
       <QuickAnswer homeId={home.id} task={task} />
       {home.role === 'tenant' && task.requires_photo_evidence && <PhotoUpload home={home} task={task} />}
+      {home.role === 'landlord' && <PhotoEvidenceView home={home} task={task} />}
       {home.can_adjust_tasks ? <AdjustForm home={home} task={task} /> : <LockedFields task={task} />}
       <dl className="task-detail__facts">
         <div>

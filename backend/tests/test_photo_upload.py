@@ -274,18 +274,25 @@ def test_the_upload_completes_through_the_same_function_as_the_checkbox(
     assert calls == [True]
 
 
-def test_no_route_returns_a_photo(client: TestClient) -> None:
-    from fastapi.routing import APIRoute
+def test_only_the_landlord_view_routes_serve_a_photo(client: TestClient) -> None:
+    from tests.test_permissions import api_routes, has_require_role
 
-    routes = [r for r in client.app.routes if isinstance(r, APIRoute)]  # type: ignore[attr-defined]
-    served = [
-        r.path
-        for r in routes
-        if "GET" in r.methods and ("photo" in r.path or "evidence" in r.path and "tasks" in r.path)
-    ]
+    # The same walk as test_permissions: `app.routes` alone does not list included routers, so the
+    # Story 4.2 version of this guard saw no routes at all and passed for nothing.
+    served = {
+        c.path: has_require_role(c)
+        for c in api_routes(client.app)  # type: ignore[arg-type]
+        if "GET" in (c.original_route.methods or ())  # type: ignore[union-attr]
+        and "evidence" in c.path
+        and "tasks" in c.path
+    }
 
-    # Viewing is Story 4.3; until then no GET route can serve the stored file.
-    assert served == []
+    # Story 4.3: exactly the two Landlord routes (see test_photo_view.py); a new GET that could
+    # serve the stored file must be added here on purpose.
+    assert served == {
+        "/api/homes/{home_id}/tasks/{task_id}/photo-evidence": True,
+        "/api/homes/{home_id}/tasks/{task_id}/photo-evidence/image": True,
+    }
 
 
 def test_check_photo_refuses_a_too_large_or_non_jpeg_body_by_itself() -> None:

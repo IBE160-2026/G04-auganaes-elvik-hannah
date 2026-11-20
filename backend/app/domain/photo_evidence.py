@@ -8,8 +8,10 @@ allowed. Changing a Task to Bør clears the requirement (domain/tasks.adjust_tas
 Story 4.2 (FR-19, AD-5, AD-3): `complete_with_photo` is how a Tenant completes such a Task. The
 photo is stored under the one server-computed key of the Task (overwritten, so no history), the
 Task's single `photo_evidence` row is updated, and the instance is completed by
-`tasks.complete_task_instance`, the same function as the checkbox. Nothing here returns a photo
-(Story 4.3).
+`tasks.complete_task_instance`, the same function as the checkbox.
+
+Story 4.3 (FR-19, NFR5, NFR6): `current_evidence` and `read_photo` are the Landlord's view of that
+photo. The routes run `require_role("landlord")` first; the key comes from the Task id only.
 """
 
 import uuid
@@ -28,6 +30,10 @@ from app.storage import PhotoStore, StorageError
 NOT_ELIGIBLE = "Denne oppgavetypen kan ikke kreve bildebevis."
 NOT_MUST = "Bare Må-oppgaver kan kreve bildebevis."
 NOT_REQUIRED = "Denne oppgaven krever ikke bilde."
+FORMER_MEMBER = "Tidligere medlem"
+NO_EVIDENCE = "Det finnes ikke noe bildebevis ennå."
+PHOTO_GONE = "Bildet finnes ikke lenger."
+READ_FAILED = "Vi fikk ikke hentet bildet. Prøv igjen."
 NOT_JPEG = "Bildet må være en JPEG-fil. Ta et nytt bilde eller velg en annen fil."
 TOO_LARGE = "Bildet er for stort. Velg et mindre bilde."
 STORE_FAILED = "Vi fikk ikke lagret bildet. Prøv igjen."
@@ -47,6 +53,12 @@ class CannotRequire(Exception):
 
 
 def can_require_photo_evidence(role: Role) -> bool:
+    return role == "landlord"
+
+
+def can_view_photo_evidence(role: Role) -> bool:
+    """Only the Home's Landlord (NFR5, NFR6). Its own rule, so widening who may set the
+    requirement can never widen who sees the photo."""
     return role == "landlord"
 
 
@@ -209,3 +221,53 @@ def complete_with_photo(
     return tasks.complete_task_instance(
         session, membership, task.id, instance_id, now=now, photo_attached=True
     )
+
+
+class NoEvidence(Exception):
+    """No Photo Evidence is stored for the Task, or the stored object is gone."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+def current_evidence(
+    session: Session, membership: Membership, task_id: uuid.UUID
+) -> PhotoEvidence | None:
+    """The Task's one evidence row, or None when no photo was uploaded yet (Landlord's view).
+
+    Raises tasks.TaskNotFound for a Task outside the Home or archived, so «no photo» is never
+    confused with «no such Task».
+    """
+    if not can_view_photo_evidence(membership.role):
+        raise ValueError(f"role {membership.role!r} may not view Photo Evidence")
+    task = tasks.active_task(session, membership.home_id, task_id)
+    return session.get(PhotoEvidence, task.id)
+
+
+def read_photo(
+    session: Session, store: PhotoStore, membership: Membership, task_id: uuid.UUID
+) -> bytes:
+    """The Task's current photo. Raises TaskNotFound, NoEvidence (no row, or object missing) and
+    StorageError. Only the key computed from the Task id is read (AD-5)."""
+    evidence = current_evidence(session, membership, task_id)
+    if evidence is None:
+        raise NoEvidence(NO_EVIDENCE)
+    data = store.read(evidence_key(evidence.task_id))
+    if data is None:
+        raise NoEvidence(PHOTO_GONE)
+    return data
+
+
+def shown_description(session: Session, membership: Membership, evidence: PhotoEvidence) -> str:
+    """The description the Landlord sees. The saved text holds the uploader's name at upload time;
+    once that user is no longer a Member of the Home it reads «Tidligere medlem» instead (AD-16)."""
+    still_member = session.exec(
+        select(Membership).where(
+            Membership.home_id == membership.home_id,
+            Membership.user_id == evidence.uploaded_by_user_id,
+        )
+    ).first()
+    if still_member is not None:
+        return evidence.description
+    return describe(FORMER_MEMBER, to_utc(evidence.uploaded_at).date())[:DESCRIPTION_MAX_LENGTH]

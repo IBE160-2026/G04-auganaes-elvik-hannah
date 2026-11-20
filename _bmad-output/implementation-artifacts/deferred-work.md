@@ -133,15 +133,23 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Run the Blob adapter against a real private store and confirm `put_blob` with `allow_overwrite` and `get_blob` behave as `BlobPhotoStore` assumes.
   evidence: The adapter is written from the SDK signatures and tested only with fakes. It cannot be exercised offline; a store has to be created in Vercel first.
+  outcome: Story 4.3 (2026-11-20) found that the adapter called the async SDK functions without `await` and stored nothing; it now uses `vercel.blob.sync`, guarded by a test. Confirmed by Eirik on Vercel Preview, 2026-11-20: upload as Tenant and view as Landlord work against the real private Blob store.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Make a photo that was stored but whose completion then failed impossible to leave behind, for example by writing to a temporary key first.
   evidence: Story 4.2 decision 6: the photo is stored before the completion commits, so a failed commit leaves the new photo under the key until the next upload.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Show a Tenant who uploaded the text that was saved with the photo, or confirm the Landlord's view (Story 4.3) is the only place it appears.
   evidence: Story 4.2 saves the description but no screen shows it yet.
+  outcome: Settled in Story 4.3 (2026-11-20): only the Landlord sees the photo and description; a Tenant, also the uploader, gets 403 (AC 4, NFR6).
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Scrub or derive the uploader's name in the saved description when account deletion and anonymisation (PRD §5) are built.
   evidence: Blind Hunter and Edge Case Hunter on Story 4.2. `photo_evidence.description` keeps the display name at upload time, so anonymising the user row would not remove it.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Check that a JPEG upload is decodable (end marker or a decode) before storing it, and test two parallel uploads against Postgres.
   evidence: Edge Case Hunter on Story 4.2. Only the JPEG signature is checked, and the row lock that serializes parallel uploads does nothing on SQLite, so it is not exercised by the tests.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
+  summary: Guard against the Blob cache serving old bytes for up to 60 s after a replacement (compare the object's upload time with `uploaded_at`, or set a short cache control on write), and make the info and image reads one consistent pair.
+  evidence: Blind Hunter on Story 4.3 against AD-5 («the review view relies on the pointer's timestamp, not on the cached object»). The view reads straight from the store; only the local store is tested, and the real Blob behaviour is unverified.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
+  summary: Map any non-SDK exception from the Blob read (network, timeout) to `StorageError`, and add a test that the photo-serving route guard also catches a GET under another path name.
+  evidence: Edge Case Hunter on Story 4.3; the adapter catches only `BlobError` and `BlobNotFoundError`, and the route guard filters on «evidence» and «tasks» in the path.
