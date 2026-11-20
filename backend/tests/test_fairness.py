@@ -6,12 +6,16 @@ Each test that guards a rule names the line it guards (review convention, Epic 2
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import update
+import pytest
+from sqlalchemy import delete, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from app.domain import due_check, fairness, homes
+from app.domain import fairness, homes
 from app.models.fairness_nudge import FairnessNudge
+from app.models.home import Home
 from app.models.membership import Membership
+from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
 from app.models.user import User
 from app.push import MockSender
@@ -29,7 +33,33 @@ def household(session: Session, *names: str) -> tuple[uuid.UUID, list[User]]:
         users.append(user)
     for user in users:
         device(session, user, user.name.lower())
+    long_ago(session, home.id)
     return home.id, users
+
+
+def long_ago(session: Session, home_id: uuid.UUID) -> None:
+    """All Memberships of the Home date from before the task history, as for a settled Home."""
+    session.execute(
+        update(Membership)
+        .where(col(Membership.home_id) == home_id)
+        .values(created_at=datetime(2026, 9, 1, tzinfo=UTC))
+    )
+    session.commit()
+
+
+def tenancy(session: Session, *tenants: str) -> tuple[uuid.UUID, User, list[User]]:
+    """A Landlord Home with Kari and the named Tenants, all with a device."""
+    kari = new_user(session, "Kari")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    users = []
+    for name in tenants:
+        user = new_user(session, name)
+        homes.add_member(session, home, user)
+        users.append(user)
+    for user in (kari, *users):
+        device(session, user, user.name.lower())
+    long_ago(session, home.id)
+    return home.id, kari, users
 
 
 def task_with_history(
@@ -106,8 +136,8 @@ def test_a_second_run_the_same_day_still_skips_the_one_who_did_the_work(
 
     run(session, again)
 
-    # Guards `sent[instance_id] != today`: a nudge sent today stays in force today, so Mari is
-    # not reminded by a repeated run, and nobody gets a second push.
+    # Guards the same-day branch (`sent[instance_id] != today` is false): the nudge stays in force
+    # today, so Mari is not reminded by a repeated run, and nobody gets a second push.
     assert len(again.sent) == 0
 
 
@@ -156,8 +186,10 @@ def test_a_home_with_one_counted_member_never_nudges(session: Session) -> None:
 
     run(session, sender)
 
-    # Guards `len(counted) < 2`.
+    # Guards `counted - did_some` leaving nobody: with one counted Member there is no target and no
+    # nudge is spent.
     assert reached(sender) == {"mari"}
+    assert session.exec(select(FairnessNudge)).all() == []
 
 
 def test_completions_by_someone_who_left_start_no_nudge(session: Session) -> None:
@@ -172,25 +204,88 @@ def test_completions_by_someone_who_left_start_no_nudge(session: Session) -> Non
 
     run(session, sender)
 
-    # Guards `if not did_some` (AD-16): nobody current did any of the last 3, so everyone is
-    # reminded and nobody is singled out.
+    # Guards `if not did_some` (AD-16): nobody current did any of the last 3, so no nudge is spent
+    # (without the guard both would be targets and a row would exist).
     assert reached(sender) == {"mari", "jonas"}
+    assert session.exec(select(FairnessNudge)).all() == []
 
 
 def test_the_landlord_is_neither_counted_nor_targeted(session: Session) -> None:
-    kari = new_user(session, "Kari")
-    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
-    anders = new_user(session, "Anders")
-    homes.add_member(session, home, anders)
-    device(session, kari, "kari")
-    device(session, anders, "anders")
-    task_with_history(session, home.id, [anders, anders, anders])
+    home_id, _kari, (anders,) = tenancy(session, "Anders")
+    task_with_history(session, home_id, [anders, anders, anders])
     sender = MockSender()
 
     run(session, sender)
 
     # Guards `Membership.role.in_(DOERS)` (decision 2): one Tenant is one counted Member.
     assert reached(sender) == {"kari", "anders"}
+    assert session.exec(select(FairnessNudge)).all() == []
+
+
+def test_the_landlord_keeps_the_regular_reminder_on_a_nudge_day(session: Session) -> None:
+    home_id, _kari, (anders, siv) = tenancy(session, "Anders", "Siv")
+    task_with_history(session, home_id, [anders, anders, anders])
+    sender = MockSender()
+
+    run(session, sender)
+
+    # Guards `user_id not in counted_by_instance[...]` in `apply_nudges`: Siv is nudged, Anders
+    # (did the work) is skipped, and the Landlord, who did not do the work either, still gets the
+    # regular reminder.
+    assert reached(sender) == {"siv", "kari"}
+
+
+def test_a_member_who_joined_after_the_window_is_not_singled_out(session: Session) -> None:
+    home_id, (mari, jonas) = household(session, "Mari", "Jonas")
+    task_with_history(session, home_id, [mari, mari, mari])
+    # Jonas joined after the last of the three completions.
+    session.execute(
+        update(Membership)
+        .where(col(Membership.user_id) == jonas.id)
+        .values(created_at=datetime(2026, 11, 1, tzinfo=UTC))
+    )
+    session.commit()
+    sender = MockSender()
+
+    run(session, sender)
+
+    # Guards `to_utc(joined) <= to_utc(since)` in `_counted_members`: Jonas could not have done
+    # the earlier completions, so only one Member counts and nobody is nudged.
+    assert reached(sender) == {"mari", "jonas"}
+    assert session.exec(select(FairnessNudge)).all() == []
+
+
+def test_a_target_without_a_device_spends_no_nudge_and_everyone_is_reminded(
+    session: Session,
+) -> None:
+    home_id, (mari, jonas) = household(session, "Mari", "Jonas")
+    task_with_history(session, home_id, [mari, mari, mari])
+    session.execute(delete(PushSubscription).where(col(PushSubscription.user_id) == jonas.id))
+    session.commit()
+    sender = MockSender()
+
+    run(session, sender)
+
+    # Guards `_with_devices`: a target nobody can reach would leave the instance without any
+    # reminder that day, so the rule does not fire.
+    assert reached(sender) == {"mari"}
+    assert session.exec(select(FairnessNudge)).all() == []
+
+
+def test_the_nudge_is_recorded_before_the_push_is_sent(session: Session) -> None:
+    home_id, (mari, jonas) = household(session, "Mari", "Jonas")
+    task_with_history(session, home_id, [mari, mari, mari])
+    seen: list[int] = []
+
+    class CheckingSender(MockSender):
+        def send(self, target, message):  # type: ignore[no-untyped-def]
+            seen.append(len(session.exec(select(FairnessNudge)).all()))
+            return super().send(target, message)
+
+    run(session, CheckingSender())
+
+    # Guards the order in `apply_nudges`: the claim is committed before any send (as AD-8).
+    assert seen == [1]
 
 
 def test_two_members_with_no_completions_are_both_targeted(session: Session) -> None:
@@ -230,6 +325,8 @@ def test_a_completed_instance_is_not_due_so_nothing_is_nudged(session: Session) 
 
     run(session, sender)
 
+    # Guards the selection that feeds `apply_nudges` (`is_open`): a completed instance never
+    # reaches the rule, so it cannot be nudged.
     assert len(sender.sent) == 0
     assert session.exec(select(FairnessNudge)).all() == []
 
@@ -237,21 +334,16 @@ def test_a_completed_instance_is_not_due_so_nothing_is_nudged(session: Session) 
 def test_a_cadence_skipping_the_target_today_sends_no_nudge_and_claims_nothing(
     session: Session,
 ) -> None:
-    kari = new_user(session, "Kari")
-    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
-    anders = new_user(session, "Anders")
-    homes.add_member(session, home, anders)
-    siv = new_user(session, "Siv")
-    homes.add_member(session, home, siv)
-    for user in (kari, anders, siv):
-        device(session, user, user.name.lower())
+    home_id, _kari, (anders, siv) = tenancy(session, "Anders", "Siv")
+    home = session.get(Home, home_id)
+    assert home is not None
     home.notification_cadence_days = 7
     session.add(home)
     session.commit()
     # Overdue by 3 days and a weekly cadence: the Tenants' Must reminder is skipped today.
     task_with_history(
         session,
-        home.id,
+        home_id,
         [anders, anders, anders],
         due_on=TODAY - timedelta(days=3),
         classification="must",
@@ -260,26 +352,28 @@ def test_a_cadence_skipping_the_target_today_sends_no_nudge_and_claims_nothing(
 
     run(session, sender)
 
-    # Guards `targets &= {…notified…}` (decision 4): a target the cadence skips is not nudged, and
-    # the instance is not claimed, so the nudge can still fire on a day the cadence allows. Only
-    # the Landlord, whom the cadence does not hold back, is reminded.
+    # Guards `reminded[instance_id]` in `apply_nudges` (decision 4): a target the cadence skips is
+    # not nudged and the instance is not claimed, so the nudge can still fire on a day the
+    # cadence allows. Only the Landlord, whom the cadence does not hold back, is reminded.
     assert reached(sender) == {"kari"}
     assert session.exec(select(FairnessNudge)).all() == []
+    nudging = MockSender()
+
+    # Seven days overdue is a cadence day: now Siv is nudged and Anders is skipped.
+    run(session, nudging, TODAY + timedelta(days=4))
+
+    assert reached(nudging) == {"siv", "kari"}
 
 
-def test_the_rule_in_one_place_has_the_window_in_one_constant() -> None:
+def test_fewer_completions_than_the_window_give_no_target() -> None:
     mari, jonas = uuid.uuid4(), uuid.uuid4()
 
-    # Guards WINDOW as the only number: changing it changes the rule without touching the text.
-    assert fairness.WINDOW == 3
+    # Guards `len(completers) < WINDOW` and that WINDOW is the only number the rule reads.
     assert fairness.nudge_targets({mari, jonas}, [mari] * fairness.WINDOW) == {jonas}
     assert fairness.nudge_targets({mari, jonas}, [mari] * (fairness.WINDOW - 1)) == set()
 
 
 def test_the_database_allows_one_nudge_per_instance(session: Session) -> None:
-    import pytest
-    from sqlalchemy.exc import IntegrityError
-
     home_id, (mari, jonas) = household(session, "Mari", "Jonas")
     task = task_with_history(session, home_id, [mari, mari, mari])
     instance = open_instance(session, task)
@@ -291,7 +385,3 @@ def test_the_database_allows_one_nudge_per_instance(session: Session) -> None:
     with pytest.raises(IntegrityError):
         session.commit()
     session.rollback()
-
-
-def test_the_due_check_module_runs_the_nudges(session: Session) -> None:
-    assert due_check.fairness is fairness

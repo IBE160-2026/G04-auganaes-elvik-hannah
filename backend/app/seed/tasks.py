@@ -9,11 +9,16 @@ overwrites: a Home that already has Tasks is left as it is.
 Story 2.4 (FR-7, FR-17): in the run that sets up the Household Home, Jonas completes «Avkalk
 vannkokeren» (60 days) two days before seeding, if he is a Member, so Mari sees «Fullført
 … av Jonas» on her list right after seeding. Through complete_task_instance, like the checkbox.
+
+Story 3.3 (FR-11, AD-9): in the same run, Mari completes «Støvsug og vask gulvene» (14 days) three
+times, 50, 36 and 22 days ago, and the Household Home's Memberships are dated 60 days back, so a
+run of the due-check (README) nudges Jonas: he has none of the last three and Mari has all three.
 """
 
 from datetime import timedelta
 
-from sqlmodel import Session, select
+from sqlalchemy import update
+from sqlmodel import Session, col, select
 
 from app.clock import utc_now, utc_today
 from app.domain import task_types, tasks
@@ -46,6 +51,13 @@ EXAMPLE_SETUPS: tuple[tuple[str, str, int], ...] = (
 EXAMPLE_COMPLETION = (JOINER_EMAIL, EXAMPLE_HOME_NAME, ("should", 60), 2)
 
 
+# Story 3.3: (who, in which Home, the Task with this Må/Bør and Frequency, days ago for each of the
+# three completions). 14 days is the one «gulv» entry; each completion adds the next instance, so
+# the last open one is due 22 - 14 = 8 days ago and the nudge fires on the seed day.
+EXAMPLE_HISTORY = (CREATOR_EMAIL, EXAMPLE_HOME_NAME, ("should", 14), (50, 36, 22))
+SETTLED_DAYS = 60
+
+
 def _membership(session: Session, email: str, home: Home) -> Membership | None:
     user = _user(session, email)
     return session.exec(
@@ -71,6 +83,34 @@ def _complete_example(session: Session, home: Home) -> None:
     print(f"{email} krysset av «{row.task.name}» i «{home_name}»")
 
 
+def _seed_history(session: Session, home: Home) -> None:
+    email, home_name, values, days_ago = EXAMPLE_HISTORY
+    if home.name != home_name:
+        return
+    member = _membership(session, email, home)
+    # The demo needs a second Member who did none of it (Jonas).
+    if member is None or _membership(session, JOINER_EMAIL, home) is None:
+        return
+    task = next(
+        r.task
+        for r in tasks.tasks_of(session, home.id)
+        if (r.task.classification, r.task.frequency_days) == values
+    )
+    for days in days_ago:
+        row = next(r for r in tasks.tasks_of(session, home.id) if r.task.id == task.id)
+        now = utc_now() - timedelta(days=days)
+        tasks.complete_task_instance(session, member, task.id, row.instance_id, now=now)
+    # A Home that has been lived in for a while: the Memberships pre-date the history above, so
+    # the nudge rule counts both Members (a new Member is never singled out).
+    session.execute(
+        update(Membership)
+        .where(col(Membership.home_id) == home.id)
+        .values(created_at=utc_now() - timedelta(days=SETTLED_DAYS))
+    )
+    session.commit()
+    print(f"{email} krysset av «{task.name}» tre ganger i «{home_name}» (for nudge-demoen)")
+
+
 def _set_up(session: Session, email: str, home_name: str, days_ago: int) -> None:
     creator = _user(session, email)
     home = _own_home(session, creator, home_name)
@@ -89,6 +129,7 @@ def _set_up(session: Session, email: str, home_name: str, days_ago: int) -> None
     created = tasks.set_up_tasks(session, membership, choices, today=today)
     print(f"Satte opp {len(created)} oppgaver i «{home_name}»")
     _complete_example(session, home)
+    _seed_history(session, home)
 
 
 def seed_tasks(session: Session) -> None:

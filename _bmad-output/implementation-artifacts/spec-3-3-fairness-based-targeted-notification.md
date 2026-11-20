@@ -2,7 +2,7 @@
 title: 'Story 3.3: Fairness-based targeted notification'
 type: 'feature'
 created: '2026-11-20'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 01d7eca
@@ -72,9 +72,31 @@ context:
 
 ## Implementation Notes
 
+- Built directly by Claude under Eirik's mandate, 2026-11-20 (rollback tag `rollback/for-story-3-3`). Backend 921 tests green, ruff clean; the migration runs only in CI (Docker is not running locally).
+- Review changed the rule from the frozen text, as Decisions 1, 2 and 4 of the frozen block are now: (a) the nudge skips only *counted* Members who are not targets, so the Landlord keeps the regular reminder; (b) a Member who joined after the oldest of the three completions is not counted; (c) a target needs a push device, else the rule does not fire and nothing is used up; (d) a nudge sent today stays in force for a repeated run the same day (the `day` column). The frozen intent (first reminder to whoever has not done the task, once per instance) is unchanged; PRD FR-11, AD-9 and epics carry the final wording.
+- Seed: Mari has three completions of «Støvsug og vask gulvene» and the household Memberships are dated 60 days back, so `run-due-check` nudges Jonas (`tests/test_seed.py`).
+- Guards: `counted - did_some`, `_with_devices`, `to_utc(joined) <= to_utc(since)`, `user_id not in counted_by_instance[...]`, `sent[instance_id] != today`, claim before send.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Three reviewers (Blind Hunter, Edge Case Hunter, Verification Gap), 2026-11-20.
+
+| Finding | Verdict | Evidence / route |
+|---|---|---|
+| The Landlord silently lost the regular reminder on a nudge day; not in PRD or tests (all three) | medium | patched: only counted non-targets are skipped; test with Landlord and two Tenants; PRD, AD-9, epics |
+| The nudge could be used up on nobody (target without a device or skipped by cadence) (Edge, Blind) | medium | patched: targets need a device and a reminder that run; tests |
+| A new Member who has none of the three is singled out (Edge) | medium | patched: Members who joined after the window are not counted; test |
+| Four tests would pass without the line they named (`if not did_some`, `len(counted) < 2`, same-day branch, module identity) (Blind, Verification Gap) | medium | patched: nudge-row assertions, redundant `len(counted) < 2` removed, honest comments, identity test deleted |
+| The cadence test would have passed through the new-member rule instead of the cadence (found in patching) | medium | patched: tenancy helper with settled Memberships, and a follow-up run on a cadence day |
+| Claim-before-send and the `IntegrityError` branch in `_claim` untested (all three) | low | claim-before-send test added; the race branch deferred |
+| Tie order of equal `completed_at` (Edge) | low | patched: `due_on` then id |
+| Seed gave a sensor no way to see the nudge; README sentence in the middle of the cadence demo (Blind) | low | patched: seed history and a test; README bullet moved |
+| N+1 queries per instance and no time budget (Blind) | low | deferred with the 3.2 time-budget item |
+| `fairness_nudges` rows never deleted (Blind) | low | kept on purpose (once per instance needs them); stated in AD-9 |
+| Spec says a race loser «sends nothing» (Edge) | low | the loser keeps the nudge targeted, `due_notifications` stops duplicates; recorded here, frozen text untouched |
+| «first reminder» wording stronger than the code (Blind) | low | patched: «on the first day the rule holds» |
 
 ## Verification
 
