@@ -11,9 +11,11 @@
 // Story 3.4: Homes carry can_broadcast (only a Landlord's is true).
 // Story 3.5: and notification_cadence_days with can_set_cadence.
 // Story 4.2: the Tenant's photo upload is answered per test (POST …/instances/<id>/photo-evidence).
+// Story 5.3: Homes carry can_view_guide; guideHandler answers the onboarding guide.
 // Story 4.1: Homes carry can_require_photo_evidence; tasks carry requires_ and may_require_photo_evidence.
 // Story 2.6: taskServer also answers add (POST …/tasks) and archive (DELETE …/tasks/<id>).
 import type { Home, HomeType, Member } from '../api/homes';
+import type { Guide } from '../api/onboarding';
 import { setSession } from '../api/session';
 import type { Completion, NewTask, Task, TaskTypes } from '../api/tasks';
 
@@ -161,6 +163,7 @@ export const OLAS_HOME: Home = {
   notification_cadence_days: 1,
   can_set_cadence: false,
   can_require_photo_evidence: false,
+  can_view_guide: false,
 };
 
 // Story 2.3: a Tenant's Home, set up by the Landlord; Ola may read but not adjust its Tasks.
@@ -173,6 +176,7 @@ export const OLAS_TENANCY: Home = {
   can_invite: false,
   can_set_up_tasks: false,
   can_adjust_tasks: false,
+  can_view_guide: true,
 };
 
 // Story 1.9: lived_in_home_id is the Home where the user is Household Member or Tenant, if any.
@@ -190,6 +194,41 @@ export function olaAs(role: Member['role']): Member {
 }
 
 export const membersPath = (home: Pick<Home, 'id'>) => `/api/homes/${home.id}/members`;
+
+// Story 5.3: the onboarding guide as GET /api/homes/<id>/onboarding-guide returns it, and its
+// dismissal. `guideServer` keeps the dismissed flag, so a reload after «Skjul» stays hidden.
+export const guidePath = (home: Pick<Home, 'id'>) => `/api/homes/${home.id}/onboarding-guide`;
+
+export const GUIDE_DISCLAIMER = 'KI kan ta feil. Vær forsiktig, særlig med kjemikalier og rengjøringsmidler.';
+
+export function guideFor(home: Pick<Home, 'name'>, changes: Partial<Guide> = {}): Guide {
+  return {
+    home_name: home.name,
+    intro: 'Her ser du hjemmets oppgaver samlet.',
+    source: 'ai',
+    must_tasks: [
+      { name: 'Rens sluket', frequency_days: 30 },
+      { name: 'Vask badet grundig', frequency_days: 14 },
+    ],
+    dismissed: false,
+    disclaimer: GUIDE_DISCLAIMER,
+    demo: false,
+    ...changes,
+  };
+}
+
+/** GET answers the guide; POST …/dismiss marks it dismissed (or fails with `dismissStatus`). */
+export function guideServer(home: Pick<Home, 'id' | 'name'>, first: Partial<Guide> = {}, dismissStatus = 204) {
+  let guide = guideFor(home, first);
+  return {
+    [`GET ${guidePath(home)}`]: () => json(200, guide),
+    [`POST ${guidePath(home)}/dismiss`]: () => {
+      if (dismissStatus !== 204) return json(dismissStatus, { detail: 'Feil.' });
+      guide = { ...guide, dismissed: true };
+      return new Response(null, { status: 204 });
+    },
+  } satisfies Record<string, Handler>;
+}
 
 // Story 2.1: tasks as GET /api/homes/<id>/tasks returns them, and the catalog.
 export const tasksPath = (home: Pick<Home, 'id'>) => `/api/homes/${home.id}/tasks`;
@@ -432,6 +471,12 @@ export function signedInWith(
         [`GET ${membersPath(home)}`, () => json(200, { members: [olaAs(home.role)] })],
         [`GET ${tasksPath(home)}`, () => json(200, { tasks: home.has_tasks ? OLAS_TASKS : [] })],
       ]),
+    ),
+    // Story 5.3: a Home that may show the guide has the default one; a test overrides it.
+    ...Object.fromEntries(
+      homes
+        .filter((home) => home.can_view_guide)
+        .flatMap((home) => Object.entries(guideServer(home))),
     ),
   };
 }

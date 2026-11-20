@@ -29,6 +29,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-20 | Story 3.3 built: FR-11 states that the targeted reminder replaces the regular one on the first day the rule holds, that later days remind everyone, who counts (not the Landlord, not former Members, not a Member who joined after the completions), that the Landlord keeps the regular reminder, and the cases with no targeted reminder (including cadence and no device) | `spec-3-3-fairness-based-targeted-notification.md` |
 | 2026-11-20 | Story 5.2 built: FR-15 states that each chat message counts toward the 20, what a chat sends besides the question (the user's earlier questions and the AI's answers, at most five exchanges), that nothing is stored, and how a failed message behaves; FR-14's data rule points to it | `spec-5-2-escalate-to-full-ai-chat.md` |
 | 2026-11-20 | Story 5.2 walkthrough: the quick-answer has no question field of its own; the user's own questions are typed in the chat (FR-14, Eirik's decision) | `spec-5-2-escalate-to-full-ai-chat.md` |
+| 2026-11-20 | Story 5.3 built: FR-16 states the two parts of the guide (live Home name and Must tasks, stored AI introduction), who gets it, that it counts as one of the Landlord's AI calls, what is sent, the fallback, the dismissal and where it is read again | `spec-5-3-ai-generated-onboarding-guide.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -311,6 +312,9 @@ When a Landlord provisions a Home and invites Tenants, the system generates an o
 
 **Consequences (testable):**
 - A new Tenant accepting an invite can open a guide that names the Home and lists its active Must tasks with their frequencies, so two Homes with different tasks never get the same text.
+- The guide has two parts. The Home's name and its active Must tasks with their frequencies are read from the Home every time the guide is shown, so a task changed later is never missing or stale. The AI writes only a short general introduction to how the app works, once, when the Home's tasks are set up, and it is stored; it is not written again when the guide is viewed.
+- Only Landlord Homes get a guide. Generating it counts as one of the Landlord's 20 AI calls that day. Only the Must tasks' names, catalog types and frequencies are sent to the AI service, never the Home's name or any user data. If the AI fails, takes longer than 10 seconds or the Landlord has used the day's calls, a fixed Norwegian introduction is used instead, and setting up the Home is not affected. A Home set up before the guide existed shows that fixed text.
+- A new Tenant sees the guide as a card at the top of the task overview. The Tenant can dismiss it, and it stays dismissed for that Tenant until they leave the Home and join again. The guide can always be read again from Settings, by the Tenant and by the Landlord. An AI-written introduction carries the AI disclaimer (FR-14), and the mock's text is marked as demo (FR-22).
 
 ### 4.6 Completion and Photo Evidence
 

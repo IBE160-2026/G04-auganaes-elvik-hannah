@@ -22,7 +22,14 @@ import { ApiError } from '../api/errors';
 import { ROLE_LABELS, type Home } from '../api/homes';
 import { recordLastHome } from '../api/lastHome';
 import { PUSH_MESSAGES, isPushDenied, readNoteDismissed, recordNoteDismissed } from '../api/push';
-import { useCompleteTask, useHomes, useTasksWithPending, type TaskView } from '../api/queries';
+import {
+  useCompleteTask,
+  useDismissGuide,
+  useHomes,
+  useOnboardingGuide,
+  useTasksWithPending,
+  type TaskView,
+} from '../api/queries';
 import { useSession } from '../api/session';
 import {
   PENDING_COMPLETION_TEXT,
@@ -33,6 +40,7 @@ import {
   dueText,
 } from '../api/tasks';
 import { Badge } from '../components/Badge';
+import { OnboardingGuide } from '../components/OnboardingGuide';
 import { PendingNotice } from '../components/PendingNotice';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
@@ -73,6 +81,7 @@ function Overview({ home, canSwitch }: { home: Home; canSwitch: boolean }) {
   return (
     <div className="task-overview">
       <PendingNotice className="task-overview__notice" />
+      {home.role === 'tenant' && home.can_view_guide && <GuideCard home={home} />}
       {home.has_tasks ? (
         <TaskSection home={home} titleRef={titleRef} canSwitch={canSwitch} />
       ) : (
@@ -82,6 +91,25 @@ function Overview({ home, canSwitch }: { home: Home; canSwitch: boolean }) {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Story 5.3 (FR-16): a new Tenant's onboarding card at the top of the list until dismissed. The
+ * server says whether it is dismissed (per Member); a failed load shows nothing, since the card
+ * must never get in the way of the tasks. A dismissal that fails brings the card back.
+ */
+function GuideCard({ home }: { home: Home }) {
+  const guide = useOnboardingGuide(home.id, true);
+  const dismiss = useDismissGuide(home.id);
+  if (!guide.data || guide.data.dismissed) return null;
+  return (
+    <OnboardingGuide
+      guide={guide.data}
+      dismissing={dismiss.isPending}
+      dismissFailed={dismiss.isError}
+      onDismiss={() => dismiss.mutate()}
+    />
   );
 }
 

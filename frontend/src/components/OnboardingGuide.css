@@ -1,0 +1,91 @@
+/* Story 5.3: the onboarding guide card and page. */
+.onboarding-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.onboarding-guide__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-display);
+  line-height: var(--line-height-display);
+}
+
+.onboarding-guide__subtitle {
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-ink-secondary);
+}
+
+.onboarding-guide__intro,
+.onboarding-guide__meta,
+.onboarding-guide__disclaimer,
+.onboarding-guide__error {
+  margin: 0;
+}
+
+.onboarding-guide__tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-guide__task {
+  font-weight: var(--font-weight-bold);
+}
+
+.onboarding-guide__meta {
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  color: var(--color-ink-secondary);
+}
+
+.onboarding-guide__disclaimer {
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-warning);
+}
+
+.onboarding-guide__error {
+  color: var(--color-danger);
+}
+
+.onboarding-guide__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.onboarding-guide__button {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.onboarding-guide__button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.guide-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

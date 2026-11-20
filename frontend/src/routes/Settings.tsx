@@ -76,6 +76,15 @@ function SettingsPage({ homes, canCreate }: { homes: readonly Home[]; canCreate:
                 >
                   Medlemmer
                 </Link>
+                {home.can_view_guide && (
+                  <Link
+                    to={`/hjem/${home.id}/velkommen`}
+                    className="settings__link"
+                    aria-label={`Velkomstguide for ${home.name}`}
+                  >
+                    Velkomstguide
+                  </Link>
+                )}
                 {home.can_set_up_tasks && !home.has_tasks && (
                   <Link
                     to={`/hjem/${home.id}/oppgaveoppsett`}

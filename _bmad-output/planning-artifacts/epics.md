@@ -1487,6 +1487,20 @@ So that I understand how the app and my obligations work without asking my Landl
 **When** it runs
 **Then** it goes through the same single backend AI service (AD-4) as the other AI surfaces, with the disclaimer applied consistently if the guide contains how-to content
 
+*Built 2026-11-20 (Story 5.3 spec):*
+
+**Given** a Landlord sets up a Home's tasks
+**When** the guide is generated
+**Then** the AI writes only a general introduction, once, and the Home's name and current Must tasks are read live at every view, so the guide is never stale and the Home's name is never sent to the AI
+
+**Given** the AI fails, times out or the Landlord has used the day's 20 calls
+**When** the Home is set up
+**Then** a fixed Norwegian introduction is stored and the setup succeeds
+
+**Given** a Tenant dismisses the card
+**When** they leave the Home and join again
+**Then** the card shows again (dismissal is per membership), and the guide can always be read from Settings by the Tenant and the Landlord
+
 ## Epic 6: Landlord Portfolio Dashboard
 
 A Landlord who owns more than one Home sees a single aggregated view of on-track/behind status across all their Homes and units, letting them triage without a site visit.
