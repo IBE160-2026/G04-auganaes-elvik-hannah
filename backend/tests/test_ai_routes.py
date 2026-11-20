@@ -180,3 +180,140 @@ def test_an_archived_task_is_404_and_nothing_is_counted(client: TestClient, engi
     assert response.status_code == 404
     with Session(engine) as session:
         assert session.exec(select(AiUsage)).all() == []
+
+
+# --- Story 5.2: the chat sends earlier turns again with each message (FR-15) ------------------
+
+TURNS = [
+    {"role": "user", "text": "Hvordan gjør jeg «Rens sluket»?"},
+    {"role": "assistant", "text": "Ta bort sil og rens med natron."},
+]
+
+
+def test_a_follow_up_gets_the_demo_text_naming_the_task_from_the_path(client: TestClient) -> None:
+    mari, home_id, task = a_home_with_tasks(client)
+    body = {"question": "Og hvis det lukter?", "history": TURNS}
+    response = client.post(url(home_id, task), json=body, headers=mari)
+    assert response.status_code == 200
+    assert response.json()["answer"] == mock_answers.follow_up_for("Rens sluket")
+    assert response.json()["disclaimer"] == ai.DISCLAIMER
+
+
+def test_the_history_and_the_task_reach_the_provider_and_the_task_comes_from_the_server(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mari, home_id, task = a_home_with_tasks(client)
+    seen: list[AiRequest] = []
+
+    class Spy:
+        demo = True
+
+        def ask(self, request: AiRequest) -> ProviderAnswer:
+            seen.append(request)
+            return ProviderAnswer("ok", "Svar")
+
+    monkeypatch.setattr(service, "select_provider", lambda: Spy())
+    body = {"question": "Mer?", "history": TURNS, "task_name": "Falsk", "task_type": "gulv"}
+    assert client.post(url(home_id, task), json=body, headers=mari).status_code == 200
+    assert seen[0].task_name == "Rens sluket" and seen[0].task_type == "rens-sluket"
+    assert [(t.role, t.text) for t in seen[0].history] == [(t["role"], t["text"]) for t in TURNS]
+    assert seen[0].question == "Mer?"
+
+
+def test_a_follow_up_counts_with_the_quick_answers_and_the_21st_is_refused(
+    client: TestClient,
+) -> None:
+    mari, home_id, task = a_home_with_tasks(client)
+    for _ in range(10):
+        assert client.post(url(home_id, task), json={}, headers=mari).status_code == 200
+    body = {"question": "Mer?", "history": TURNS}
+    for _ in range(10):
+        assert client.post(url(home_id, task), json=body, headers=mari).status_code == 200
+    refused = client.post(url(home_id, task), json=body, headers=mari)
+    assert refused.status_code == 429 and refused.json()["detail"] == LIMIT_REACHED
+
+
+def bad_histories() -> dict[str, dict]:
+    user, assistant = TURNS
+    pairs = TURNS * 5
+    return {
+        "no-question": {"history": TURNS},
+        "blank-question": {"question": "  ", "history": TURNS},
+        "ends-with-user": {"question": "Mer?", "history": [*TURNS, user]},
+        "starts-with-assistant": {"question": "Mer?", "history": [assistant, user]},
+        "same-role-twice": {"question": "Mer?", "history": [user, user]},
+        "eleven": {"question": "Mer?", "history": [*pairs, user]},
+        "twelve": {"question": "Mer?", "history": [*pairs, *TURNS]},
+        "long-user": {"question": "Mer?", "history": [{**user, "text": "x" * 301}, assistant]},
+        "long-answer": {"question": "Mer?", "history": [user, {**assistant, "text": "x" * 2001}]},
+        "empty-text": {"question": "Mer?", "history": [{**user, "text": ""}, assistant]},
+        "bad-role": {"question": "Mer?", "history": [{**user, "role": "system"}, assistant]},
+    }
+
+
+@pytest.mark.parametrize("name", list(bad_histories()))
+def test_a_bad_history_is_422_and_spends_no_call(
+    client: TestClient, session: Session, engine: Engine, name: str
+) -> None:
+    mari, home_id, task = a_home_with_tasks(client)
+    response = client.post(url(home_id, task), json=bad_histories()[name], headers=mari)
+    assert response.status_code == 422
+    with Session(engine) as check:
+        assert check.exec(select(AiUsage)).all() == []
+
+
+def test_ten_entries_with_the_longest_allowed_texts_are_accepted(client: TestClient) -> None:
+    mari, home_id, task = a_home_with_tasks(client)
+    user, assistant = TURNS
+    history = [{**user, "text": "x" * 300}, {**assistant, "text": "y" * 2000}] * 5
+    response = client.post(
+        url(home_id, task), json={"question": "q" * 300, "history": history}, headers=mari
+    )
+    assert response.status_code == 200
+
+
+def test_the_gemini_body_of_a_follow_up_has_no_user_name_email_or_home_name(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        text = json.dumps({"confidence": "ok", "answer": "Svar"})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": text}]}}]})
+
+    kari = register_via_api(client, "Kari Nordmann")
+    auth = {"Authorization": f"Bearer {kari.json()['access_token']}"}
+    home = client.post(
+        "/api/homes", json={"name": "Hemmelig Borettslag", "type": "household"}, headers=auth
+    )
+    home_id = home.json()["id"]
+    assert set_up(client, auth, home_id, ALL).status_code == 201
+    task = next(
+        t
+        for t in list_tasks(client, auth, home_id).json()["tasks"]
+        if t["task_type"] == "rens-sluket"
+    )
+    monkeypatch.setattr(
+        service,
+        "select_provider",
+        lambda: GeminiProvider("nokkel", "modell", httpx.MockTransport(handler)),
+    )
+    body = {"question": "Og hvis det lukter?", "history": TURNS}
+    assert client.post(url(home_id, task), json=body, headers=auth).status_code == 200
+    sent = json.loads(seen[0].content)
+    assert len(sent["contents"]) == 3
+    text = seen[0].content.decode()
+    assert "Rens sluket" in text and "Og hvis det lukter?" in text and "natron" in text
+    for private in ("Kari", "Nordmann", kari.json()["user"]["email"], "Hemmelig", "Borettslag"):
+        assert private not in text
+
+
+def test_a_follow_up_about_an_archived_task_is_404(client: TestClient) -> None:
+    mari, home_id, task = a_home_with_tasks(client)
+    assert (
+        client.delete(f"/api/homes/{home_id}/tasks/{task['id']}", headers=mari).status_code == 204
+    )
+    body = {"question": "Mer?", "history": TURNS}
+    response = client.post(url(home_id, task), json=body, headers=mari)
+    assert response.status_code == 404 and response.json()["detail"] == TASK_NOT_FOUND

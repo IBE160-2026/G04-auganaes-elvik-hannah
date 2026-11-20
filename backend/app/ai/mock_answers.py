@@ -47,3 +47,13 @@ GENERIC = (
 
 def answer_for(task_type: str | None) -> str:
     return BY_TASK_TYPE.get(task_type, GENERIC) if task_type is not None else GENERIC
+
+
+def follow_up_for(task_name: str) -> str:
+    """The canned answer to a follow-up question in a chat (Story 5.2). It names the Task, so
+    the demo shows that the chat keeps the Task as context."""
+    return (
+        f"Demo-svar på oppfølgingsspørsmålet ditt om «{task_name}»: uten KI-nøkkel er svaret "
+        "ferdigskrevet og svarer ikke på selve spørsmålet. Ta det steg for steg, bruk et mildt "
+        "middel først og les instruksjonene på produktet."
+    )
