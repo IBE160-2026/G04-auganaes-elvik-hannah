@@ -133,7 +133,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Run the Blob adapter against a real private store and confirm `put_blob` with `allow_overwrite` and `get_blob` behave as `BlobPhotoStore` assumes.
   evidence: The adapter is written from the SDK signatures and tested only with fakes. It cannot be exercised offline; a store has to be created in Vercel first.
-  outcome: Story 4.3 (2026-11-20) found that the adapter called the async SDK functions without `await` and stored nothing; it now uses `vercel.blob.sync`, guarded by a test. Still open: one real upload and view against the Blob store on Preview (the `get_blob(...).body` shape is read from the SDK source only).
+  outcome: Story 4.3 (2026-11-20) found that the adapter called the async SDK functions without `await` and stored nothing; it now uses `vercel.blob.sync`, guarded by a test. Confirmed by Eirik on Vercel Preview, 2026-11-20: upload as Tenant and view as Landlord work against the real private Blob store.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Make a photo that was stored but whose completion then failed impossible to leave behind, for example by writing to a temporary key first.
   evidence: Story 4.2 decision 6: the photo is stored before the completion commits, so a failed commit leaves the new photo under the key until the next upload.
