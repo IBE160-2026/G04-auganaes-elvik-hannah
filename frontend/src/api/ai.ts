@@ -12,7 +12,7 @@ export type ChatTurn = components['schemas']['HistoryEntry'];
 export type Exchange = { question: string; answer: Answer };
 
 /** The name the chat gives the cleaning assistant as sender. One place, so it is easy to change. */
-export const ASSISTANT_NAME = 'Moppen';
+export const ASSISTANT_NAME = 'Fiks';
 
 export const AI_MESSAGES = {
   // UX State Patterns, «AI cannot answer / low confidence».
