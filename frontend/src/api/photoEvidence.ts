@@ -113,7 +113,8 @@ export async function fetchPhotoImage(homeId: string, taskId: string): Promise<s
     params: { path: { home_id: homeId, task_id: taskId } },
     parseAs: 'arrayBuffer',
   });
-  if (!data) throw toApiError(response, error, { passThrough: [], fallback: PHOTO_VIEW_MESSAGES.failed });
+  // A 404 carries the server's reason (no photo, or the stored file is gone): no retry helps.
+  if (!data) throw toApiError(response, error, { passThrough: [404], fallback: PHOTO_VIEW_MESSAGES.failed });
   const bytes = new Uint8Array(data as ArrayBuffer);
   let binary = '';
   // In pieces: one call with millions of arguments would overflow the stack.

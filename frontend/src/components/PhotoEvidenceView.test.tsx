@@ -49,7 +49,7 @@ describe('Photo Evidence view', () => {
     });
     renderAt(detailUrl);
 
-    const image = await screen.findByRole('img', { name: DESCRIPTION });
+    const image = await screen.findByRole('img', { name: 'Bildebevis for oppgaven' });
     // Guards the data address: no storage address ever reaches the browser, only bytes it made itself.
     expect(image.getAttribute('src')).toMatch(/^data:image\/jpeg;base64,/);
     expect(seen[0]).toMatch(/^Bearer /);
@@ -77,7 +77,19 @@ describe('Photo Evidence view', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Vi fikk ikke hentet bildet.');
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Prøv igjen' }));
-    expect(await screen.findByRole('img', { name: DESCRIPTION })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Bildebevis for oppgaven' })).toBeInTheDocument();
+  });
+
+  it('says the photo is gone, with no retry, when the stored file is missing', async () => {
+    landlordServer({
+      [`GET ${evidencePath}`]: () => json(200, { evidence: { description: DESCRIPTION, uploaded_at: '2026-09-29T10:00:00Z' } }),
+      [`GET ${evidencePath}/image`]: () => json(404, { detail: 'Bildet finnes ikke lenger.' }),
+    });
+    renderAt(detailUrl);
+
+    // Guards `gone`: a permanent 404 shows the server's reason and no «Prøv igjen» that cannot succeed.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Bildet finnes ikke lenger.');
+    expect(screen.queryByRole('button', { name: 'Prøv igjen' })).not.toBeInTheDocument();
   });
 
   it('makes no request and shows nothing to a Tenant', async () => {

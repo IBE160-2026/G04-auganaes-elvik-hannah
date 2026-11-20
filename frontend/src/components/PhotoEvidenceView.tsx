@@ -2,6 +2,7 @@
 // server writes the description and the time; the browser formats no date. The photo is fetched
 // through the API (it needs the Bearer token) and shown from a data address made in the browser.
 // Nothing here offers download, history or deleting.
+import { ApiError } from '../api/errors';
 import type { Home } from '../api/homes';
 import { PHOTO_VIEW_MESSAGES } from '../api/photoEvidence';
 import { usePhotoEvidence, type TaskView } from '../api/queries';
@@ -12,7 +13,9 @@ export function PhotoEvidenceView({ home, task }: { home: Home; task: TaskView }
   const evidence = info.data;
   const url = image.data;
 
-  const failed = info.isError || image.isError;
+  // A 404 on the image is final (the stored file is gone): its message, no retry.
+  const gone = image.error instanceof ApiError && image.error.status === 404;
+  const failed = info.isError || (image.isError && !gone);
   // A Task that cannot have a photo and has none shows nothing; a required one says so.
   if (!failed && !info.isPending && !evidence && !task.requires_photo_evidence) return null;
 
@@ -27,8 +30,13 @@ export function PhotoEvidenceView({ home, task }: { home: Home; task: TaskView }
         <>
           <p className="photo-view__note">{evidence.description}</p>
           {image.isPending && <p role="status">Laster bildet …</p>}
-          {url && <img className="photo-view__image" src={url} alt={evidence.description} />}
+          {url && <img className="photo-view__image" src={url} alt={PHOTO_VIEW_MESSAGES.alt} />}
         </>
+      )}
+      {gone && !failed && (
+        <p className="auth-form__error" role="alert">
+          {image.error?.message}
+        </p>
       )}
       {failed && (
         <>

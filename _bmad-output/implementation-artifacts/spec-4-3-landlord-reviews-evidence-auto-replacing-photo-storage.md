@@ -2,7 +2,7 @@
 title: 'Story 4.3: Landlord reviews evidence, auto-replacing photo storage'
 type: 'feature'
 created: '2026-11-20'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 073052a12f36767981d8137d00704f977f79225a
@@ -74,9 +74,32 @@ context:
 
 ## Implementation Notes
 
+- Built directly by Claude under Eirik's mandate, 2026-11-20 (rollback tag `rollback/for-story-4-3`). Backend 901 tests green; frontend `tsc` and eslint clean, vitest cannot start on this Mac, so CI runs the new frontend tests first.
+- Found while planning: the 4.2 Blob adapter called the async SDK functions without `await` (nothing stored on Vercel). Now `vercel.blob.sync`, with a guard test. Production rows from before the fix have no file, so the Landlord sees «Bildet finnes ikke lenger» until the Tenant uploads again.
+- Deviations from the spec text: the browser shows a base64 `data:` address, not an object URL (decision 4; the lint rule against setState in effects, and nothing to revoke); `alt` is a fixed label so screen readers do not read the description twice; a removed uploader shows «Tidligere medlem» (AD-16, an existing AC).
+- Guards: `shown_description` (`still_member is None`), `evidence.uploaded_at = now`, the `Landlord` alias on both routes, `Cache-Control`, `data is None` in `read_photo`, `except StorageError`, `gone` in `PhotoEvidenceView`, `home.role === 'landlord'`.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Three reviewers (Blind Hunter, Edge Case Hunter, Verification Gap), 2026-11-20.
+
+| Finding | Verdict | Evidence / route |
+|---|---|---|
+| Replacement test used `>=` on `uploaded_at` and passed without the update (all three) | medium | patched: old time set first, strict `>` |
+| 404 «gone» showed a retry that can never succeed; Production rows from the no-op adapter hit it (Blind, Edge) | medium | patched: 404 passes through, message without retry, test |
+| Epics AC said support staff and signed URL; no ACs for no photo, gone, read failure (PRD-drift, Blind, Edge) | medium | patched: epics, PRD FR-19 |
+| AD-16 AC «Tidligere medlem» not met: description held the saved name (PRD-drift, Blind, Edge) | medium | patched: `shown_description`, test |
+| AD-5 says the view relies on the timestamp because Blob may cache 60 s; the code reads the store directly (Blind, Edge) | medium, unverified | known limit in AD-5, deferred |
+| `get_blob(...).body` shape and real store unverified (all three) | medium | already open in deferred-work; fake-SDK read test added; real Preview check before merge |
+| Viewing reused the requirement permission (Blind) | low | patched: `can_view_photo_evidence` |
+| `"http" not in info.text` guarded nothing; wrong comment on the 403 case (Blind, Edge) | low | patched: exact field set, no `Location` header |
+| `alt` repeated the visible description (Blind) | low | patched |
+| Non-SDK exception from the Blob read becomes 500; route guard path filter narrow (Edge) | low | deferred |
+| Request fired for tasks that can never have a photo (Blind) | low | rejected: one cheap request, and a photo stays after the requirement is turned off |
+| Spec decision 4 says object URL (Edge) | low | recorded in Implementation Notes; frozen text untouched |
+| 401 test, unreachable `ValueError` branch (Blind) | low | rejected: auth is `require_role`'s and covered in `test_permissions` |
 
 ## Verification
 

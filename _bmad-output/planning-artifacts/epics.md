@@ -1293,11 +1293,15 @@ So that I can review after the fact without the system becoming a privacy liabil
 
 **Given** a stored photo
 **When** access is attempted
-**Then** only that Home's Landlord and the product's own support staff can view it — no other Tenant, other Landlord, or third party can (NFR5)
+**Then** only that Home's Landlord can view it — no Tenant (also the one who uploaded it), Household Member, other Landlord, or third party can (NFR5)
 
 **Given** a stored photo
 **When** the Landlord views it
-**Then** it is served through a backend route that runs `require_role` first (streamed, or a short-lived signed URL if private Blob storage supports it); no permanent Blob URL ever reaches the browser (AD-5, NFR5)
+**Then** it is streamed through a backend route that runs `require_role` first and is never cached; no Blob URL ever reaches the browser (AD-5, NFR5)
+
+**Given** no photo has been uploaded for a task, or the stored file is gone, or the store cannot be read
+**When** the Landlord opens the task
+**Then** a clear message says which, and a retry is offered only when trying again can help
 
 **Given** a Tenant's task history and Photo Evidence
 **When** visibility is checked
@@ -1307,7 +1311,7 @@ So that I can review after the fact without the system becoming a privacy liabil
 
 **Given** evidence uploaded by a Tenant who has since been removed
 **When** the Landlord reviews it
-**Then** it shows «Tidligere medlem» as uploader and stays reviewable
+**Then** it shows «Tidligere medlem» as uploader (the saved name is not shown) and stays reviewable
 
 ## Epic 5: AI Assistant
 

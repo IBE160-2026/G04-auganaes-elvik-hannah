@@ -30,6 +30,7 @@ from app.storage import PhotoStore, StorageError
 NOT_ELIGIBLE = "Denne oppgavetypen kan ikke kreve bildebevis."
 NOT_MUST = "Bare Må-oppgaver kan kreve bildebevis."
 NOT_REQUIRED = "Denne oppgaven krever ikke bilde."
+FORMER_MEMBER = "Tidligere medlem"
 NO_EVIDENCE = "Det finnes ikke noe bildebevis ennå."
 PHOTO_GONE = "Bildet finnes ikke lenger."
 READ_FAILED = "Vi fikk ikke hentet bildet. Prøv igjen."
@@ -52,6 +53,12 @@ class CannotRequire(Exception):
 
 
 def can_require_photo_evidence(role: Role) -> bool:
+    return role == "landlord"
+
+
+def can_view_photo_evidence(role: Role) -> bool:
+    """Only the Home's Landlord (NFR5, NFR6). Its own rule, so widening who may set the
+    requirement can never widen who sees the photo."""
     return role == "landlord"
 
 
@@ -232,7 +239,7 @@ def current_evidence(
     Raises tasks.TaskNotFound for a Task outside the Home or archived, so «no photo» is never
     confused with «no such Task».
     """
-    if not can_require_photo_evidence(membership.role):
+    if not can_view_photo_evidence(membership.role):
         raise ValueError(f"role {membership.role!r} may not view Photo Evidence")
     task = tasks.active_task(session, membership.home_id, task_id)
     return session.get(PhotoEvidence, task.id)
@@ -250,3 +257,17 @@ def read_photo(
     if data is None:
         raise NoEvidence(PHOTO_GONE)
     return data
+
+
+def shown_description(session: Session, membership: Membership, evidence: PhotoEvidence) -> str:
+    """The description the Landlord sees. The saved text holds the uploader's name at upload time;
+    once that user is no longer a Member of the Home it reads «Tidligere medlem» instead (AD-16)."""
+    still_member = session.exec(
+        select(Membership).where(
+            Membership.home_id == membership.home_id,
+            Membership.user_id == evidence.uploaded_by_user_id,
+        )
+    ).first()
+    if still_member is not None:
+        return evidence.description
+    return describe(FORMER_MEMBER, to_utc(evidence.uploaded_at).date())[:DESCRIPTION_MAX_LENGTH]

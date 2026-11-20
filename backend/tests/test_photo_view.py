@@ -7,9 +7,11 @@ import uuid
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.domain import homes, photo_evidence
+from app.models.membership import Membership
+from app.models.photo_evidence import PhotoEvidence
 from app.models.task import Task, TaskInstance
 from app.models.user import User
 from app.storage import StorageError, get_photo_store
@@ -50,8 +52,10 @@ def test_the_landlord_gets_the_photo_through_the_backend_and_it_is_never_cached(
     # Guards the headers on the image response: a per-user photo never lives in a shared cache.
     assert image.headers["cache-control"] == "private, no-store"
     assert image.headers["x-content-type-options"] == "nosniff"
-    # Guards AD-5/NFR5: the body is the JPEG itself, no Blob or other URL is in any answer.
-    assert "http" not in info.text
+    # Guards AD-5/NFR5: the info answer has exactly these fields (no address of any kind) and the
+    # image answer is the bytes themselves, not a redirect to a storage address.
+    assert set(info.json()["evidence"]) == {"description", "uploaded_at"}
+    assert "location" not in image.headers
 
 
 def test_no_photo_yet_is_a_200_without_evidence_and_the_image_is_404(
@@ -84,7 +88,7 @@ def test_only_the_landlord_of_the_home_may_view_the_photo(
             # Guards the Landlord alias on both routes (NFR5, NFR6): not the uploader, not a
             # member of another Home, not another Landlord.
             assert get(client, user, url + suffix).status_code == 403
-    # A Landlord asking for this Task under their own Home does not find it either.
+    # Not a Member of that Home: refused by the role check before any Task lookup.
     assert get(client, other_landlord, base(household.id, task)).status_code == 403
 
 
@@ -112,6 +116,14 @@ def test_a_replaced_photo_is_the_only_one_viewed_and_one_object_exists(
     client: TestClient, session: Session, local_photo_store: Path
 ) -> None:
     home_id, kari, martin, task = uploaded(client, session)
+    from datetime import UTC, datetime
+
+    row = session.get(PhotoEvidence, task.id)
+    assert row is not None
+    # An old time, so the replacement below is later whatever the clock resolution.
+    row.uploaded_at = datetime(2026, 1, 1, tzinfo=UTC)
+    session.add(row)
+    session.commit()
     first = get(client, kari, base(home_id, task)).json()["evidence"]
     next_instance = session.exec(
         TaskInstance.__table__.select().where(  # type: ignore[attr-defined]
@@ -163,3 +175,20 @@ def test_a_row_without_a_stored_object_is_404_and_a_store_failure_is_503(
     # Guards `except StorageError` in the image route.
     assert failed.status_code == 503
     assert failed.json() == {"detail": photo_evidence.READ_FAILED}
+
+
+def test_a_removed_uploader_shows_as_former_member(client: TestClient, session: Session) -> None:
+    home_id, kari, martin, task = uploaded(client, session)
+    membership = session.exec(
+        select(Membership).where(Membership.home_id == home_id, Membership.user_id == martin.id)
+    ).one()
+    session.delete(membership)
+    session.commit()
+
+    info = get(client, kari, base(home_id, task)).json()["evidence"]
+
+    # Guards `still_member is None` in shown_description (AD-16): the name is not shown once the
+    # uploader has left, and the photo stays reviewable.
+    assert info["description"].startswith("Bildebevis lastet opp av Tidligere medlem, ")
+    assert "Martin" not in info["description"]
+    assert get(client, kari, base(home_id, task) + "/image").status_code == 200

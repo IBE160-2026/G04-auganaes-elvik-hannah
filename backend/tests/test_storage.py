@@ -114,3 +114,21 @@ def test_the_blob_store_uses_the_synchronous_sdk_calls() -> None:
     # store nothing and fail silently (found in Story 4.3; the upload answered 200 on Vercel).
     assert not inspect.iscoroutinefunction(blob_module.put_blob)
     assert not inspect.iscoroutinefunction(blob_module.get_blob)
+
+
+def test_the_blob_store_reads_the_body_of_the_sdk_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    import app.storage.blob as blob_module
+
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    def fake_get(key: str, **kwargs: object) -> object:
+        calls.append((key, kwargs))
+        return SimpleNamespace(body=b"jpegbytes")
+
+    monkeypatch.setattr(blob_module, "get_blob", fake_get)
+
+    # Guards `.body` and access="private" on the read: bytes out, never an address (AD-5).
+    assert BlobPhotoStore().read(KEY) == b"jpegbytes"
+    assert calls == [(KEY, {"access": "private"})]

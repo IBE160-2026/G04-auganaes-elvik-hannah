@@ -154,7 +154,10 @@ def get_photo_evidence(
     if row is None:
         return EvidenceInfoOut(evidence=None)
     return EvidenceInfoOut(
-        evidence=EvidenceOut(description=row.description, uploaded_at=row.uploaded_at)
+        evidence=EvidenceOut(
+            description=photo_evidence.shown_description(session, landlord, row),
+            uploaded_at=row.uploaded_at,
+        )
     )
 
 

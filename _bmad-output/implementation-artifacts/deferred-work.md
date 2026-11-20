@@ -147,3 +147,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Check that a JPEG upload is decodable (end marker or a decode) before storing it, and test two parallel uploads against Postgres.
   evidence: Edge Case Hunter on Story 4.2. Only the JPEG signature is checked, and the row lock that serializes parallel uploads does nothing on SQLite, so it is not exercised by the tests.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
+  summary: Guard against the Blob cache serving old bytes for up to 60 s after a replacement (compare the object's upload time with `uploaded_at`, or set a short cache control on write), and make the info and image reads one consistent pair.
+  evidence: Blind Hunter on Story 4.3 against AD-5 («the review view relies on the pointer's timestamp, not on the cached object»). The view reads straight from the store; only the local store is tested, and the real Blob behaviour is unverified.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
+  summary: Map any non-SDK exception from the Blob read (network, timeout) to `StorageError`, and add a test that the photo-serving route guard also catches a GET under another path name.
+  evidence: Edge Case Hunter on Story 4.3; the adapter catches only `BlobError` and `BlobNotFoundError`, and the route guard filters on «evidence» and «tasks» in the path.
