@@ -2,7 +2,7 @@
 title: 'Story 5.3: AI-Generated Onboarding Guide for New Tenants'
 type: 'feature'
 created: '2026-11-20'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: '340ca0a61c7d67aa9de7671602ca82d210d883d6'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -85,13 +85,13 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] model, migration, `domain/onboarding.py` -- table, column, rules
-- [ ] `app/ai/*` -- guide provider method, instruction, mock, service function, fallback
-- [ ] routes (`onboarding.py`, `set_up_tasks`, `can_view_guide`), seed -- the endpoints and the generation at setup
-- [ ] `backend/tests/*` -- every matrix row, the payload test, permissions, migration check
-- [ ] regenerate `openapi.json`/`schema.d.ts`; `api/onboarding.ts`, hooks, fake API
-- [ ] `OnboardingGuide`, overview card, Settings link, guide page, tests (a11y, dismiss, failure)
-- [ ] README, `epics.md`, PRD FR-16 + Revision log, AD-4, UX note
+- [x] model, migration, `domain/onboarding.py` -- table, column, rules
+- [x] `app/ai/*` -- guide provider method, instruction, mock, service function, fallback
+- [x] routes (`onboarding.py`, `set_up_tasks`, `can_view_guide`), seed -- the endpoints and the generation at setup
+- [x] `backend/tests/*` -- every matrix row, the payload test, permissions, migration check
+- [x] regenerate `openapi.json`/`schema.d.ts`; `api/onboarding.ts`, hooks, fake API
+- [x] `OnboardingGuide`, overview card, Settings link, guide page, tests (a11y, dismiss, failure)
+- [x] README, `epics.md`, PRD FR-16 + Revision log, AD-4, UX note
 
 **Acceptance Criteria:**
 - Given a Landlord sets up a Home's Tasks, when the request is done, then the Home has a stored guide introduction, written once, and the setup succeeded even if the AI failed.
@@ -101,6 +101,14 @@ context:
 - Given the full test suite and CI, then no test calls Gemini.
 
 ## Implementation Notes
+
+- Built directly, no implementation subagent (the mandate names the three reviewers only). Epic 5 context is older than `epics.md`; the sources were read directly.
+- Deviation from the Code Map: the seed is not changed. A Home without a stored row shows the fixed text (Decision 6), so Kari's seeded Home already gives the demo a card; the README says so.
+- Backend: `domain/onboarding.py` (rules, `FALLBACK_INTRO`), `models/onboarding_guide.py`, `memberships.onboarding_dismissed_at`, migration `f1a3c5e7b9d2` (ran upgrade, `alembic check`, `downgrade -1`, upgrade and a refused bad `source` against the throwaway database `husly_scratch_53`, dropped afterwards; `husly` untouched), `ai.generate_guide_intro` built on a generic `_within` (the 5.1 thread-per-call deadline, now shared), `GuideRequest`/`write_guide` on both providers, `routes/onboarding.py`, `write_onboarding_guide` in `routes/tasks.py` after the setup commit, `HomeOut.can_view_guide`. The CI list of CHECK constraints has the new one.
+- The `!= "landlord"` guard in `test_homes.py` (the one-Home rule lives only in `domain/homes.py`) caught a first draft of `write_onboarding_guide`; it now tests `== "landlord"`.
+- Frontend: `OnboardingGuide` (card and page), `GuideCard` in `TaskOverview` (Tenant only; a failed load shows nothing), `GuidePage` at `/hjem/<id>/velkommen`, «Velkomstguide» in Settings, `useOnboardingGuide`/`useDismissGuide` (optimistic dismissal, rolled back on failure).
+- Guarded lines: `test_a_failing_provider_still_sets_up…`, `…slow…` and `…twenty_calls…` guard the never-raise rule in `generate_guide_intro`; `test_a_provider_that_cannot_be_chosen…` guards that selection happens before counting; `test_reading_never_calls_the_provider_again` guards «once»; `test_later_changes…` guards that the Must list is read live; `test_the_gemini_request_has_only_the_must_tasks…` guards the payload (and that no Bør task and no Home name leaves); `test_a_stored_introduction_is_never_replaced` guards `store_guide`; `test_an_unknown_source…` the CHECK; `test_dismissing_is_idempotent_and_per_tenant` the first-time-wins and per-Membership rules; `test_a_tenant_who_leaves…` the AD-16 reset; the frontend dismissal tests guard the optimistic update and its rollback.
+- Not verified: no real Gemini call (no key locally); the guide prompt and the `{intro}` JSON schema are tested over `httpx.MockTransport` only. A smoke test on Preview is needed.
 
 ## Spec Change Log
 
