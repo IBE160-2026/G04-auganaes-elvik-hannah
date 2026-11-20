@@ -2,7 +2,7 @@
 title: 'Story 5.2: Escalate to Full AI Chat'
 type: 'feature'
 created: '2026-11-20'
-status: 'in-review'
+status: 'done'
 baseline_commit: '83c8b002de33b4cf6d50987b5eb433927d428a45'
 route: 'dispatch'
 review_loop_iteration: 0
