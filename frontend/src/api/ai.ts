@@ -11,6 +11,9 @@ export type ChatTurn = components['schemas']['HistoryEntry'];
 /** One completed exchange of a chat: the question and the answer it got (ok or low_confidence). */
 export type Exchange = { question: string; answer: Answer };
 
+/** The name the chat gives the cleaning assistant as sender. One place, so it is easy to change. */
+export const ASSISTANT_NAME = 'Moppen';
+
 export const AI_MESSAGES = {
   // UX State Patterns, «AI cannot answer / low confidence».
   unsure: 'Usikker på svaret her — spør gjerne på nytt eller sjekk med noen andre',
@@ -21,13 +24,12 @@ export const AI_MESSAGES = {
     'Demo-svar: ingen KI-nøkkel er satt, så svaret er ferdigskrevet og svarer ikke på selve ' +
     'spørsmålet. Med nøkkel sendes spørsmålet til en ekstern KI-tjeneste (Google Gemini).',
   questionLabel: 'Spør KI om mer',
-  ask: 'Spør',
   askMore: 'Spør mer',
   chatEmpty: (taskName: string) => `Still et spørsmål om «${taskName}».`,
   chatLabel: (taskName: string) => `Spør KI om «${taskName}»`,
   send: 'Send',
   you: 'Du',
-  assistant: 'KI',
+  assistant: ASSISTANT_NAME,
   backToTask: (taskName: string) => `Tilbake til «${taskName}»`,
   retry: 'Prøv igjen',
   limit: (detail: string, resetsAt: string) => `${detail} Du kan spørre igjen ${formatReset(resetsAt)}.`,

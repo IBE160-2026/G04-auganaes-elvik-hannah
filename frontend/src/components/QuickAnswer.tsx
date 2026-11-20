@@ -1,12 +1,13 @@
 // Story 5.1 (FR-14, AD-4, UX-DR48): the «?» on Task Detail. An inline popover, not a navigation:
-// it asks at once with the server's default question, and a field asks something else. A skeleton
-// line (not a spinner) while it waits, announced with aria-live="polite", and the answer the same
-// way. The disclaimer and the line about the external AI service come with every answer. A failed
-// or slow call is said plainly with a retry; nothing here touches completing the Task.
+// it asks at once with the server's default question. A skeleton line (not a spinner) while it
+// waits, announced with aria-live="polite", and the answer the same way. The disclaimer and the
+// line about the external AI service come with every answer. A failed or slow call is said plainly
+// with a retry; nothing here touches completing the Task.
 // Story 5.2 (FR-15): once an answer is shown, «Spør mer» pushes into the chat with that exchange.
-import { useId, useRef, useState, type FormEvent } from 'react';
+// The chat is the one place to ask something else, so the popover has no question field of its own.
+import { useId, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AI_MESSAGES, AiLimitError, QUESTION_MAX_LENGTH, defaultQuestion, type Answer } from '../api/ai';
+import { AI_MESSAGES, AiLimitError, defaultQuestion, type Answer } from '../api/ai';
 import { ApiError } from '../api/errors';
 import { useAskTask } from '../api/queries';
 import './QuickAnswer.css';
@@ -17,15 +18,10 @@ export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
   const ask = useAskTask(homeId);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState('');
-  // The last question, so «Prøv igjen» asks the same thing.
-  const lastQuestion = useRef<string | undefined>(undefined);
   const popoverId = useId();
-  const inputId = useId();
 
-  function send(question?: string) {
-    lastQuestion.current = question;
-    ask.mutate({ taskId: task.id, question });
+  function send() {
+    ask.mutate({ taskId: task.id });
   }
 
   function toggle() {
@@ -35,22 +31,14 @@ export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
     if (opening && ask.isIdle) send();
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const question = draft.trim();
-    if (question === '' || ask.isPending) return;
-    send(question);
-  }
-
   // The chat continues from an answer that says something; a failed one has nothing to continue.
   const answer = ask.data;
   const continuable = answer && answer.status !== 'error' ? answer : null;
 
   function askMore() {
     if (!continuable) return;
-    const question = lastQuestion.current ?? defaultQuestion(task.name);
     navigate(`/hjem/${homeId}/oppgaver/${task.id}/chat`, {
-      state: { exchanges: [{ question, answer: continuable }] },
+      state: { exchanges: [{ question: defaultQuestion(task.name), answer: continuable }] },
     });
   }
 
@@ -74,7 +62,7 @@ export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
               <span className="quick-answer__skeleton" aria-hidden="true" data-testid="answer-skeleton" />
             </>
           ) : (
-            <Result answer={ask.data} error={ask.error} onRetry={() => send(lastQuestion.current)} />
+            <Result answer={ask.data} error={ask.error} onRetry={send} />
           )}
         </div>
         {continuable && !ask.isPending && (
@@ -82,24 +70,6 @@ export function QuickAnswer({ homeId, task }: QuickAnswerProps) {
             {AI_MESSAGES.askMore}
           </button>
         )}
-        <form className="quick-answer__form" onSubmit={submit} noValidate>
-          <label className="quick-answer__label" htmlFor={inputId}>
-            {AI_MESSAGES.questionLabel}
-          </label>
-          <div className="quick-answer__row">
-            <input
-              id={inputId}
-              type="text"
-              className="quick-answer__input"
-              maxLength={QUESTION_MAX_LENGTH}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-            <button type="submit" className="quick-answer__ask" disabled={ask.isPending}>
-              {AI_MESSAGES.ask}
-            </button>
-          </div>
-        </form>
       </div>
     </section>
   );

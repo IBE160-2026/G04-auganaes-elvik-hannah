@@ -100,6 +100,8 @@ context:
 
 ## Spec Change Log
 
+- 2026-11-20, Eirik after testing on Preview: (1) the popover's own question field is removed, «Spør mer» is its only way on, and own questions are typed in the chat; this changes Decision 7 («the popover's own field stays») and FR-14's «can also type their own question», so FR-14, `epics.md` Story 5.1 and the Revision log are amended. (2) The chat labels the assistant with a name instead of «KI»: `ASSISTANT_NAME = 'Moppen'` in `frontend/src/api/ai.ts` (a proposal; one constant). KEEP: the history, counting and disclaimer rules are unchanged; the API still accepts a `question` without history, which is how the chat's first message is sent.
+
 ## Review Triage Log
 
 Code review 2026-11-20 (Blind Hunter B, Edge Case Hunter E, Verification Gap V; about 32 findings, verified against the code):

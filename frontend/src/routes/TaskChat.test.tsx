@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import {
   AI_MESSAGES,
+  ASSISTANT_NAME,
   FALLBACK_DISCLAIMER,
   HISTORY_ANSWER_MAX_LENGTH,
   HISTORY_MAX_ENTRIES,
@@ -79,19 +80,6 @@ describe('«Spør mer» from the popover', () => {
     expect(within(log).getByText(DEFAULT_Q)).toBeInTheDocument();
     expect(within(log).getByText(ANSWER)).toBeInTheDocument();
   });
-
-  it('carries the user’s own question when that was what the popover asked', async () => {
-    setUp(['ok', 'ok']);
-    renderAt(detailPath(OLAS_HOME));
-    await userEvent.click(await screen.findByRole('button', { name: `Spør KI om «${MUST.name}»` }));
-    await screen.findByText(ANSWER);
-    await userEvent.type(screen.getByRole('textbox', { name: AI_MESSAGES.questionLabel }), 'Hva med kalk?');
-    await userEvent.click(screen.getByRole('button', { name: AI_MESSAGES.ask }));
-    await userEvent.click(await screen.findByRole('button', { name: AI_MESSAGES.askMore }));
-    const log = await screen.findByRole('log');
-    expect(within(log).getByText('Hva med kalk?')).toBeInTheDocument();
-    expect(within(log).queryByText(DEFAULT_Q)).not.toBeInTheDocument();
-  });
 });
 
 describe('The chat', () => {
@@ -154,6 +142,14 @@ describe('The chat', () => {
     expect(log).toHaveAttribute('aria-live', 'polite');
     expect(log.contains(disclaimer)).toBe(false);
     expect(screen.getByText(AI_MESSAGES.demo)).toBeInTheDocument();
+  });
+
+  it('names the sender of the answers with the assistant’s name and the user as «Du»', async () => {
+    setUp(['ok']);
+    const log = await escalate();
+    expect(within(log).getByText(ASSISTANT_NAME)).toBeInTheDocument();
+    expect(within(log).getByText(AI_MESSAGES.you)).toBeInTheDocument();
+    expect(within(log).queryByText('KI')).not.toBeInTheDocument();
   });
 
   it('says the question goes to an external AI service when a real provider answered', async () => {

@@ -1403,7 +1403,7 @@ So that I can get unstuck right when I need it.
 
 **Given** a Member taps "?" on a task, whatever their Role
 **When** the popover opens
-**Then** it asks at once with a default question about the task, and a field lets the Member ask their own question of at most 300 characters
+**Then** it asks at once with a default question about the task; the Member asks something else in the chat (Story 5.2), so the popover has no question field of its own (changed 2026-11-20)
 
 **Given** a question that is not about the task or housework
 **When** the AI answers

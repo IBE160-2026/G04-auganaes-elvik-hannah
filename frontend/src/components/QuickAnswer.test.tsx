@@ -75,23 +75,13 @@ describe('Quick answer («?»)', () => {
     expect(screen.queryByText(AI_MESSAGES.demo)).not.toBeInTheDocument();
   });
 
-  it('sends no question on the first tap and the user’s own question from the field', async () => {
+  it('asks at once with no question of its own, and has no field to type one (the chat is for that)', async () => {
     const { bodies } = setUp(['ok']);
     await open();
     await screen.findByText('Rens rista med hansker.');
-    await userEvent.type(screen.getByRole('textbox', { name: AI_MESSAGES.questionLabel }), '  Hva med kalk?  ');
-    await userEvent.click(screen.getByRole('button', { name: AI_MESSAGES.ask }));
-    await waitFor(() => expect(bodies).toHaveLength(2));
-    expect(bodies).toEqual([{}, { question: 'Hva med kalk?' }]);
-  });
-
-  it('does not ask with a blank question', async () => {
-    const { bodies } = setUp(['ok']);
-    await open();
-    await screen.findByText('Rens rista med hansker.');
-    await userEvent.type(screen.getByRole('textbox', { name: AI_MESSAGES.questionLabel }), '   ');
-    await userEvent.click(screen.getByRole('button', { name: AI_MESSAGES.ask }));
-    expect(bodies).toHaveLength(1);
+    expect(bodies).toEqual([{}]);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: AI_MESSAGES.askMore })).toBeVisible();
   });
 
   it('keeps the answer when the popover is closed and reopened, without a new call', async () => {
@@ -125,17 +115,6 @@ describe('Quick answer («?»)', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     },
   );
-
-  it('retries the same question it asked last', async () => {
-    const { bodies } = setUp(['ok', 'error', 'ok']);
-    await open();
-    await screen.findByText('Rens rista med hansker.');
-    await userEvent.type(screen.getByRole('textbox', { name: AI_MESSAGES.questionLabel }), 'Hva med kalk?');
-    await userEvent.click(screen.getByRole('button', { name: AI_MESSAGES.ask }));
-    await userEvent.click(await screen.findByRole('button', { name: AI_MESSAGES.retry }));
-    await waitFor(() => expect(bodies).toHaveLength(3));
-    expect(bodies[2]).toEqual({ question: 'Hva med kalk?' });
-  });
 
   it('says the daily limit is reached and when it resets, without a retry', async () => {
     setUp(['limit']);
@@ -196,6 +175,7 @@ describe('Quick answer («?»)', () => {
     const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
     expect(panel).toHaveAttribute('hidden');
     await userEvent.click(toggle);
-    expect(within(panel as HTMLElement).getByRole('textbox', { name: AI_MESSAGES.questionLabel })).toBeVisible();
+    await screen.findByText('Rens rista med hansker.');
+    expect(within(panel as HTMLElement).getByRole('button', { name: AI_MESSAGES.askMore })).toBeVisible();
   });
 });
