@@ -51,6 +51,36 @@ class ChatTurn(NamedTuple):
     text: str
 
 
+# Story 5.3 (FR-16): the introduction to a Home's onboarding guide. It explains how the app works,
+# never how to clean, and the Home's name is not part of the request, so it cannot leak.
+GUIDE_INSTRUCTION = (
+    "Du skriver en kort velkomst til en ny leietaker i en app for husarbeid som heter Husly. "
+    "Svar bare på norsk bokmål, aldri på andre språk. Forklar i høyst 120 ord hvordan appen "
+    "fungerer: oppgavene i hjemmet, forskjellen på Må og Bør, at man krysser av en oppgave når "
+    "den er gjort og at alle i hjemmet ser det, at man får påminnelser, og at man kan spørre KI "
+    "om hjelp. Du får oppgitt hjemmets Må-oppgaver; nevn gjerne at de er de viktigste, men du "
+    "skal ikke forklare hvordan noe rengjøres og ikke nevne rengjøringsmidler eller kjemikalier."
+)
+
+GUIDE_RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {"intro": {"type": "STRING"}},
+    "required": ["intro"],
+}
+
+
+class GuideTask(NamedTuple):
+    """A Must task as the guide request sees it: no Home, user or e-mail data (FR-14)."""
+
+    name: str
+    task_type: str | None
+    frequency_days: int
+
+
+class GuideRequest(NamedTuple):
+    tasks: tuple[GuideTask, ...]
+
+
 class AiRequest(NamedTuple):
     """Everything a provider may see (FR-14, FR-15)."""
 
@@ -73,6 +103,8 @@ class AiProvider(Protocol):
 
     def ask(self, request: AiRequest) -> ProviderAnswer: ...
 
+    def write_guide(self, request: GuideRequest) -> str: ...
+
 
 class MockProvider:
     demo = True
@@ -81,6 +113,10 @@ class MockProvider:
         if request.history:
             return ProviderAnswer("ok", mock_answers.follow_up_for(request.task_name))
         return ProviderAnswer("ok", mock_answers.answer_for(request.task_type))
+
+    def write_guide(self, request: GuideRequest) -> str:
+        # Canned: it does not read the tasks (the Home-specific part is built by the app).
+        return mock_answers.GUIDE_DEMO
 
 
 class GeminiProvider:
@@ -120,16 +156,42 @@ class GeminiProvider:
             },
         }
 
-    def ask(self, request: AiRequest) -> ProviderAnswer:
+    def build_guide_body(self, request: GuideRequest) -> dict:
+        # The tasks go only in the user content; the instruction is fixed.
+        lines = "\n".join(
+            f"- {t.name} ({t.task_type or 'egendefinert'}), hver {t.frequency_days}. dag"
+            for t in request.tasks
+        )
+        return {
+            "systemInstruction": {"parts": [{"text": GUIDE_INSTRUCTION}]},
+            "contents": [{"role": "user", "parts": [{"text": f"Hjemmets Må-oppgaver:\n{lines}"}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "responseSchema": GUIDE_RESPONSE_SCHEMA,
+                "temperature": 0.4,
+                "thinkingConfig": {"thinkingLevel": GEMINI_THINKING_LEVEL},
+            },
+        }
+
+    def _generate(self, body: dict) -> str:
         # The key goes in a header, never in the URL, and no error here carries the request.
         with httpx.Client(transport=self._transport, timeout=AI_TIMEOUT_SECONDS) as client:
             response = client.post(
                 GEMINI_URL.format(model=self._model),
-                json=self.build_body(request),
+                json=body,
                 headers={"x-goog-api-key": self._api_key},
             )
         response.raise_for_status()
-        text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+    def write_guide(self, request: GuideRequest) -> str:
+        intro = json.loads(self._generate(self.build_guide_body(request)))["intro"]
+        if not isinstance(intro, str) or not intro.strip():
+            raise ValueError("unexpected guide shape")
+        return intro.strip()
+
+    def ask(self, request: AiRequest) -> ProviderAnswer:
+        text = self._generate(self.build_body(request))
         data = json.loads(text)
         confidence, answer = data["confidence"], data["answer"]
         if confidence not in ("ok", "low") or not isinstance(answer, str) or not answer.strip():

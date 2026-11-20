@@ -467,6 +467,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/onboarding-guide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Guide */
+        get: operations["get_guide_api_homes__home_id__onboarding_guide_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/homes/{home_id}/onboarding-guide/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss Guide */
+        post: operations["dismiss_guide_api_homes__home_id__onboarding_guide_dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/push/config": {
         parameters: {
             query?: never;
@@ -657,6 +691,33 @@ export interface components {
              */
             uploaded_at: string;
         };
+        /** GuideOut */
+        GuideOut: {
+            /** Home Name */
+            home_name: string;
+            /** Intro */
+            intro: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "ai" | "demo" | "fallback";
+            /** Must Tasks */
+            must_tasks: components["schemas"]["GuideTaskOut"][];
+            /** Dismissed */
+            dismissed: boolean;
+            /** Disclaimer */
+            disclaimer: string | null;
+            /** Demo */
+            demo: boolean;
+        };
+        /** GuideTaskOut */
+        GuideTaskOut: {
+            /** Name */
+            name: string;
+            /** Frequency Days */
+            frequency_days: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -717,6 +778,8 @@ export interface components {
             can_set_cadence: boolean;
             /** Can Require Photo Evidence */
             can_require_photo_evidence: boolean;
+            /** Can View Guide */
+            can_view_guide: boolean;
         };
         /** HomesOut */
         HomesOut: {
@@ -2216,6 +2279,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LimitOut"];
+                };
+            };
+        };
+    };
+    get_guide_api_homes__home_id__onboarding_guide_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideOut"];
+                };
+            };
+            /** @description Not a Tenant or the Landlord of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description The Home has no Tasks yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_guide_api_homes__home_id__onboarding_guide_dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a Tenant of this Home, or no such Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

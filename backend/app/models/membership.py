@@ -47,3 +47,8 @@ class Membership(SQLModel, table=True):
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+    # Story 5.3 (FR-16): when this Tenant dismissed the onboarding card. On the Membership, so a
+    # Tenant who leaves and is invited again sees it again (AD-16).
+    onboarding_dismissed_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )

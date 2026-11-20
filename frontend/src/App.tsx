@@ -15,6 +15,7 @@ import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
 import { Settings } from './routes/Settings';
 import { SignIn } from './routes/SignIn';
+import { GuidePage } from './routes/GuidePage';
 import { TaskChat } from './routes/TaskChat';
 import { TaskDetail } from './routes/TaskDetail';
 import { TaskOverview } from './routes/TaskOverview';
@@ -93,6 +94,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <TaskChat />
+          </RequireAuth>
+        }
+      />
+      {/* Story 5.3: the onboarding guide as a page, reached from Settings. */}
+      <Route
+        path="/hjem/:homeId/velkommen"
+        element={
+          <RequireAuth>
+            <GuidePage />
           </RequireAuth>
         }
       />

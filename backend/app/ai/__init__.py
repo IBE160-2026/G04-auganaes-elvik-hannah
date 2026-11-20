@@ -4,8 +4,10 @@ from app.ai.providers import AI_TIMEOUT_SECONDS, AiRequest, ChatTurn
 from app.ai.service import (
     DISCLAIMER,
     AiAnswer,
+    GuideIntro,
     LimitReached,
     answer_question,
+    generate_guide_intro,
 )
 
 __all__ = [
@@ -14,6 +16,8 @@ __all__ = [
     "AiAnswer",
     "AiRequest",
     "ChatTurn",
+    "GuideIntro",
     "LimitReached",
     "answer_question",
+    "generate_guide_intro",
 ]

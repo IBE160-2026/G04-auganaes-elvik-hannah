@@ -165,3 +165,10 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
   summary: Smoke test a follow-up with history against real Gemini on Preview: multi-turn `contents` with plain-text model turns must still give the JSON schema answer within 10 s.
   evidence: Verification Gap on Story 5.2; the Gemini provider is covered only over `httpx.MockTransport` and no key exists locally.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-3-ai-generated-onboarding-guide.md`
+  summary: Smoke test the guide against real Gemini on Preview: the guide instruction and the `{intro}` JSON schema must give a Norwegian introduction of at most 120 words within 10 s.
+  evidence: Blind Hunter and Verification Gap on Story 5.3; the Gemini guide path is covered only over `httpx.MockTransport` and no key exists locally.
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-3-ai-generated-onboarding-guide.md`
+  summary: A Home that got the fixed introduction (AI failed or the Landlord had used the day's calls) keeps it; add a Landlord action to write it again if this matters.
+  evidence: Blind Hunter on Story 5.3; `store_guide` never replaces a row by design (written once), and FR-16 now says so.
+

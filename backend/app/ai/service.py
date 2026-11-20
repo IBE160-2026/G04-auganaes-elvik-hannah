@@ -9,6 +9,7 @@ import logging
 import queue
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -20,11 +21,14 @@ from app.ai.providers import (
     AiProvider,
     AiRequest,
     ChatTurn,
+    GuideRequest,
+    GuideTask,
     ProviderAnswer,
     select_provider,
 )
 from app.clock import utc_today
-from app.domain import ai_usage
+from app.domain import ai_usage, onboarding
+from app.models.onboarding_guide import INTRO_MAX_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -46,19 +50,19 @@ class DeadlineExceeded(Exception):
     """The provider did not answer within the deadline."""
 
 
-def _ask_within(provider: AiProvider, request: AiRequest, timeout: float) -> ProviderAnswer:
-    """Runs provider.ask on its own daemon thread and waits at most `timeout` seconds.
+def _within[T](call: Callable[[], T], timeout: float) -> T:
+    """Runs `call` on its own daemon thread and waits at most `timeout` seconds.
 
     One thread per call, not a small pool: hung calls then never make later calls queue behind
     them and miss the deadline without reaching the provider. A thread that outlives the deadline
     ends when the provider's own timeout does. Never a `with ThreadPoolExecutor` block either,
     whose exit waits for the provider.
     """
-    outcome: queue.Queue[ProviderAnswer | Exception] = queue.Queue(maxsize=1)
+    outcome: queue.Queue[T | Exception] = queue.Queue(maxsize=1)
 
     def run() -> None:
         try:
-            outcome.put(provider.ask(request))
+            outcome.put(call())
         except Exception as exc:
             outcome.put(exc)
 
@@ -70,6 +74,14 @@ def _ask_within(provider: AiProvider, request: AiRequest, timeout: float) -> Pro
     if isinstance(value, Exception):
         raise value
     return value
+
+
+def _ask_within(provider: AiProvider, request: AiRequest, timeout: float) -> ProviderAnswer:
+    return _within(lambda: provider.ask(request), timeout)
+
+
+def _ask_guide_within(provider: AiProvider, request: GuideRequest, timeout: float) -> str:
+    return _within(lambda: provider.write_guide(request), timeout)
 
 
 @dataclass(frozen=True)
@@ -126,3 +138,54 @@ def answer_question(
         return AiAnswer("error", ERROR_TEXT, DISCLAIMER, chosen.demo)
     status = "ok" if result.confidence == "ok" else "low_confidence"
     return AiAnswer(status, result.answer, DISCLAIMER, chosen.demo)
+
+
+@dataclass(frozen=True)
+class GuideIntro:
+    text: str
+    # ai: Gemini wrote it. demo: the mock did. fallback: the fixed text (nothing could be asked).
+    source: Literal["ai", "demo", "fallback"]
+
+
+def generate_guide_intro(
+    session: Session,
+    user_id: uuid.UUID,
+    must_tasks: list[onboarding.MustTask],
+    *,
+    provider: AiProvider | None = None,
+    today: date | None = None,
+) -> GuideIntro:
+    """Writes the introduction to a Home's onboarding guide (Story 5.3, FR-16).
+
+    One counted call against the user's daily limit, asked within the same deadline as every AI
+    call. It never raises: the limit being reached, a failing or slow provider and a bad answer
+    all give the fixed fallback text, so setting up a Home never fails because of the guide.
+    Only the Must tasks' names, catalog types and frequencies go to the provider.
+    """
+    day = today if today is not None else utc_today()
+    fallback = GuideIntro(onboarding.FALLBACK_INTRO, "fallback")
+    if not must_tasks:
+        # Nothing to tailor to: the fixed text says the same, and no call is spent on it.
+        return fallback
+    try:
+        # Before counting, so a provider that cannot be built spends no call.
+        chosen = provider if provider is not None else select_provider()
+    except Exception as exc:
+        logger.warning("KI-leverandøren kunne ikke velges: %s", type(exc).__name__)
+        return fallback
+    if not ai_usage.try_count_call(session, user_id, day, AI_DAILY_LIMIT):
+        return fallback
+    request = GuideRequest(
+        tuple(GuideTask(t.name, t.task_type, t.frequency_days) for t in must_tasks)
+    )
+    try:
+        text = _ask_guide_within(chosen, request, AI_TIMEOUT_SECONDS)
+    except Exception as exc:
+        # The type name only: the exception text may carry the URL or headers.
+        logger.warning("KI-leverandøren kunne ikke skrive guiden: %s", type(exc).__name__)
+        return fallback
+    if len(text) > INTRO_MAX_LENGTH:
+        # Longer than the table holds and than the instruction asks for: not cut mid-sentence.
+        logger.warning("KI-leverandøren ga en for lang velkomst (%s tegn).", len(text))
+        return fallback
+    return GuideIntro(text, "demo" if chosen.demo else "ai")

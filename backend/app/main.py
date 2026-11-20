@@ -16,6 +16,7 @@ from app.routes import (
     homes,
     internal,
     invites,
+    onboarding,
     photo_evidence,
     push,
     tasks,
@@ -35,6 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(invites.router, prefix="/api")
     app.include_router(tasks.router, prefix="/api")
     app.include_router(ai.router, prefix="/api")
+    app.include_router(onboarding.router, prefix="/api")
     app.include_router(push.router, prefix="/api")
     app.include_router(internal.router, prefix="/api")
     return app

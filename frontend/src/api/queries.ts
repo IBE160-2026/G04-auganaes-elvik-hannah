@@ -26,6 +26,7 @@ import {
 } from './homes';
 import { sendBroadcast } from './broadcast';
 import { saveCadence, type CadenceDays } from './cadence';
+import { dismissGuide, fetchGuide, type Guide } from './onboarding';
 import {
   fetchPhotoEvidence,
   fetchPhotoImage,
@@ -413,6 +414,47 @@ export function useSaveCadence(homeId: string) {
   return useMutation({
     mutationFn: (days: CadenceDays) => saveCadence(homeId, days),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: homesKey(session?.user.id) }),
+  });
+}
+
+/**
+ * Story 5.3 (FR-16): the onboarding guide of a Home. Keyed on the signed-in user, since the
+ * dismissal is per Member. Fetched only when the Home says the caller may view it.
+ */
+export function guideKey(homeId: string, userId: string | undefined) {
+  return ['onboarding-guide', homeId, userId] as const;
+}
+
+export function useOnboardingGuide(homeId: string, enabled: boolean) {
+  const session = useSession();
+  return useQuery({
+    queryKey: guideKey(homeId, session?.user.id),
+    queryFn: () => fetchGuide(homeId),
+    enabled: enabled && session !== null,
+    retry: false,
+  });
+}
+
+/**
+ * Story 5.3: hides the card. The cached guide is marked dismissed at once, so the card goes away
+ * without waiting; a failure puts it back and the card shows the message. A 403 is the global
+ * handler's.
+ */
+export function useDismissGuide(homeId: string) {
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const key = guideKey(homeId, session?.user.id);
+  return useMutation({
+    mutationFn: () => dismissGuide(homeId),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const before = queryClient.getQueryData<Guide>(key);
+      queryClient.setQueryData<Guide>(key, (old) => old && { ...old, dismissed: true });
+      return { before };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.before) queryClient.setQueryData(key, context.before);
+    },
   });
 }
 

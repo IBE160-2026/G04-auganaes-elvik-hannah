@@ -108,6 +108,10 @@
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: B1 ekte push og første cron-kjøring 06:00 UTC; B2 avgjør push-pålitelighet; A3 skjermlesersjekk; A4 Blob-cache (anbefales godtatt)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: skal nudgen (FR-11) erstatte eller komme i tillegg til den vanlige påminnelsen?
 - [x] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Story 5.2 (KI-chat) er neste; start i ny terminal fra `main` (løst 2026-11-20: bygget på `story/5-2-ki-chat`)
-- [ ] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Eirik: bekreft valgene i spec 5.2, push `story/5-2-ki-chat`, lag issue og PR, walkthrough og merge
+- [x] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Eirik: bekreft valgene i spec 5.2, push `story/5-2-ki-chat`, lag issue og PR, walkthrough og merge (løst 2026-11-20: PR #83 merget, valgene er godkjent ved at Eirik testet og ba om endringer)
 - [ ] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Røyktest av KI-chat med historikk mot ekte Gemini på Preview
 - [ ] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Chat: auto-scroll/makshøyde og feilet melding som egen linje (deferred-work)
+- [ ] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Merge PR #85 (Story 5.3) når CI er grønn, deretter 5-3 til `done` og Status i CLAUDE.md
+- [ ] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Røyktest av velkomstguiden mot ekte Gemini på Preview
+- [ ] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Eirik: bekreft valgene i spec 5.3 («Decisions»)
+
