@@ -20,6 +20,8 @@ This document provides the complete epic and story breakdown for Husly (placehol
 
 > **Revision 2026-11-09:** Story 1.9 (one rule for creating Homes, issue #30) and Story 2.6 (add and remove Tasks, issue #31) added, with FR-24; see `sprint-change-proposal-2026-11-09.md`. The document now has 27 stories.
 
+> **Revision 2026-11-20 (Story 3.3):** Story 3.3 adds that the targeted reminder is the first reminder and replaces the regular one that day (later days remind everyone), that only Household Members and Tenants count (not the Landlord), and that the cadence of FR-13 decides which Members can be targeted. No story is added or renumbered.
+
 > **Revision 2026-11-20 (Story 4.3):** Story 4.3 adds the two Landlord routes (info and image), the «no photo yet» answer, the refusal of every other role including the uploader, and the cache rule. No story is added or renumbered.
 
 > **Revision 2026-11-19 (Story 4.2):** Story 4.2 adds the Tenant-only rule, the JPEG and size rule, the already-completed case and that viewing is Story 4.3. No story is added or renumbered.
@@ -1072,6 +1074,14 @@ So that completion feels fair rather than me nagging my housemates.
 **Given** a recurring shared task where no Member has completed any of the last 3 instances
 **When** the due-check job runs
 **Then** the fairness nudge does not fire — the regular due/overdue notification still applies instead
+
+**Given** a fairness-targeted nudge is sent for an instance
+**When** the same job runs again the same day, and on the next day
+**Then** the Members who did the work are still not reminded the same day, and from the next day everyone gets the regular reminder (FR-10); no second nudge is sent for the instance
+
+**Given** a Home with a Landlord and one Tenant who did the last 3 completions
+**When** the due-check job runs
+**Then** no nudge fires: only Household Members and Tenants count, so there is one counted Member
 
 **Given** Martin (UJ-3) receives a fairness-targeted nudge
 **When** he reads it
