@@ -6,6 +6,8 @@ claims each (instance, Member, day) in `due_notifications` BEFORE sending, so a 
 concurrent run finds the pairs taken and sends nothing. The price is deliberate (AD-8): a send
 that fails is not retried that day. Each Member gets one push covering all their tasks, across
 Homes, to each of their devices. Claims from earlier days are deleted at the start of a run.
+Story 3.3 (FR-11): `fairness.apply_nudges` narrows the first reminder for an instance to the
+Members who have not done their share.
 """
 
 import logging
@@ -17,7 +19,7 @@ from sqlalchemy import case, delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from app.domain import push, tasks
+from app.domain import fairness, push, tasks
 from app.domain.cadence import reminder_day
 from app.models.due_notification import DueNotification
 from app.models.home import Home
@@ -142,7 +144,9 @@ def run_due_check(session: Session, sender: Sender, today: date) -> DueCheckResu
     members = 0
     task_count = 0
     pushes = 0
-    for user_id, due in _due_by_member(session, today).items():
+    for user_id, due in fairness.apply_nudges(
+        session, _due_by_member(session, today), today
+    ).items():
         claimed = _claim(session, user_id, due, today)
         if not claimed:
             continue

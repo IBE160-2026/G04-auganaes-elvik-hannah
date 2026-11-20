@@ -2,6 +2,7 @@
 
 from app.models.ai_usage import AiUsage
 from app.models.due_notification import DueNotification
+from app.models.fairness_nudge import FairnessNudge
 from app.models.home import Home
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
@@ -13,6 +14,7 @@ from app.models.user import User
 __all__ = [
     "AiUsage",
     "DueNotification",
+    "FairnessNudge",
     "Home",
     "InviteLink",
     "Membership",
