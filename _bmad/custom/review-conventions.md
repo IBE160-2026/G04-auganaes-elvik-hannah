@@ -44,3 +44,19 @@ What to do:
 2. Check that removing or inverting that line would make the test fail (read the assertion, not only the test name). Report a finding starting with `Verification gap:` when it would still pass.
 3. In the implementation notes the author states which line each such test guards, so a reviewer can check it.
 
+
+## Required check: does an adapter to an external service run the way the SDK says?
+
+Source: Epic 4 retrospective (`_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md`, finding F1, action A1). In Story 4.2 the Blob adapter called two coroutine functions without `await`. Nothing was stored, nothing failed, and every test passed because the tests replaced the SDK functions with fakes.
+
+What to do, for a diff that adds or changes an adapter to an external SDK or service (storage, push, AI, mail):
+
+1. Check that the code calls the SDK the way the installed package defines it: sync or async, the arguments, and the shape of what comes back. Read the package source in the virtual environment or `node_modules`; do not trust the fake in the tests.
+2. Check that a test fails if the calling convention is wrong (for example `inspect.iscoroutinefunction` on the imported functions), not only that the fake returns what the adapter expects. Report a finding starting with `Verification gap:` when only fakes cover it.
+3. A story that depends on a real external store is confirmed only when the stored object is read back (not on a 200 or a completed task). If the diff claims it works against the real service and shows no read-back, report it.
+
+## Required check: does a guard see anything?
+
+Source: same retrospective, finding F2, action A2. The Story 4.2 test «no route returns a photo» walked `app.routes`, which does not list routers added with `include_router`, so it saw no routes and passed for any code.
+
+A test that enumerates routes, files, rows or components in order to assert that something is absent or present only everywhere must also assert that it found the thing it looks at (at least one known route, a known count, or a known item). Report a finding starting with `Verification gap:` when the guard would still pass on an empty list.

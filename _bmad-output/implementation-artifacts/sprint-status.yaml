@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-20-2026 18:00
+last_updated: 11-20-2026 20:40
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -76,7 +76,7 @@ development_status:
   4-1-landlord-requires-photo-evidence-on-eligible-must-tasks: done
   4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval: done
   4-3-landlord-reviews-evidence-auto-replacing-photo-storage: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   epic-5: in-progress
   5-1-contextual-quick-answer: done
@@ -171,10 +171,11 @@ action_items:
     owner: "Eirik and Claude"
     status: done
     decision: "2026-11-13: no split. Epic 3 code goes in new modules (domain/due_check.py,
-      later domain/fairness.py); _is_open and _is_active become public instead. Revisit if 3.3
-      must change _rows or tasks.py passes ~650 lines. Also: the day stays the UTC day (cron
-      06:00 UTC is the same calendar day in Oslo); 3.2 adds one clock.utc_today() that all
-      routes and the due check use, so a later switch to Europe/Oslo is one line."
+      later domain/fairness.py); _is_open and _is_active become public instead. Revisit
+      if 3.3 must change _rows or tasks.py passes ~650 lines. Also: the day stays
+      the UTC day (cron 06:00 UTC is the same calendar day in Oslo); 3.2 adds one
+      clock.utc_today() that all routes and the due check use, so a later switch to
+      Europe/Oslo is one line."
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
   - id: "epic-2-retro-item-4-remove-browser-clock-default-in-formatdueon"
     epic: 2
@@ -197,3 +198,38 @@ action_items:
     owner: "Eirik"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-11-12.md"
+  - id: "epic-4-retro-item-16-review-convention-external-sdk-adapters"
+    epic: 4
+    action: "Review convention: external SDK adapters get a contract test on the calling
+      convention, and a story is confirmed only when the stored object is read back
+      (A1)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md"
+  - id: "epic-4-retro-item-17-review-convention-a-guard-that-enumerate"
+    epic: 4
+    action: "Review convention: a guard that enumerates routes, files or rows must
+      assert it found something (A2)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md"
+  - id: "epic-4-retro-item-18-re-read-a-story-acs-against-prd-and-ad-n"
+    epic: 4
+    action: "Re-read a story ACs against PRD and AD notes at story start, and do one
+      screen reader pass over PhotoUpload, PhotoEvidenceView and the AI popover (A3)"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md"
+  - id: "epic-4-retro-item-19-decide-how-to-meet-the-blob-60-s-cache-b"
+    epic: 4
+    action: "Decide how to meet the Blob 60 s cache before the demo, or accept it
+      in AD-5 (A4)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md"
+  - id: "epic-4-retro-item-20-find-why-vitest-cannot-start-its-worker"
+    epic: 4
+    action: "Find why vitest cannot start its worker on Eiriks Mac (A5)"
+    owner: "Eirik"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-11-20.md"
