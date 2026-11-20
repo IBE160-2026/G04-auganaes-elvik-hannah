@@ -23,7 +23,7 @@ from app.domain import ai_usage, onboarding
 from app.models.ai_usage import AiUsage
 from app.models.home import Home
 from app.models.membership import Membership
-from app.models.onboarding_guide import OnboardingGuide
+from app.models.onboarding_guide import INTRO_MAX_LENGTH, OnboardingGuide
 from app.permissions.require_role import FORBIDDEN
 from app.routes.onboarding import NO_GUIDE_YET
 from tests.helpers import register_via_api, sign_up
@@ -275,12 +275,34 @@ def test_a_home_set_up_before_the_guide_shows_the_fallback_and_stores_nothing(
     assert stored(engine, home_id) is None and spy.guide_requests == []
 
 
-def test_a_stored_introduction_is_never_replaced(session: Session) -> None:
+def test_a_stored_introduction_is_never_replaced_and_is_not_even_written_again(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     home = Home(name="H", type="landlord")
     session.add(home)
     session.commit()
     onboarding.store_guide(session, home.id, "Første", "ai")
+    added: list[object] = []
+    original = session.add
+    monkeypatch.setattr(session, "add", lambda row: (added.append(row), original(row))[1])
     onboarding.store_guide(session, home.id, "Andre", "demo")
+    row = session.get(OnboardingGuide, home.id)
+    assert row is not None and (row.intro, row.source) == ("Første", "ai")
+    # The early return: no second row is even attempted (the primary key would only refuse it).
+    assert added == []
+
+
+def test_two_writers_at_once_keep_the_first_and_the_second_does_not_raise(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = Home(name="H", type="landlord")
+    session.add(home)
+    session.commit()
+    onboarding.store_guide(session, home.id, "Første", "ai")
+    # The second writer looked before the first committed: its lookup finds nothing.
+    monkeypatch.setattr(session, "get", lambda *args, **kwargs: None)
+    onboarding.store_guide(session, home.id, "Andre", "demo")
+    monkeypatch.undo()
     row = session.get(OnboardingGuide, home.id)
     assert row is not None and (row.intro, row.source) == ("Første", "ai")
 
@@ -343,7 +365,8 @@ def test_home_out_says_who_may_view_the_guide(client: TestClient) -> None:
 
     assert flag(kari) == [True] and flag(anders) == [True]
     assert flag(mari) == [False] and flag(empty) == [False]
-    assert empty_home  # a Landlord Home before setup has no guide to view
+    # A Landlord Home before setup has no guide to view, and the server says so.
+    assert client.get(guide_url(empty_home), headers=empty).status_code == 404
 
 
 # --- dismissing -------------------------------------------------------------------------------
@@ -417,10 +440,17 @@ def test_the_gemini_request_has_only_the_must_tasks_and_the_guide_instruction(
     # A Bør task never reaches the provider: only the Must tasks are listed.
     assert SHOULD[0]["task_type"] not in user_text
     assert sent["systemInstruction"]["parts"][0]["text"] == providers.GUIDE_INSTRUCTION
+    # Nothing else rides along: the body has exactly these parts, and one user turn.
+    assert set(sent) == {"systemInstruction", "contents", "generationConfig"}
+    assert len(sent["contents"]) == 1 and sent["contents"][0]["role"] == "user"
+    assert len(sent["contents"][0]["parts"]) == 1
+    assert len(user_text.splitlines()) == 1 + len(MUST[:2])
+    assert str(home_id) not in text
     assert "Hemmelig" not in providers.GUIDE_INSTRUCTION
 
 
 def test_the_guide_instruction_asks_for_norwegian_how_the_app_works_and_no_cleaning_howto() -> None:
+    # A tripwire on the wording only: what the model writes cannot be tested offline.
     text = providers.GUIDE_INSTRUCTION
     assert "norsk bokmål" in text and "høyst 120 ord" in text
     assert "ikke forklare hvordan noe rengjøres" in text
@@ -441,3 +471,67 @@ def test_a_gemini_guide_with_a_blank_intro_is_the_fallback(
     _, _, home_id = a_landlord_home(client)
     row = stored(engine, home_id)
     assert row is not None and row.source == "fallback"
+
+
+def test_an_answer_longer_than_the_table_holds_is_the_fallback_not_a_cut_sentence(
+    client: TestClient, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    use(monkeypatch, Spy("x" * (INTRO_MAX_LENGTH + 1)))
+    _, _, home_id = a_landlord_home(client)
+    row = stored(engine, home_id)
+    assert row is not None and row.source == "fallback" and row.intro == onboarding.FALLBACK_INTRO
+
+
+def test_an_answer_exactly_as_long_as_the_table_holds_is_kept(
+    client: TestClient, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    use(monkeypatch, Spy("x" * INTRO_MAX_LENGTH))
+    _, _, home_id = a_landlord_home(client)
+    row = stored(engine, home_id)
+    assert row is not None and row.source == "ai" and len(row.intro) == INTRO_MAX_LENGTH
+
+
+def test_a_home_with_no_must_tasks_gets_the_fixed_text_and_no_ai_call(
+    client: TestClient, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spy = Spy()
+    use(monkeypatch, spy)
+    _, _, home_id = a_landlord_home(client, SHOULD[:2])
+    row = stored(engine, home_id)
+    assert row is not None and row.source == "fallback"
+    assert spy.guide_requests == [] and usage(engine) == 0
+
+
+@pytest.mark.parametrize(
+    "body",
+    ["ikke json", json.dumps({}), json.dumps({"intro": 5}), json.dumps({"intro": None})],
+    ids=["not-json", "no-intro", "number", "null"],
+)
+def test_a_malformed_gemini_guide_is_the_fallback(
+    client: TestClient, engine: Engine, monkeypatch: pytest.MonkeyPatch, body: str
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": body}]}}]})
+
+    monkeypatch.setattr(
+        service,
+        "select_provider",
+        lambda: GeminiProvider("nokkel", "modell", httpx.MockTransport(handler)),
+    )
+    _, _, home_id = a_landlord_home(client)
+    row = stored(engine, home_id)
+    assert row is not None and row.source == "fallback"
+
+
+def test_a_database_failure_while_storing_never_undoes_the_setup(
+    client: TestClient, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("databasen falt ut")
+
+    monkeypatch.setattr(onboarding, "store_guide", broken)
+    kari = sign_up(client, "Kari")
+    home_id = create_home(client, kari, "landlord")
+    assert set_up(client, kari, home_id, ALL).status_code == 201
+    assert stored(engine, home_id) is None
+    assert client.get(guide_url(home_id), headers=kari).json()["source"] == "fallback"

@@ -19,6 +19,7 @@ did it is said from the viewer's side (you / member + name / former_member), so 
 never compares ids or reads the clock.
 """
 
+import logging
 import uuid
 from datetime import date
 from typing import Literal
@@ -43,6 +44,7 @@ from app.routes.deps import (
     TaskSetter,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["tasks"])
 
 ALREADY_SET_UP = "Oppgavene i dette hjemmet er allerede satt opp."
@@ -192,14 +194,19 @@ def list_task_types(_user: CurrentUser) -> TaskTypesOut:
 
 def write_onboarding_guide(session: Session, setter: Membership) -> None:
     """Story 5.3 (FR-16): once the Tasks are committed, a Landlord Home gets its guide
-    introduction, written by the AI service and stored. Best effort: the service never raises, so
-    the setup is never undone by it. Household Homes have no Tenants and get none."""
-    home = session.get(Home, setter.home_id)
-    if home is not None and home.type == "landlord":
-        intro = ai.generate_guide_intro(
-            session, setter.user_id, onboarding.must_tasks(session, setter.home_id)
-        )
-        onboarding.store_guide(session, setter.home_id, intro.text, intro.source)
+    introduction, written by the AI service and stored. Best effort: the service never raises and
+    any other failure here is logged, so the setup is never undone by it. Household Homes have no
+    Tenants and get none. At setup every Task is a catalog Task, so no free text reaches the AI."""
+    try:
+        home = session.get(Home, setter.home_id)
+        if home is not None and home.type == "landlord":
+            intro = ai.generate_guide_intro(
+                session, setter.user_id, onboarding.must_tasks(session, setter.home_id)
+            )
+            onboarding.store_guide(session, setter.home_id, intro.text, intro.source)
+    except Exception:
+        session.rollback()
+        logger.exception("Kunne ikke lagre velkomstguiden for hjemmet.")
 
 
 @router.post(

@@ -38,6 +38,7 @@ describe('The onboarding card on the Task Overview', () => {
     expect(items[0]).toHaveTextContent(`Rens sluket ${FREQUENCY_LABELS[30]}`);
     expect(items[1]).toHaveTextContent(`Vask badet grundig ${FREQUENCY_LABELS[14]}`);
     expect(within(card).getByText(GUIDE_DISCLAIMER)).toBeInTheDocument();
+    expect(within(card).getByRole('heading', { level: 3, name: GUIDE_MESSAGES.mustHeading })).toBeInTheDocument();
   });
 
   it('sits above the task list', async () => {
@@ -138,6 +139,8 @@ describe('Reading the guide again', () => {
     await userEvent.click(link);
     expect(window.location.pathname).toBe(`/hjem/${OLAS_TENANCY.id}/velkommen`);
     expect(await screen.findByRole('heading', { level: 1, name: GUIDE_MESSAGES.heading('Storgata 12') })).toBeInTheDocument();
+    // No level is skipped under the page's h1.
+    expect(screen.getByRole('heading', { level: 2, name: GUIDE_MESSAGES.mustHeading })).toBeInTheDocument();
     // Dismissed or not, the page shows it, with no «Skjul».
     expect(screen.queryByRole('button', { name: GUIDE_MESSAGES.dismiss })).not.toBeInTheDocument();
   });

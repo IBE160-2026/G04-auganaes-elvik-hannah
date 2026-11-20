@@ -92,7 +92,7 @@ FR-14: Contextual quick-answer. Any task offers a "?" affordance that returns an
 
 FR-15: Escalate to full AI chat. From the quick-answer, a user can open a full conversational chat with the AI assistant for follow-up questions, retaining the originating task as context for at least the first follow-up, under the same timeout, data and daily-limit rules as FR-14.
 
-FR-16: AI-generated onboarding guide. When a Landlord provisions a Home and invites Tenants, the system generates an onboarding guide explaining how the app works, tailored to that Home: it names the Home and lists its active Must tasks with their frequencies.
+FR-16: AI-generated onboarding guide. When a Landlord sets up a Landlord Home's tasks, the system generates an onboarding guide explaining how the app works, tailored to that Home: it names the Home and lists its active Must tasks with their frequencies (read live; the AI writes only a short general introduction, once).
 
 FR-17: Self-checkoff completion. Any Member can mark a task instance complete with a single action; no confirmation from another Member is required.
 
@@ -133,7 +133,7 @@ No starter/greenfield template tool is specified by Architecture — it instead 
 - **Current vs past Members (AD-16, added 2026-11-08):** only current Memberships count for access, notifications, fairness and overviews; history (completions, Photo Evidence) references the User and shows «Tidligere medlem» when that User has no Membership in the Home.
 - **Active vs archived Tasks (FR-24, added 2026-11-09):** an archived Task is never deleted, and every read that drives behaviour — Task Overview, the due-check and fairness (Epic 3), Photo Evidence requirements (Epic 4) and the Portfolio (Epic 6) — reads active Tasks only. History on an archived Task (completions, Photo Evidence) stays reachable where that history is shown. `has_tasks` means Task Setup has run.
 - **Task completion:** One domain function (`complete_task_instance`) is the sole code path marking a Task instance complete, recording attribution, and triggering the FR-9 reschedule; it is idempotent on retried requests (AD-3).
-- **AI service:** One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation); every response is a structured object `{status: "ok" | "low_confidence" | "error", answer, disclaimer}` with the disclaimer always its own field (AD-4). The onboarding guide is generated once per Home at provisioning time and persisted, not regenerated per view (AD-4, FR-16).
+- **AI service:** One backend AI service wraps every Gemini call (quick-answer, chat, onboarding-guide generation); every response is a structured object `{status: "ok" | "low_confidence" | "error", answer, disclaimer}` with the disclaimer always its own field (AD-4). The onboarding guide is generated once per Home when its Tasks are set up and persisted, not regenerated per view (AD-4, FR-16).
 - **Photo Evidence storage:** `PhotoEvidence` is 1:1 with `Task` (not `TaskInstance`); each task's photo is stored under a fixed key (`tasks/{task_id}/evidence.jpg`) in a private Vercel Blob store, overwritten on each new upload — no per-completion history row; the photo is only served through a backend route that runs `require_role` first, never as a permanent Blob URL (AD-5). Task types carry a system-seeded, non-Landlord-editable `photo_evidence_eligible` flag; the endpoint setting FR-18's requirement rejects the request server-side if the Task's type isn't flagged eligible (AD-6).
 - **Auth:** Short-lived JWT access token returned in the login response body and kept only in React memory (never `localStorage`); long-lived refresh token as an `httpOnly`/`Secure`/`SameSite=Lax` cookie scoped to `/api/auth/refresh`, the only endpoint that exchanges it. The frontend calls the API only through relative `/api/...` paths on the same origin (Vercel rewrite in the hosted demo, Vite proxy locally), so no CORS configuration exists (AD-7).
 - **Due/notification job:** A dedicated `GET /api/internal/run-due-check` endpoint runs the due/overdue scan (FR-10's daily batch, FR-11's fairness nudge); Vercel Cron calls it once a day (`0 6 * * *` UTC) with `Authorization: Bearer <CRON_SECRET>`, and requests without that secret are rejected. The endpoint is safe to call concurrently or twice — it tracks per Task Instance whether the notification for the current day was already sent (AD-8). Fairness-nudge rule: fire a targeted nudge to a Member with 0 completions in the last 3 instances of a recurring shared task, provided at least one other Member completed at least one of those 3 (AD-9, resolves PRD Open Question 4). Landlord broadcast (FR-12) is sent directly and synchronously on request, independent of the due-check cron (AD-14).
@@ -269,7 +269,7 @@ A Landlord can flag a specific Must task (restricted to system-eligible task typ
 **Stage:** Trinn 2
 
 ### Epic 5: AI Assistant
-Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat for follow-up questions, and a new Tenant receives an AI-generated onboarding guide tailored to their Home when they join. Implements the single server-mediated AI service (AD-4) wrapping all Gemini calls behind one structured response shape.
+Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat for follow-up questions, and a Tenant sees an onboarding guide tailored to their Home, written once by the AI service when the Home's tasks are set up. Implements the single server-mediated AI service (AD-4) wrapping all Gemini calls behind one structured response shape.
 **FRs covered:** FR-14, FR-15, FR-16
 **Stage:** FR-14 (Story 5.1) is Trinn 1; FR-15 and FR-16 (Stories 5.2, 5.3) are Trinn 2
 
@@ -1333,7 +1333,7 @@ So that I can review after the fact without the system becoming a privacy liabil
 
 ## Epic 5: AI Assistant
 
-Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat, and a new Tenant receives an AI-generated onboarding guide tailored to their Home when they join.
+Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to answer, escalate to a full AI chat, and a Tenant sees an onboarding guide tailored to their Home, written once by the AI service when the Home's tasks are set up.
 
 ### Story 5.1: Contextual Quick-Answer ("?")
 
@@ -1471,13 +1471,13 @@ So that I understand how the app and my obligations work without asking my Landl
 
 **Acceptance Criteria:**
 
-**Given** a Landlord provisions a Home and invites Tenants
+**Given** a Landlord sets up a Landlord Home's tasks
 **When** the onboarding guide is generated
-**Then** it is generated once per Home at provisioning time and persisted — not regenerated on every view (FR-16, AD-4)
+**Then** its introduction is generated once per Home and persisted — not regenerated on every view (FR-16, AD-4)
 
-**Given** a new Tenant accepts an invite
-**When** they first open Task Overview
-**Then** the guide surfaces as a one-time dismissible card at the top of the list — naming the Home and listing its active Must tasks with their frequencies, so two Homes with different tasks never get the same text
+**Given** a Tenant has not dismissed the guide
+**When** they open Task Overview
+**Then** the guide surfaces as a dismissible card at the top of the list — naming the Home and listing its active Must tasks with their frequencies, so two Homes with different tasks never get the same text
 
 **Given** the Tenant dismisses the card
 **When** they want to see it again later

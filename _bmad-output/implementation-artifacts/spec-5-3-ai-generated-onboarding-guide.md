@@ -2,7 +2,7 @@
 title: 'Story 5.3: AI-Generated Onboarding Guide for New Tenants'
 type: 'feature'
 created: '2026-11-20'
-status: 'in-review'
+status: 'done'
 baseline_commit: '340ca0a61c7d67aa9de7671602ca82d210d883d6'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -113,6 +113,30 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+Code review 2026-11-20 (Blind Hunter B, Edge Case Hunter E, Verification Gap V; about 45 findings, verified against the code):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| PRD-drift: FR-16, epics (lines 95, 136, 272, 1336, the 5.3 ACs) and AD-4 still said «provisions a Home and invites Tenants» / «at provisioning time» and «a new Tenant»; the card shows to every Tenant until dismissed (B, E, V) | medium | patch to text: reworded in FR-16, epics (old ACs replaced, not stacked) and AD-4 |
+| PRD-drift: FR-14's 20-call bullet and the account-data list omit the guide call, the stored introduction and the dismissal; no text for «no tasks, no guide» or for a permanent fixed text (B, E) | medium | patch to text: FR-14, FR-16 and §account data amended |
+| A DB error in counting or storing, or any other failure after the Tasks are committed, would give the setup a 500 (B, E) | medium | patch: `write_onboarding_guide` catches, rolls back and logs; test makes `store_guide` raise |
+| `test_a_stored_introduction_is_never_replaced` passes without the early return; the `IntegrityError` branch is untested (V, B) | medium | patch: two tests (no second `add`; a lookup that misses), both shown to fail without their line |
+| `text[:2000]` is untested and cuts mid-sentence (V, B, E) | medium | patch: an over-long answer is the fallback, exactly 2000 is kept, both tested |
+| Malformed Gemini bodies (not JSON, no `intro`, non-string, null) untested (B) | low | patch: parametrized test |
+| Only Bør tasks: an AI call is counted with an empty list (E) | low | patch: no Must tasks gives the fixed text and no call; tested |
+| Subtitle is always `h3`, skipping a level under the page's `h1` (B) | low | patch: follows the heading level; tested on card and page |
+| `assert empty_home` guards nothing (B, E) | low | patch: asserts the 404 |
+| «Exact body» is only substrings (E) | low | patch: asserts the keys, one user turn and the line count |
+| Custom Task names reach the AI (B, E) | false | the guide is written at setup, when every Task is a catalog Task (comment in code) |
+| Prompt-wording test guards no behaviour (V, B, E) | low, accepted | kept as a tripwire on the wording, now said so in the test |
+| `set_up_tasks` waits up to 10 s; write in the background or lazily (B) | low, rejected | Decision 1 (in the request, never fails); a background task on Vercel is not reliable after the response |
+| Orchestration in the route, not the domain (B) | low, rejected | same shape as 5.1: the route calls the AI service and the domain stores; the domain must not import `app.ai` |
+| `GuideCard` fetches on every visit, layout shift, no `onSettled` refetch, stale alert after a failed dismissal, 403 page blank (B, E) | low, rejected | the flag on `HomeOut` would add a second source for the dismissal; the failure paths are intended and covered by the card test |
+| README one long bullet, demo marker said twice, disclaimer on the demo text (B) | low, rejected | README keeps its single-bullet form; the disclaimer rule is Decision 10 |
+| No way to get an AI introduction after a fallback (B) | low, defer | stated in FR-16; regenerate path in `deferred-work.md` |
+| The guide prompt and `{intro}` schema are only tested over `MockTransport` (B, V) | medium, not testable here | defer: Preview smoke test (`deferred-work.md`) |
+| CI CHECK probe could fail for another reason (E) | low, rejected | the loop checks the constraint name in the error |
 
 ## Design Notes
 

@@ -21,6 +21,8 @@ type Props = {
 
 export function OnboardingGuide({ guide, onDismiss, dismissFailed, dismissing, headingLevel = 2, titleRef }: Props) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
+  // The subtitle sits one level below the title, so the outline never skips a level.
+  const Subheading = headingLevel === 1 ? 'h2' : 'h3';
   return (
     <section className="onboarding-guide" aria-labelledby="onboarding-guide-title">
       <Heading
@@ -32,7 +34,7 @@ export function OnboardingGuide({ guide, onDismiss, dismissFailed, dismissing, h
         {GUIDE_MESSAGES.heading(guide.home_name)}
       </Heading>
       <p className="onboarding-guide__intro">{guide.intro}</p>
-      <h3 className="onboarding-guide__subtitle">{GUIDE_MESSAGES.mustHeading}</h3>
+      <Subheading className="onboarding-guide__subtitle">{GUIDE_MESSAGES.mustHeading}</Subheading>
       {guide.must_tasks.length === 0 ? (
         <p className="onboarding-guide__meta">{GUIDE_MESSAGES.noMust}</p>
       ) : (

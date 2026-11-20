@@ -164,6 +164,9 @@ def generate_guide_intro(
     """
     day = today if today is not None else utc_today()
     fallback = GuideIntro(onboarding.FALLBACK_INTRO, "fallback")
+    if not must_tasks:
+        # Nothing to tailor to: the fixed text says the same, and no call is spent on it.
+        return fallback
     try:
         # Before counting, so a provider that cannot be built spends no call.
         chosen = provider if provider is not None else select_provider()
@@ -181,5 +184,8 @@ def generate_guide_intro(
         # The type name only: the exception text may carry the URL or headers.
         logger.warning("KI-leverandøren kunne ikke skrive guiden: %s", type(exc).__name__)
         return fallback
-    # Bounded to what the table holds; a real answer is far shorter (120 words at most).
-    return GuideIntro(text[:INTRO_MAX_LENGTH], "demo" if chosen.demo else "ai")
+    if len(text) > INTRO_MAX_LENGTH:
+        # Longer than the table holds and than the instruction asks for: not cut mid-sentence.
+        logger.warning("KI-leverandøren ga en for lang velkomst (%s tegn).", len(text))
+        return fallback
+    return GuideIntro(text, "demo" if chosen.demo else "ai")
