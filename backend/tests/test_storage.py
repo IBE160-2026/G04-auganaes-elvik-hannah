@@ -103,3 +103,14 @@ def test_two_writes_to_one_key_do_not_share_a_temporary_file(tmp_path: Path) -> 
     # Guards the unique temporary name: nothing is left over and the last write wins.
     assert store.read(KEY) == b"two"
     assert list((tmp_path / "tasks").rglob("*.tmp")) == []
+
+
+def test_the_blob_store_uses_the_synchronous_sdk_calls() -> None:
+    import inspect
+
+    import app.storage.blob as blob_module
+
+    # Guards the `vercel.blob.sync` import: the async top-level functions, called without await,
+    # store nothing and fail silently (found in Story 4.3; the upload answered 200 on Vercel).
+    assert not inspect.iscoroutinefunction(blob_module.put_blob)
+    assert not inspect.iscoroutinefunction(blob_module.get_blob)

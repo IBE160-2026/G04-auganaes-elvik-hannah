@@ -269,6 +269,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homes/{home_id}/tasks/{task_id}/photo-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Photo Evidence */
+        get: operations["get_photo_evidence_api_homes__home_id__tasks__task_id__photo_evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/homes/{home_id}/tasks/{task_id}/photo-evidence/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Photo Evidence Image
+         * @description Streams the photo through the backend after `require_role`: never a Blob URL (AD-5, NFR5).
+         */
+        get: operations["get_photo_evidence_image_api_homes__home_id__tasks__task_id__photo_evidence_image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homes/{home_id}/invites": {
         parameters: {
             query?: never;
@@ -603,6 +640,20 @@ export interface components {
         ErrorOut: {
             /** Detail */
             detail: string;
+        };
+        /** EvidenceInfoOut */
+        EvidenceInfoOut: {
+            evidence: components["schemas"]["EvidenceOut"] | null;
+        };
+        /** EvidenceOut */
+        EvidenceOut: {
+            /** Description */
+            description: string;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1526,6 +1577,115 @@ export interface operations {
                 };
             };
             /** @description Photo not saved */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_photo_evidence_api_homes__home_id__tasks__task_id__photo_evidence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceInfoOut"];
+                };
+            };
+            /** @description Not the Landlord of this Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task in this Home */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_photo_evidence_image_api_homes__home_id__tasks__task_id__photo_evidence_image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                home_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Task's current photo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            /** @description Not the Landlord of this Home */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description No such Task, or no photo */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Photo not read */
             503: {
                 headers: {
                     [name: string]: unknown;

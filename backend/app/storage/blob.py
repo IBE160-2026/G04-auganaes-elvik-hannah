@@ -2,11 +2,13 @@
 
 Private, with overwrite on, under the key the server computed. The SDK reads the token from
 `BLOB_READ_WRITE_TOKEN`. No Blob URL ever leaves the backend: every view goes through a backend
-route that runs `require_role` first (Story 4.3). This adapter cannot be exercised offline, so it
-is only run once a store exists.
+route that runs `require_role` first (Story 4.3). The SDK's top-level `put_blob` and `get_blob` are
+coroutines; called without `await` they do nothing and raise nothing, so the synchronous ones from
+`vercel.blob.sync` are used (a test guards that). The real store is only reachable on Vercel.
 """
 
-from vercel.blob import BlobError, BlobNotFoundError, get_blob, put_blob
+from vercel.blob import BlobError, BlobNotFoundError
+from vercel.blob.sync import get_blob, put_blob
 
 from app.storage.base import StorageError
 
