@@ -133,12 +133,14 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Run the Blob adapter against a real private store and confirm `put_blob` with `allow_overwrite` and `get_blob` behave as `BlobPhotoStore` assumes.
   evidence: The adapter is written from the SDK signatures and tested only with fakes. It cannot be exercised offline; a store has to be created in Vercel first.
+  outcome: Story 4.3 (2026-11-20) found that the adapter called the async SDK functions without `await` and stored nothing; it now uses `vercel.blob.sync`, guarded by a test. Still open: one real upload and view against the Blob store on Preview (the `get_blob(...).body` shape is read from the SDK source only).
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Make a photo that was stored but whose completion then failed impossible to leave behind, for example by writing to a temporary key first.
   evidence: Story 4.2 decision 6: the photo is stored before the completion commits, so a failed commit leaves the new photo under the key until the next upload.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Show a Tenant who uploaded the text that was saved with the photo, or confirm the Landlord's view (Story 4.3) is the only place it appears.
   evidence: Story 4.2 saves the description but no screen shows it yet.
+  outcome: Settled in Story 4.3 (2026-11-20): only the Landlord sees the photo and description; a Tenant, also the uploader, gets 403 (AC 4, NFR6).
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Scrub or derive the uploader's name in the saved description when account deletion and anonymisation (PRD §5) are built.
   evidence: Blind Hunter and Edge Case Hunter on Story 4.2. `photo_evidence.description` keeps the display name at upload time, so anonymising the user row would not remove it.

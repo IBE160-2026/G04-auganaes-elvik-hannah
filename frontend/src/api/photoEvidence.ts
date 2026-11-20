@@ -1,4 +1,5 @@
 // Story 4.1 (FR-18, AD-6): the Landlord's Photo Evidence requirement on one Task, with Norwegian copy.
+// Story 4.3 (FR-19, NFR5): the Landlord's view of the current photo, fetched through the API.
 import { api } from './client';
 import { toApiError } from './errors';
 import type { Task } from './tasks';
@@ -79,4 +80,43 @@ export async function setPhotoEvidenceRequirement(
     throw toApiError(response, error, { passThrough: [409], fallback: PHOTO_EVIDENCE_MESSAGES.failed });
   }
   return data.requires_photo_evidence;
+}
+
+// Story 4.3: what the Landlord sees on Task Detail.
+export const PHOTO_VIEW_MESSAGES = {
+  failed: 'Vi fikk ikke hentet bildet. Prøv igjen.',
+  none: 'Ingen bilde er lastet opp ennå.',
+  alt: 'Bildebevis for oppgaven',
+} as const;
+
+export interface PhotoEvidenceInfo {
+  description: string;
+  uploaded_at: string;
+}
+
+/** The current evidence of a Task, or null when no photo was uploaded yet (a 200, never a 404). */
+export async function fetchPhotoEvidence(homeId: string, taskId: string): Promise<PhotoEvidenceInfo | null> {
+  const { data, error, response } = await api.GET('/api/homes/{home_id}/tasks/{task_id}/photo-evidence', {
+    params: { path: { home_id: homeId, task_id: taskId } },
+  });
+  if (!data) throw toApiError(response, error, { passThrough: [], fallback: PHOTO_VIEW_MESSAGES.failed });
+  return data.evidence ?? null;
+}
+
+/**
+ * The photo itself as a `data:` address made in the browser. `<img src>` cannot send the Bearer
+ * token, so the bytes are fetched here through the API; no Blob or other storage address ever
+ * reaches the browser (AD-5). A data address needs no cleanup, unlike an object URL.
+ */
+export async function fetchPhotoImage(homeId: string, taskId: string): Promise<string> {
+  const { data, error, response } = await api.GET('/api/homes/{home_id}/tasks/{task_id}/photo-evidence/image', {
+    params: { path: { home_id: homeId, task_id: taskId } },
+    parseAs: 'arrayBuffer',
+  });
+  if (!data) throw toApiError(response, error, { passThrough: [], fallback: PHOTO_VIEW_MESSAGES.failed });
+  const bytes = new Uint8Array(data as ArrayBuffer);
+  let binary = '';
+  // In pieces: one call with millions of arguments would overflow the stack.
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:image/jpeg;base64,${btoa(binary)}`;
 }

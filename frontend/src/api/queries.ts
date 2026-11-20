@@ -26,7 +26,13 @@ import {
 } from './homes';
 import { sendBroadcast } from './broadcast';
 import { saveCadence, type CadenceDays } from './cadence';
-import { prepareImage, setPhotoEvidenceRequirement, uploadPhotoEvidence } from './photoEvidence';
+import {
+  fetchPhotoEvidence,
+  fetchPhotoImage,
+  prepareImage,
+  setPhotoEvidenceRequirement,
+  uploadPhotoEvidence,
+} from './photoEvidence';
 import { acceptInvite, createInvite, fetchInvite } from './invites';
 import { useSession } from './session';
 import {
@@ -450,6 +456,30 @@ export function useSetPhotoEvidence(homeId: string) {
       if (error instanceof ApiError && (error.status === 409 || error.status === 404)) void refresh();
     },
   });
+}
+
+/**
+ * Story 4.3 (FR-19): the Landlord's view of a Task's current photo. The image is keyed on the
+ * server's `uploaded_at`, so a replaced photo is fetched again and a stale one is never shown.
+ * Refetched on mount, because the Tenant uploads from another device.
+ */
+export function usePhotoEvidence(homeId: string, taskId: string, enabled: boolean) {
+  const userId = useSession()?.user.id;
+  const info = useQuery({
+    queryKey: ['photo-evidence', homeId, taskId, userId] as const,
+    queryFn: () => fetchPhotoEvidence(homeId, taskId),
+    enabled,
+    staleTime: 0,
+  });
+  const uploadedAt = info.data?.uploaded_at;
+  const image = useQuery({
+    queryKey: ['photo-evidence-image', homeId, taskId, userId, uploadedAt] as const,
+    queryFn: () => fetchPhotoImage(homeId, taskId),
+    enabled: enabled && uploadedAt !== undefined,
+    // The bytes under one `uploaded_at` never change, so they are kept for that key only briefly.
+    gcTime: 60_000,
+  });
+  return { info, image };
 }
 
 export function useCreateInvite(homeId: string) {
