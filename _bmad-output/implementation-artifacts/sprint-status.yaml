@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-11-2026 14:38
-last_updated: 11-21-2026 21:30
+last_updated: 11-21-2026 22:00
 project: Prosjektoppgave IBE160
 project_key: NOKEY
 tracking_system: file-system
@@ -82,7 +82,7 @@ development_status:
   5-1-contextual-quick-answer: done
   5-2-escalate-to-full-ai-chat: done
   5-3-ai-generated-onboarding-guide-for-new-tenants: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   epic-6: done
   6-1-landlord-portfolio-dashboard: done
@@ -272,3 +272,18 @@ action_items:
     owner: "Eirik"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-6-retro-2026-11-21.md"
+  - id: "epic-5-retro-item-26-decide-if-the-two-chat-polish-items-auto"
+    epic: 5
+    action: "Decide if the two chat polish items (auto-scroll with a maximum height,
+      keep a failed message in the transcript) are built before the demo or kept as
+      known limits (D1)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-11-21.md"
+  - id: "epic-5-retro-item-27-story-template-when-a-story-lets-the-ai"
+    epic: 5
+    action: "Story template: when a story lets the AI answer, the AC says what it
+      may talk about and what it may not (D2)"
+    owner: "Eirik + Claude"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-11-21.md"
