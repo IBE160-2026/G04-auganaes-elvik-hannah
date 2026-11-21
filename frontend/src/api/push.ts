@@ -121,6 +121,28 @@ export async function forgetDevice(): Promise<void> {
   }
 }
 
+/**
+ * Account deletion (Story 1.10): the server already dropped its rows, so only this browser's own
+ * subscription is cancelled, and a failure is ignored.
+ */
+export async function unsubscribeThisBrowser(): Promise<void> {
+  try {
+    const subscription = await (await activeRegistration())?.pushManager.getSubscription();
+    await subscription?.unsubscribe();
+  } catch {
+    // Nothing to do: the push service forgets an endpoint nobody listens to.
+  }
+}
+
+/** Removes the «varsel-notat lukket» mark of a user from this device. */
+export function forgetNoteDismissed(userId: string): void {
+  try {
+    localStorage.removeItem(`${NOTE_KEY_PREFIX}${userId}`);
+  } catch {
+    // localStorage can throw (private mode); there is then nothing stored.
+  }
+}
+
 // The Task Overview note is shown until it is dismissed, once per user and device. localStorage
 // can throw (private mode), so every access is guarded; a failure just means «not dismissed».
 const NOTE_KEY_PREFIX = 'husly.varselnotatLukket.';

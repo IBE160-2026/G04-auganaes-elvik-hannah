@@ -8,7 +8,7 @@ coroutines; called without `await` they do nothing and raise nothing, so the syn
 """
 
 from vercel.blob import BlobError, BlobNotFoundError
-from vercel.blob.sync import get_blob, put_blob
+from vercel.blob.sync import delete_blob, get_blob, put_blob
 
 from app.storage.base import StorageError
 
@@ -29,3 +29,11 @@ class BlobPhotoStore:
             return None
         except BlobError as error:
             raise StorageError("Kunne ikke hente bildet.") from error
+
+    def delete(self, key: str) -> None:
+        try:
+            delete_blob(key)
+        except BlobNotFoundError:
+            return
+        except BlobError as error:
+            raise StorageError("Kunne ikke slette bildet.") from error

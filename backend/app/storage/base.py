@@ -13,3 +13,6 @@ class PhotoStore(Protocol):
 
     def read(self, key: str) -> bytes | None:
         """The bytes under `key`, or None when nothing is stored there."""
+
+    def delete(self, key: str) -> None:
+        """Removes what is under `key`. Nothing there is fine."""

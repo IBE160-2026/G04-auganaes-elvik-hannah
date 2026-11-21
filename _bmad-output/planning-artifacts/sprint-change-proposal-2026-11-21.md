@@ -23,7 +23,7 @@ rollback: none needed (plan change only; no code reverted)
 ## 2. Decisions (Eirik, 2026-11-21)
 
 1. **A Landlord must remove the Tenants first.** Deletion is refused (409) while any of the user's Landlord Homes has a Tenant, with the message to remove them first (FR-23). Landlord Homes without Tenants are deleted with the account. No change to FR-3 or FR-23.
-2. **Everything else as proposed.** The user row is **anonymised, not deleted**: name becomes «Tidligere medlem», the e-mail is replaced by an unusable address, the password hash is cleared and `deleted_at` is set. The user's Memberships, push devices, claimed notifications, AI counts, fairness records and unused invite links are deleted. Homes left without any Member are deleted with their photos. History in other Members' Homes stays as «Tidligere medlem».
+2. **Everything else as proposed.** The user row is **anonymised, not deleted**: name becomes «Tidligere medlem», the e-mail is replaced by an unusable address, the password hash is cleared and `deleted_at` is set. The user's Memberships, push devices, claimed notifications, AI counts and unused invite links are deleted. Homes left without any Member are deleted with their photos. History in other Members' Homes stays as «Tidligere medlem».
 
 **Decided by Claude (not a choice the user would notice).**
 - **No `ON DELETE` is needed.** Because the user row is kept, no foreign key to `users` is ever violated; the domain function deletes the dependent rows explicitly, in one transaction. This settles the Story 3.2 deferred item.
@@ -41,7 +41,7 @@ rollback: none needed (plan change only; no code reverted)
 
 **Architecture.** AD-17 added after AD-16: anonymise, never delete the user row; explicit deletes in one domain function; `deleted_at`; refusal rule for Landlords with Tenants. `ARCHITECTURE-SPINE.md` is otherwise unchanged.
 
-**Code (Story 1.10).** One Alembic migration (`users.deleted_at`), `domain/accounts.delete_account`, `PhotoStore.delete` (local and Blob), `DELETE /api/me`, a «Slett konto» section under Settings with a confirmation and the password, tests, README. Tests cover every dependent table, the Landlord refusal, a refused token, and that nothing of another user changes.
+**Code (Story 1.10).** One Alembic migration (`users.deleted_at`), `domain/account_deletion.delete_account`, `PhotoStore.delete` (local and Blob), `DELETE /api/me`, a «Slett konto» section under Settings with a confirmation and the password, tests, README. Tests cover every dependent table, the Landlord refusal, a refused token, and that nothing of another user changes.
 
 **Deferred items settled.** `ON DELETE` for push and due notifications (no `ON DELETE`: explicit delete), the uploader's name in the photo description (rewritten).
 

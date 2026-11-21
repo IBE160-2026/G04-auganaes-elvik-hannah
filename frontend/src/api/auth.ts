@@ -2,7 +2,9 @@
 import { api } from './client';
 import { GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
-import { setSession } from './session';
+import { forgetLastHome } from './lastHome';
+import { forgetNoteDismissed, unsubscribeThisBrowser } from './push';
+import { getSession, setSession } from './session';
 
 type AuthResponse = components['schemas']['AuthResponse'];
 type RegisterResponse = components['schemas']['RegisterResponse'];
@@ -114,4 +116,30 @@ export async function fetchMe() {
   const { data, error, response } = await api.GET('/api/auth/me');
   if (!data) throw toAuthError(response, error);
   return data;
+}
+
+/** Story 1.10 (FR-25): the texts of «Slett konto». The server's own 400 and 409 texts are shown. */
+export const DELETE_ACCOUNT_MESSAGES = {
+  explanation:
+    'Kontoen din slettes for alltid, og dette kan ikke angres. Navnet og e-postadressen din fjernes, og det du har gjort i andres hjem blir stående som «Tidligere medlem». Hjem uten andre medlemmer slettes.',
+  passwordLabel: 'Passord',
+  passwordMissing: 'Skriv inn passordet ditt for å bekrefte.',
+} as const;
+
+/**
+ * Deletes the signed-in account after the password is confirmed. The server clears the refresh
+ * cookie; the session is cleared here, so the routes send the user to sign-in. A failed call
+ * keeps the session. What this device kept for the user (the push subscription of this browser,
+ * the last used Home and the closed note) goes with it.
+ */
+export async function deleteAccount(password: string): Promise<void> {
+  const { error, response } = await api.POST('/api/auth/delete-account', { body: { password } });
+  if (!response.ok) throw toAuthError(response, error);
+  const userId = getSession()?.user.id;
+  setSession(null);
+  if (userId) {
+    forgetLastHome(userId);
+    forgetNoteDismissed(userId);
+  }
+  await unsubscribeThisBrowser();
 }

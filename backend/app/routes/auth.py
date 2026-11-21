@@ -14,9 +14,10 @@ from sqlmodel import Session
 
 from app.config import Settings
 from app.db import get_session
-from app.domain import accounts, homes, invites, tokens
+from app.domain import account_deletion, accounts, homes, invites, tokens
 from app.models.user import EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, User
 from app.permissions.current_user import CurrentUser
+from app.storage import PhotoStore, get_photo_store
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -153,7 +154,7 @@ def refresh(
             user = session.get(User, user_id)
         except tokens.InvalidToken:
             pass
-    if user is None:
+    if user is None or user.deleted_at is not None:
         # Returned, not raised: a raised HTTPException would drop the cleared cookie.
         failed = JSONResponse({"detail": SESSION_EXPIRED}, status_code=status.HTTP_401_UNAUTHORIZED)
         clear_refresh_cookie(failed, settings)
@@ -172,3 +173,40 @@ def logout(request: Request) -> Response:
 @router.get("/me")
 def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user, from_attributes=True)
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+
+
+@router.post(
+    "/delete-account",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "The password does not match"},
+        status.HTTP_409_CONFLICT: {"description": "A Landlord Home still has Tenants (FR-23)"},
+    },
+)
+def delete_account(
+    body: DeleteAccountRequest,
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    store: Annotated[PhotoStore, Depends(get_photo_store)],
+) -> Response:
+    """Story 1.10 (FR-25): anonymises the caller and deletes what only exists for them.
+
+    A wrong password is 400, not 401 or 403, which the frontend answers with a refresh or a
+    reload of the Homes. The refresh cookie is cleared with the answer.
+    """
+    try:
+        account_deletion.delete_account(session, user, body.password, store)
+    except account_deletion.WrongPassword:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=account_deletion.WRONG_PASSWORD
+        ) from None
+    except account_deletion.LandlordHasTenants as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(error)) from None
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    clear_refresh_cookie(response, _settings(request))
+    return response

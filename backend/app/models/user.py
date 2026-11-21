@@ -26,3 +26,8 @@ class User(SQLModel, table=True):
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+    # Story 1.10 (FR-25, AD-17): set when the account is deleted. The row stays, anonymised, so
+    # history that references the User keeps working.
+    deleted_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )

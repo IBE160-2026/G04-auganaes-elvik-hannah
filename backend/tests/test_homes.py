@@ -737,7 +737,9 @@ def test_remove_raises_not_a_tenant_when_the_tenant_left_in_between(
 
 
 def test_only_leave_and_remove_tenant_delete_a_membership() -> None:
-    # Story 1.8 (AD-16): Membership rows are deleted only in domain/homes, by these two functions.
+    # Story 1.8 (AD-16): Membership rows are deleted only in domain/homes, by these two functions,
+    # and (Story 1.10, AD-17) in domain/account_deletion: the user's own Memberships and, for a
+    # Home left without Members, the Home's.
     # Like the constructor guard above, it does not see session.delete(obj) or raw SQL.
     statement = re.compile(r"\bdelete\(Membership\b")
     app_dir = Path(homes.__file__).resolve().parents[1]
@@ -746,7 +748,7 @@ def test_only_leave_and_remove_tenant_delete_a_membership() -> None:
         for path in app_dir.rglob("*.py")
         if statement.search(path.read_text("utf-8"))
     }
-    assert found == {"domain/homes.py": 2}
+    assert found == {"domain/homes.py": 2, "domain/account_deletion.py": 2}
     source = Path(homes.__file__).read_text("utf-8")
     for function in ("def leave(", "def remove_tenant("):
         start = source.index(function)

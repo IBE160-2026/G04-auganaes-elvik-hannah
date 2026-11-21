@@ -41,7 +41,7 @@ def register(session: Session, *, email: str, name: str, password: str) -> User:
 def authenticate(session: Session, *, email: str, password: str) -> User | None:
     """The user if the credentials match, otherwise None. Always runs one hash check."""
     user = session.exec(select(User).where(User.email == normalize_email(email))).first()
-    if user is None:
+    if user is None or user.deleted_at is not None:
         password_hash.verify(password, _DUMMY_HASH)
         return None
     if not password_hash.verify(password, user.password_hash):

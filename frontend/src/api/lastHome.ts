@@ -36,3 +36,12 @@ export function pickHome(homes: HomesList, storedId: string | null): Home | unde
   const find = (id: string | null) => (id ? homes.homes.find((h) => h.id === id) : undefined);
   return find(storedId) ?? find(homes.lived_in_home_id) ?? homes.homes[0];
 }
+
+/** Account deletion (Story 1.10): removes the stored «last used Home» of this user. */
+export function forgetLastHome(userId: string): void {
+  try {
+    localStorage.removeItem(lastHomeKey(userId));
+  } catch {
+    // localStorage can throw (private mode); there is then nothing stored.
+  }
+}

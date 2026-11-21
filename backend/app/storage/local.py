@@ -36,3 +36,9 @@ class LocalPhotoStore:
     def read(self, key: str) -> bytes | None:
         path = self._path(key)
         return path.read_bytes() if path.is_file() else None
+
+    def delete(self, key: str) -> None:
+        try:
+            self._path(key).unlink(missing_ok=True)
+        except OSError as error:
+            raise StorageError("Kunne ikke slette bildet.") from error
