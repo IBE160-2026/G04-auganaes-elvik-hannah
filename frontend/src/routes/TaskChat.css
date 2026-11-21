@@ -56,6 +56,10 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   box-shadow: var(--shadow-card);
+  /* D1: after several exchanges the input stays in view and the stream scrolls inside itself. */
+  max-height: 60vh;
+  max-height: 60dvh;
+  overflow-y: auto;
 }
 
 .task-chat__message {

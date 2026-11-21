@@ -206,6 +206,57 @@ describe('The chat', () => {
     },
   );
 
+  it('keeps a failed message in the transcript when another message is sent instead of retrying', async () => {
+    // Guards the Item list in Chat: a failed line is an item of its own, not the mutation's state.
+    const { bodies } = setUp(['ok', 'network', 'ok']);
+    const log = await escalate();
+    await say('Første');
+    expect(await within(log).findByRole('alert')).toHaveTextContent(AI_MESSAGES.failed);
+
+    await say('Andre');
+
+    await waitFor(() => expect(within(log).getAllByText(ANSWER)).toHaveLength(2));
+    expect(within(log).getByText('Første')).toBeInTheDocument();
+    expect(within(log).getByRole('alert')).toHaveTextContent(AI_MESSAGES.failed);
+    expect(within(log).getByRole('button', { name: AI_MESSAGES.retry })).toBeEnabled();
+    // The failed turn is not history for the next message.
+    expect((bodies[2] as { history: unknown[] }).history).toHaveLength(2);
+  });
+
+  it('moves a retried message to the end of the transcript', async () => {
+    setUp(['ok', 'network', 'ok', 'ok']);
+    const log = await escalate();
+    await say('Første');
+    await within(log).findByRole('alert');
+    await say('Andre');
+    await waitFor(() => expect(within(log).getAllByText(ANSWER)).toHaveLength(2));
+
+    await userEvent.click(within(log).getByRole('button', { name: AI_MESSAGES.retry }));
+
+    await waitFor(() => expect(within(log).getAllByText(ANSWER)).toHaveLength(3));
+    expect(within(log).queryByRole('alert')).not.toBeInTheDocument();
+    const youLines = within(log).getAllByText(/^(Første|Andre)$/).map((el) => el.textContent);
+    expect(youLines).toEqual(['Andre', 'Første']);
+  });
+
+  it('scrolls the stream to the newest line, and the stream can be reached by keyboard', async () => {
+    // Guards the effect in Chat that sets scrollTop; jsdom has no layout, so the height is faked.
+    const scrollHeight = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(480);
+    try {
+      setUp(['ok']);
+      const log = await escalate();
+      expect(log).toHaveAttribute('tabindex', '0');
+      log.scrollTop = 0;
+
+      await say('Mer?');
+
+      await waitFor(() => expect(within(log).getAllByText(ANSWER)).toHaveLength(2));
+      expect(log.scrollTop).toBe(480);
+    } finally {
+      scrollHeight.mockRestore();
+    }
+  });
+
   it.each([['error' as const], ['network' as const], ['limit' as const]])(
     'keeps a disclaimer visible, outside the live region, when the very first message fails (%s)',
     async (outcome) => {

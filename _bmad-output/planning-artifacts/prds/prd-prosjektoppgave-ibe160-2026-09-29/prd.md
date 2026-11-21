@@ -31,6 +31,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-20 | Story 5.2 walkthrough: the quick-answer has no question field of its own; the user's own questions are typed in the chat (FR-14, Eirik's decision) | `spec-5-2-escalate-to-full-ai-chat.md` |
 | 2026-11-20 | Story 5.3 built: FR-16 states the two parts of the guide (live Home name and Must tasks, stored AI introduction), who gets it, that it counts as one of the Landlord's AI calls, what is sent, the fallback, the dismissal and where it is read again | `spec-5-3-ai-generated-onboarding-guide.md` |
 | 2026-11-21 | Story 6.1 built: FR-20 and UJ-2 say «per Home» (each unit is its own Home, there is no building), and FR-20 states when a Home is behind, what a row and the detail show, and who has the dashboard | `spec-6-1-landlord-portfolio-dashboard.md` |
+| 2026-11-21 | Chat polish (Epic 5 retro, D1): FR-15 says a failed message stays in the chat when another is sent, a retry moves it to the end, and the chat scrolls to the newest line | `epic-5-retro-2026-11-21.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -303,7 +304,7 @@ From the quick-answer, a user can open a full conversational chat with the AI as
 - The chat carries the same AI-can-be-wrong / chemical-caution disclaimer as the quick-answer (FR-14), visible at least once per session.
 - The chat follows the same timeout, data and daily-limit rules as the quick-answer (FR-14). Every chat message is one AI call and counts toward the same 20 a day.
 - Besides the task's name, its catalog type and the new question, a chat sends the user's own earlier questions and the AI's answers to them (at most five exchanges, the oldest dropped first, each question at most 300 characters). The service keeps no chat: nothing is stored, so closing the chat page ends it, and a reload keeps only the exchange carried over from the quick-answer. An earlier answer longer than 2000 characters is cut to that length before it is sent again.
-- A message that fails stays in the chat with a retry, and is not sent along as an earlier message. A user can open the chat from any answer that says something, whatever their Role, or by its link, and then it starts empty. The disclaimer is visible in the chat before the first answer too.
+- A message that fails stays in the chat with a retry, also when the user sends another message instead; a retry puts the message at the end. A failed message is not sent along as an earlier message. The chat scrolls to the newest line. A user can open the chat from any answer that says something, whatever their Role, or by its link, and then it starts empty. The disclaimer is visible in the chat before the first answer too.
 
 **Feature-specific NFRs:**
 - The AI assistant can answer chemical-related how-to questions (for example, which cleaner suits which surface); every such answer surfaces the disclaimer above rather than being scoped out. No numeric accuracy bound is set for this round — the disclaimer is the product's chosen mitigation, not a claim of verified correctness.

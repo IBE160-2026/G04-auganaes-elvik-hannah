@@ -278,7 +278,8 @@ action_items:
       keep a failed message in the transcript) are built before the demo or kept as
       known limits (D1)"
     owner: "Eirik + Claude"
-    status: open
+    status: done
+    decision: "2026-11-21: built (fix/5-2-chat-polering): max height with auto-scroll, failed message kept as its own line."
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-11-21.md"
   - id: "epic-5-retro-item-27-story-template-when-a-story-lets-the-ai"
     epic: 5
