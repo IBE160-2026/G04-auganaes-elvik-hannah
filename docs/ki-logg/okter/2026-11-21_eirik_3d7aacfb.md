@@ -1,9 +1,9 @@
 # KI-økt 2026-11-21 – Eirik
 
 - **Økt-ID:** `3d7aacfb-6e1b-4f4e-8e34-1d9c0372fe11`
-- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 19:33
+- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 20:06
 - **Verktøy:** Claude Code
-- **Antall prompts:** 7
+- **Antall prompts:** 16
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -14,6 +14,16 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `c3a24a1` 2026-11-21 19:20 (Eirik) Story 6.1: rettinger etter kodegjennomgang (tre reviewere)
 - `35be20c` 2026-11-21 19:33 (EirikAuganaes) Merge pull request #87 from IBE160-2026/story/6-1-portefolje
 - `19c79a9` 2026-11-21 19:34 (Eirik) Status: Story 6.1 ferdig (PR #87), alle stories gjort
+- `71c25f5` 2026-11-21 19:51 (Eirik) Status: A4 godtatt som kjent grense i AD-5 (Blob-cache 60 s)
+- `eb81191` 2026-11-21 19:52 (Eirik) Epic 6-retrospektiv, Gemini-røyktest på Production og KI-korrigering for 6.1
+- `ff1b545` 2026-11-21 19:53 (Eirik) KI-logg: økt 21.11 (Story 6.1, retrospektiv og røyktest)
+- `b2fdb76` 2026-11-21 19:53 (Eirik) Logg: story-6-1-portefolje
+- `131e373` 2026-11-21 19:55 (Eirik) Påminnelse for Eirik og Steffen 22.11 (B1, Windows-test, skjermleser, layout, testdata)
+- `e16ce7a` 2026-11-21 19:56 (Eirik) Epic 5-retrospektiv (akseptert med åpne punkter) og to nye tiltak (D1, D2)
+- `192af59` 2026-11-21 20:00 (Eirik) Chatpolering (D1, Epic 5-retro): auto-scroll, makshøyde og mislykket melding blir stående
+- `c720cdb` 2026-11-21 20:03 (EirikAuganaes) Merge pull request #88 from IBE160-2026/fix/5-2-chat-polering
+- `7e95efe` 2026-11-21 20:05 (Eirik) D2: KI-stories sier hva KI-en ikke skal gjøre (CLAUDE.md og reviewkonvensjoner)
+- `741f9c1` 2026-11-21 20:08 (EirikAuganaes) Merge pull request #89 from IBE160-2026/chore/d2-ki-ac-regel
 
 ## Logg
 
@@ -60,4 +70,44 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 11. Prompt · 2026-11-21 19:33
 
 > godkjenn og merge
+
+### 12. Prompt · 2026-11-21 19:42
+
+> Du får mandat til å gjøre gjenstående i den rekkefølgen du mener er best. Ved usikkerhet kan du konferere med meg.
+
+### 13. Prompt · 2026-11-21 19:48
+
+> Du skal ha internett nå
+
+### 14. Svar på spørsmål fra KI · 2026-11-21 19:50
+
+> "Gemini-røyktest av 5.2 (chat med historikk) og 5.3 (velkomstguide) krever en testkonto og testdata på det hostede nettstedet g04husly.vercel.app (delt Neon-database, ekte Gemini-nøkkel). Skal jeg gjøre det?"="Ja, på Production", "A4: Blob-cachen kan gi gammelt bilde i opptil 60 s etter at en leietaker erstatter bildet. Hva gjør vi?"="Godta som kjent grense (Recommended)", "B2: push-pålitelighet (tidsbudsjett per medlem, 401/403 fra gamle enheter, pushsubscriptionchange, ON DELETE, batching). Hva gjør vi?"="Vent til B1 er bekreftet".
+
+### 15. Prompt · 2026-11-21 19:54
+
+> Jeg og Steffen skal k
+
+### 16. Prompt · 2026-11-21 19:55
+
+> Jeg og Steffen skal jobbe sammen imorgen lag en påminnelse om punkt 1-2-3-4-5. Epic 5 retroperspektivet kan vi se på nå.
+
+### 17. Prompt · 2026-11-21 19:58
+
+> bygg D1 chatpoleringen nå. Hva er denne chatpoleringen?
+
+### 18. Prompt · 2026-11-21 20:02
+
+> sjekk CI og merge hvis grønn
+
+### 19. Prompt · 2026-11-21 20:04
+
+> Hva er D2?
+
+### 20. Prompt · 2026-11-21 20:05
+
+> Ja, skriv det inn i begge
+
+### 21. Prompt · 2026-11-21 20:06
+
+> merge PR #89
 
