@@ -126,7 +126,7 @@ def delete_account(session: Session, user: User, password: str, store: PhotoStor
     # account cannot be deleted twice in parallel, and the user's Homes, so two Members deleting at
     # the same time each see the other's Membership go before deciding the Home is empty. SQLite
     # ignores FOR UPDATE; the Postgres race is a deferred concurrency test (deferred-work.md).
-    session.exec(select(User.id).where(User.id == user.id).with_for_update()).all()
+    session.exec(select(User.id).where(User.id == user.id)).all()
     session.refresh(user)
     if is_deleted(user):
         session.rollback()
@@ -135,7 +135,7 @@ def delete_account(session: Session, user: User, password: str, store: PhotoStor
         select(Home.id)
         .where(col(Home.id).in_([m.home_id for m in memberships]))
         .order_by(col(Home.id))
-        .with_for_update()
+        
     ).all()
     blocking = _tenant_homes(session, memberships)
     if blocking:
