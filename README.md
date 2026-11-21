@@ -219,6 +219,15 @@ uv run pytest
 uv run ruff check . && uv run ruff format --check .
 ```
 
+Samtidighetstestene i `backend/tests/postgres/` (radlåsene i `create_home`, `invites.accept`, `add_member`, `set_up_tasks`, `adjust_task`, bildeopplasting, kontosletting og migreringslåsen) trenger en ekte Postgres, siden SQLite ignorerer `FOR UPDATE`. De hoppes over uten `HUSLY_POSTGRES_TEST_URL`, så `uv run pytest` er uendret. CI kjører dem mot Postgres 18. Lokalt: `docker compose up -d --wait`, så
+
+```bash
+cd backend
+HUSLY_POSTGRES_TEST_URL=postgresql+psycopg://husly:husly@localhost:5433/postgres uv run pytest tests/postgres -v
+```
+
+Hver testmodul lager og migrerer sin egen database (`husly_conc_…`) på serveren og sletter den etterpå; `husly`-databasen røres ikke.
+
 ```bash
 cd frontend
 npm test -- --run

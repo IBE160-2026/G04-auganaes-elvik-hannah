@@ -93,6 +93,14 @@ class InOtherHome(Exception):
         self.home = home
 
 
+class HomeGone(Exception):
+    """The Home was deleted while the user was joining it (its Landlord deleted the account)."""
+
+    def __init__(self, home: Home) -> None:
+        super().__init__(f"home is gone: {home.id}")
+        self.home = home
+
+
 class NotATenant(Exception):
     """The caller may not remove this user: not a Tenant of the caller's Landlord Home."""
 
@@ -177,11 +185,17 @@ def add_member(session: Session, home: Home, user: User) -> Membership:
     """Add a user to a Home as a joiner and commit. Raises AlreadyMember or InOtherHome.
 
     Commits whatever the caller has pending in the same transaction (invites.accept marks the
-    link used first). A refused join rolls back first, so nothing of it is written.
+    link used first). A refused join rolls back first, so nothing of it is written. Raises
+    AlreadyMember, InOtherHome or HomeGone.
     """
     # Locks the user's row until commit, so two parallel joins cannot both pass the rule below
     # (same as create_home). Postgres only; SQLite ignores FOR UPDATE.
     session.exec(select(User).where(User.id == user.id).with_for_update()).one()
+    # Then the Home row, in the order account deletion takes them (user, then Homes, then links), so
+    # a Home cannot be deleted under a join and the two never wait for each other (Story 1.10).
+    if session.exec(select(Home.id).where(Home.id == home.id).with_for_update()).first() is None:
+        session.rollback()
+        raise HomeGone(home)
     blocker = join_blocker(session, home, user)
     if blocker is not None:
         session.rollback()

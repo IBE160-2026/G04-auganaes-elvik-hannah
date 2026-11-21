@@ -12,6 +12,8 @@
   summary: Add an automated test that `backend/alembic/env.py` uses `get_migration_url()` and takes `pg_advisory_xact_lock` inside Alembic's transaction.
   evidence: Code review of Story 1.7 (R6); today only proven by hand (spec Implementation Notes). Needs a DB-backed test harness, expected with Story 1.2/1.6.
   outcome: Accepted risk 2026-11-08 (Epic 1 retrospective, P3): no Postgres concurrency test job before Epic 2; the lock is reasoned, not tested. Recorded in `epics.md` (Additional Requirements, deferred by Architecture). Revisit if the hosted demo gets real users.
+  outcome: Settled 2026-11-21 (`story/pg-samtidighetstester`): `backend/tests/postgres/test_concurrency.py` races several threads, each with its own Session, against a real Postgres in the CI job «Migreringer (Postgres 18)» (eight rounds per test; locally skipped without `HUSLY_POSTGRES_TEST_URL`). `test_two_deploys_migrating_at_once_both_succeed_and_reach_head` runs two `alembic upgrade head` processes at once.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Add a CI workflow that runs pytest, ruff, Vitest, lint and build on every PR.
   evidence: Code review of Story 1.7 (R7); no workflow runs tests, so all checks are local only. Pre-existing since Story 1.1.
@@ -44,6 +46,8 @@
   summary: Add a concurrent Postgres test that two parallel `POST /api/homes` for a user without a Home create exactly one Home (the `with_for_update` lock in `domain/homes.create_home`).
   evidence: Code review of Story 1.3; SQLite ignores `FOR UPDATE` and CI runs pytest only on SQLite, so deleting the lock passes every check. Needs a Postgres-backed test harness (same gap as the 1.7 `env.py` lock entry).
   outcome: Accepted risk 2026-11-08 (Epic 1 retrospective, P3): no Postgres concurrency test job before Epic 2; the lock is reasoned, not tested. Recorded in `epics.md` (Additional Requirements, deferred by Architecture). Revisit if the hosted demo gets real users.
+  outcome: Settled 2026-11-21 (`story/pg-samtidighetstester`): `backend/tests/postgres/test_concurrency.py` races several threads, each with its own Session, against a real Postgres in the CI job «Migreringer (Postgres 18)» (eight rounds per test; locally skipped without `HUSLY_POSTGRES_TEST_URL`). `test_two_parallel_household_creates_make_one_home`.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-create-a-home.md`
   summary: Decide in Story 1.4 whether accepting an invite may give a Household Member or Tenant a second Home, and enforce it in `domain/homes.add_member` rather than only in the seed.
   evidence: Code review of Story 1.3 (unverified, would be medium). `add_member` adds a Membership to any Home; only `seed/homes.py` skips Jonas when he is already in another Home. The 1.3 intent covers only the create flow ("not re-prompted"), so the rule for joining belongs to 1.4's invite acceptance.
@@ -52,6 +56,8 @@
   summary: Add concurrent Postgres tests that two parallel accepts of one invite link give exactly one Membership (the `with_for_update` lock in `domain/invites.accept`), and that two parallel joins by one Household Member through different links give exactly one Membership (the user-row lock in `domain/homes.add_member`).
   evidence: Verification-gap review of Story 1.4. Removing either lock passes every check, because pytest runs on SQLite (which ignores `FOR UPDATE`) and the CI Postgres steps never run two accepts at once; `test_sequential_second_accept_fails` fails on `used_at`, not on the lock. Needs the same Postgres-backed test harness as the 1.3 `create_home` entry.
   outcome: Accepted risk 2026-11-08 (Epic 1 retrospective, P3): no Postgres concurrency test job before Epic 2; the lock is reasoned, not tested. Recorded in `epics.md` (Additional Requirements, deferred by Architecture). Revisit if the hosted demo gets real users.
+  outcome: Settled 2026-11-21 (`story/pg-samtidighetstester`): `backend/tests/postgres/test_concurrency.py` races several threads, each with its own Session, against a real Postgres in the CI job «Migreringer (Postgres 18)» (eight rounds per test; locally skipped without `HUSLY_POSTGRES_TEST_URL`). `test_two_parallel_accepts_of_one_link_give_one_membership` and `test_one_user_joining_two_homes_at_once_joins_one`.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-5-view-home-members-list-enforce-role-based-permissions.md`
   summary: Add a frontend test that a session change to another user without sign-out never shows the previous user's cached Homes, invite preview or members list (the user id in `homesKey`, `inviteKey` and `membersKey`).
   evidence: Verification-gap review of Story 1.5. Dropping the user id from `membersKey` passes every test, because each test has one user and a fresh `QueryClient`, and sign-out clears the cache. The same holds for `homesKey` and `inviteKey`, so one shared test fits better than one per story.
@@ -64,6 +70,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Test on Postgres that the Home-row lock in `domain/tasks.set_up_tasks` stops two concurrent setups with disjoint choices from both committing.
   evidence: The tests run on SQLite, which ignores FOR UPDATE; the overlapping-race tests prove only the unique `(home_id, task_type)` backstop. Same gap as the Epic 1 lock tests (Story 1.3/1.4 entries); needs a concurrent Postgres harness in CI.
+  outcome: Settled 2026-11-21 (`story/pg-samtidighetstester`): `backend/tests/postgres/test_concurrency.py` races several threads, each with its own Session, against a real Postgres in the CI job «Migreringer (Postgres 18)» (eight rounds per test; locally skipped without `HUSLY_POSTGRES_TEST_URL`). `test_two_parallel_setups_with_different_choices_commit_only_one`.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Story 2.4 must change `domain/tasks.tasks_of` from the earliest instance to the earliest open (not completed) instance.
   evidence: `tasks_of` uses `min(TaskInstance.due_on)`; once 2.4 stores completions, a completed past instance stays the earliest and the list would show an old date as «Neste gang». The architecture revision note now says so.
@@ -192,6 +200,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-3-fairness-based-targeted-notification.md`
   summary: Add a test that drives `fairness._claim` into its `IntegrityError` branch (a parallel run inserted the nudge row), and batch the per-instance history queries in `apply_nudges`.
   evidence: Verification Gap and Blind Hunter on Story 3.3. The race path and the N+1 queries are untested and unbudgeted; they sit with the 3.2 time-budget item.
+  outcome: Settled 2026-11-21 (`story/pg-samtidighetstester`): `backend/tests/postgres/test_concurrency.py` races several threads, each with its own Session, against a real Postgres in the CI job «Migreringer (Postgres 18)» (eight rounds per test; locally skipped without `HUSLY_POSTGRES_TEST_URL`). `test_two_runs_claiming_one_nudge_both_succeed_and_leave_one_row`. The N+1 batching in `apply_nudges` is not done (B2).
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
   summary: The chat stream has no auto-scroll to the newest message and no maximum height, so after several exchanges the input can sit below the fold; do the screen-reader pass together with the popover (A3).
   evidence: Blind Hunter on Story 5.2; the stream is a plain growing `div`. Cosmetic for five exchanges, but the `role="log"` announces content the user may not see.
@@ -230,6 +240,8 @@ Every entry above was read against the code on 2026-11-21 and the ones that were
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-10-account-deletion.md`
   summary: Join and delete race: `homes.add_member` locks the user row but not the Home, so a Tenant who joins a Landlord Home while its Landlord deletes the account can get an unhandled integrity error (500) when the Home is gone; add a Postgres concurrency test and a `FOR UPDATE` on the Home in the join path.
   evidence: Edge Case Hunter on Story 1.10. `delete_account` locks the Landlord's Homes, but the join path does not take the same lock. Rare, and the joiner only sees an error.
+  outcome: Settled 2026-11-21 (`story/pg-samtidighetstester`): `backend/tests/postgres/test_concurrency.py` races several threads, each with its own Session, against a real Postgres in the CI job «Migreringer (Postgres 18)» (eight rounds per test; locally skipped without `HUSLY_POSTGRES_TEST_URL`). `homes.add_member` now locks the Home row after the user row and raises `HomeGone`, `invites.accept` locks user, Home, then link (the order account deletion uses, so no deadlock), and `test_a_landlord_deleting_while_a_tenant_joins_never_strands_either` checks both outcomes.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-10-account-deletion.md`
   summary: No throttle on wrong passwords at `POST /api/auth/delete-account` (nor at sign-in), so a stolen access token could try passwords there without a limit.
   evidence: Blind Hunter and Edge Case Hunter on Story 1.10. Accepted as a known limit at course scale: FR-25 says attempts are not limited, as for sign-in. Add a per-user or per-IP throttle for both routes if the demo gets real users.

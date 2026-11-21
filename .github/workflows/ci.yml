@@ -119,6 +119,13 @@ jobs:
               bad = fr3_violations(session)
           assert bad == [], bad
           EOF
+      # Concurrency tests (Epic 1 retro P3): SQLite ignores FOR UPDATE, so the row locks and the
+      # migration lock are exercised here, on a real Postgres. Each test module gets its own
+      # database on this server; the seed above is not touched.
+      - name: Samtidighetstester mot Postgres (radlåser og migreringslås)
+        env:
+          HUSLY_POSTGRES_TEST_URL: postgresql+psycopg://husly:husly@localhost:5433/postgres
+        run: uv run pytest tests/postgres -v
       # Story 1.3: alembic check ignores CHECK constraints, so prove the migrated schema has them.
       - name: CHECK-constraints finnes i migrert skjema
         run: |
