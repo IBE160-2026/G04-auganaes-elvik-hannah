@@ -4,7 +4,7 @@ Each test that guards a rule names the line it guards (review convention, Epic 2
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -162,6 +162,7 @@ def test_an_upload_for_a_task_that_needs_no_photo_is_409_and_stores_nothing(
         pytest.param(b"\x89PNG\r\n\x1a\n" + b"x" * 100, 415, photo_evidence.NOT_JPEG, id="png"),
         pytest.param(b"", 415, photo_evidence.NOT_JPEG, id="empty"),
         pytest.param(b"just text", 415, photo_evidence.NOT_JPEG, id="text"),
+        pytest.param(JPEG[:-2] + b"abc", 415, photo_evidence.NOT_JPEG, id="cut-off"),
         pytest.param(
             JPEG + b"x" * photo_evidence.MAX_PHOTO_BYTES, 413, photo_evidence.TOO_LARGE, id="large"
         ),
@@ -424,6 +425,16 @@ def test_a_failed_completion_puts_the_old_photo_back(
     key = photo_evidence.evidence_key(task.id)
     if had_photo:
         store.put(key, b"old")
+        session.add(
+            PhotoEvidence(
+                task_id=task.id,
+                task_instance_id=instance_id,
+                uploaded_by_user_id=martin.id,
+                uploaded_at=datetime(2026, 11, 1, tzinfo=UTC),
+                description="Bildebevis lastet opp av Martin, 1. nov",
+            )
+        )
+        session.commit()
     membership = session.exec(
         select(Membership).where(Membership.user_id == martin.id, Membership.home_id == home_id)
     ).one()
@@ -437,3 +448,60 @@ def test_a_failed_completion_puts_the_old_photo_back(
         photo_evidence.complete_with_photo(session, store, membership, task.id, instance_id, JPEG)
 
     assert store.read(key) == (b"old" if had_photo else None)
+
+
+def _membership(session: Session, user: User, home_id: uuid.UUID) -> Membership:
+    return session.exec(
+        select(Membership).where(Membership.user_id == user.id, Membership.home_id == home_id)
+    ).one()
+
+
+def test_a_commit_that_went_through_before_the_error_keeps_the_new_photo(
+    session: Session, local_photo_store: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Guards `_evidence_committed` in the except branch: when the connection drops after the commit
+    # the database has the new evidence, so restoring the old photo would show the wrong picture.
+    from app.storage import LocalPhotoStore
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    store = LocalPhotoStore(local_photo_store)
+    original = tasks.complete_task_instance
+
+    def commits_then_fails(*args: object, **kwargs: object) -> None:
+        original(*args, **kwargs)  # type: ignore[arg-type]
+        raise RuntimeError("the connection dropped after the commit")
+
+    monkeypatch.setattr(tasks, "complete_task_instance", commits_then_fails)
+
+    with pytest.raises(RuntimeError):
+        photo_evidence.complete_with_photo(
+            session, store, _membership(session, martin, home_id), task.id, instance_id, JPEG
+        )
+
+    assert store.read(photo_evidence.evidence_key(task.id)) == JPEG
+
+
+def test_a_completion_that_swallowed_a_lost_race_puts_the_old_photo_back(
+    session: Session, local_photo_store: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Guards the check after a normal return: complete_task_instance can roll back and return.
+    from app.storage import LocalPhotoStore
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    store = LocalPhotoStore(local_photo_store)
+
+    def rolls_back_and_returns(*args: object, **kwargs: object) -> str:
+        session.rollback()
+        return "returned"
+
+    monkeypatch.setattr(tasks, "complete_task_instance", rolls_back_and_returns)
+
+    result = photo_evidence.complete_with_photo(
+        session, store, _membership(session, martin, home_id), task.id, instance_id, JPEG
+    )
+
+    assert result == "returned"
+    assert store.read(photo_evidence.evidence_key(task.id)) is None
+    assert session.get(PhotoEvidence, task.id) is None

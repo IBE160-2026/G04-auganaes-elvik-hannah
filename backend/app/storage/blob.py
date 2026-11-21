@@ -7,10 +7,14 @@ coroutines; called without `await` they do nothing and raise nothing, so the syn
 `vercel.blob.sync` are used (a test guards that). The real store is only reachable on Vercel.
 """
 
+import logging
+
 from vercel.blob import BlobNotFoundError
 from vercel.blob.sync import delete_blob, get_blob, put_blob
 
 from app.storage.base import StorageError
+
+logger = logging.getLogger(__name__)
 
 CONTENT_TYPE = "image/jpeg"
 
@@ -20,6 +24,7 @@ class BlobPhotoStore:
         try:
             put_blob(key, data, access="private", content_type=CONTENT_TYPE, allow_overwrite=True)
         except Exception as error:  # noqa: BLE001 - any SDK or network failure is a store failure
+            logger.warning("Blob put feilet for %s", key, exc_info=True)
             raise StorageError("Kunne ikke lagre bildet.") from error
 
     def read(self, key: str) -> bytes | None:
@@ -27,7 +32,8 @@ class BlobPhotoStore:
             return get_blob(key, access="private").body
         except BlobNotFoundError:
             return None
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:  # noqa: BLE001 - any SDK or network failure is a store failure
+            logger.warning("Blob get feilet for %s", key, exc_info=True)
             raise StorageError("Kunne ikke hente bildet.") from error
 
     def delete(self, key: str) -> None:
@@ -35,5 +41,6 @@ class BlobPhotoStore:
             delete_blob(key)
         except BlobNotFoundError:
             return
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:  # noqa: BLE001 - any SDK or network failure is a store failure
+            logger.warning("Blob delete feilet for %s", key, exc_info=True)
             raise StorageError("Kunne ikke slette bildet.") from error
