@@ -249,6 +249,23 @@ def test_partial_run_adds_jonas_to_the_existing_home(
     assert "finnes allerede" in out and f"La til {JONAS}" in out
 
 
+def test_a_jonas_who_is_only_a_landlord_elsewhere_still_joins(
+    session: Session, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Guards `homes.join_blocker` in _seed_household: only a Household Member or Tenant elsewhere
+    # blocks joining (Story 1.9), the same rule as the app's own joining.
+    seed_users(session)
+    jonas = by_email(session, JONAS)
+    homes.create_home(session, jonas, name="Jonas sin utleiebolig", type="landlord")
+    capsys.readouterr()
+
+    seed_homes(session)
+
+    names = {h.home.name for h in homes.homes_for(session, jonas)}
+    assert EXAMPLE_HOME_NAME in names
+    assert f"La til {JONAS}" in capsys.readouterr().out
+
+
 def test_jonas_in_another_home_is_skipped_with_a_reason(
     session: Session, capsys: pytest.CaptureFixture[str]
 ) -> None:

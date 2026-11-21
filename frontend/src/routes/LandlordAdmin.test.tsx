@@ -8,6 +8,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { BROADCAST_MAX, sentNotice } from '../api/broadcast';
+import { OFFLINE_ERROR } from '../api/errors';
 import type { Home } from '../api/homes';
 import {
   OLAS_HOME,
@@ -101,6 +102,37 @@ describe('Landlord Home Admin', () => {
     expect(await screen.findByText(`Meldingen kan ha maks ${BROADCAST_MAX} tegn.`)).toBeInTheDocument();
     expect(api.calls('POST', path(LANDLORD))).toHaveLength(0);
   });
+
+  it.each([
+    ['the broadcast', 'POST', path],
+    ['the cadence', 'PUT', cadencePath],
+    ['the photo requirement', 'PUT', (h: Home) => requirementPath(h, SLUKET.id)],
+  ] as const)(
+    'says in Norwegian that there was no contact, with a retry, when %s gets no answer',
+    async (name, method, pathOf) => {
+      // Guards failureText: a thrown fetch error is not an ApiError and used to show raw text.
+      fakeApi({
+        ...signedInWith([LANDLORD]),
+        [`${method} ${pathOf(LANDLORD)}`]: () => {
+          throw new TypeError('Failed to fetch');
+        },
+      });
+      renderAt(`/hjem/${LANDLORD.id}/utleier`);
+      if (name === 'the broadcast') {
+        await userEvent.type(await screen.findByLabelText('Melding'), 'Hei');
+        await userEvent.click(screen.getByRole('button', { name: 'Send melding' }));
+      } else if (name === 'the cadence') {
+        await userEvent.click(await screen.findByRole('radio', { name: 'Annenhver dag' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+      } else {
+        await userEvent.click(await screen.findByRole('checkbox', { name: /Rens sluket/ }));
+      }
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(OFFLINE_ERROR);
+      expect(screen.queryByText(/Failed to fetch/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeInTheDocument();
+    },
+  );
 
   it('keeps the text after a failed send and retries with «Prøv igjen»', async () => {
     let attempts = 0;
@@ -391,11 +423,19 @@ describe('Photo Evidence', () => {
 
 describe('sentNotice', () => {
   it('names nobody, says one Tenant in the singular and adds who has no push', () => {
-    expect(sentNotice({ recipients: 1, without_push: 0 })).toBe('Sendt til 1 leietaker.');
-    expect(sentNotice({ recipients: 3, without_push: 0 })).toBe('Sendt til 3 leietakere.');
-    expect(sentNotice({ recipients: 2, without_push: 2 })).toBe(
+    expect(sentNotice({ recipients: 1, without_push: 0, demo: false })).toBe('Sendt til 1 leietaker.');
+    expect(sentNotice({ recipients: 3, without_push: 0, demo: false })).toBe('Sendt til 3 leietakere.');
+    expect(sentNotice({ recipients: 2, without_push: 2, demo: false })).toBe(
       'Sendt til 2 leietakere. 2 kunne ikke nås med varsel.',
     );
-    expect(sentNotice({ recipients: 0, without_push: 2 })).toContain('Ingen leietakere kunne nås');
+    expect(sentNotice({ recipients: 0, without_push: 2, demo: false })).toContain('Ingen leietakere kunne nås');
+  });
+
+  it('says it is a demo when the mock sender answered, so «Sendt» is not read as delivered', () => {
+    // Guards the `demo` suffix in sentNotice.
+    expect(sentNotice({ recipients: 2, without_push: 0, demo: true })).toBe(
+      'Sendt til 2 leietakere. Demo: ingen ekte varsler er sendt.',
+    );
+    expect(sentNotice({ recipients: 1, without_push: 1, demo: true })).toContain('Demo: ingen ekte varsler');
   });
 });

@@ -28,6 +28,10 @@ export const TASK_MESSAGES = {
   noneChosen: 'Velg minst én oppgave.',
   setupFailed: GENERIC_ERROR,
   tenantWaiting: 'Utleier har ikke satt opp oppgaver ennå.',
+  // Every Task archived: setup has run, so “not set up yet” would be untrue (Story 2.6 follow-up).
+  // A task changed to Bør loses its photo requirement (FR-18), so the editor is told.
+  savedWithoutPhotoRequirement: 'Lagret. Kravet om bilde er fjernet, siden oppgaven nå er Bør.',
+  tenantNoTasks: 'Ingen oppgaver i hjemmet ennå.',
   refreshed: 'Oppdatert',
   refreshFailed: 'Vi fikk ikke oppdatert oppgavene.',
   // Decision 2 and 10: shown above the full list when nothing is overdue or due soon.

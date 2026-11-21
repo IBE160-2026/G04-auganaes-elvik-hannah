@@ -55,6 +55,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-5-view-home-members-list-enforce-role-based-permissions.md`
   summary: Add a frontend test that a session change to another user without sign-out never shows the previous user's cached Homes, invite preview or members list (the user id in `homesKey`, `inviteKey` and `membersKey`).
   evidence: Verification-gap review of Story 1.5. Dropping the user id from `membersKey` passes every test, because each test has one user and a fresh `QueryClient`, and sign-out clears the cache. The same holds for `homesKey` and `inviteKey`, so one shared test fits better than one per story.
+  outcome: Settled 2026-11-21 (`fix/smaating`): `queries.test.tsx` checks that the user id is in `homesKey`, `membersKey`, `inviteKey`, `tasksKey` and `portfolioKey`, and that a session change shows the next user a fresh load; the mutation (dropping the id from `homesKey`) fails it.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-task-setup-at-home-creation.md`
   summary: Let a Household Member or Landlord add custom tasks (own name, classification and Frequency) beside the catalog's, in setup or later.
   evidence: Story 2.1, decision 5 (Eirik, 2026-11-09): setup only ticks and adjusts catalog entries. The model is ready for it: a Task copies its name from the catalog, so a custom task needs only a nullable `tasks.task_type` (and `photo_evidence_eligible` false), plus a rule for the unique `(home_id, task_type)`. No story owns it yet.
@@ -70,6 +72,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-9-one-rule-for-creating-homes.md`
   summary: The seed's `_seed_household` skips Jonas when he has any Membership instead of asking `homes.join_blocker`, so a Jonas who is only a Landlord elsewhere is left out although the app would let him join.
   evidence: `backend/app/seed/homes.py` (`elif jonas_home_ids:`) vs `_seed_landlord`, which uses `join_blocker`; pre-existing since Story 1.6, found in the Story 1.9 code review (R7). Fix: use `join_blocker` and add a seed test with Jonas as a Landlord elsewhere.
+  outcome: Settled 2026-11-21 (`fix/smaating`): `_seed_household` asks `homes.join_blocker`; `test_a_jonas_who_is_only_a_landlord_elsewhere_still_joins`.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-adjust-task-classification-frequency.md`
   summary: Story 2.4 must switch `domain/tasks._open_instance` (the instance a Frequency change moves) to the earliest *open* instance together with `tasks_of`, so both always point at the same instance.
   evidence: Story 2.3 moves the earliest instance, which is the open one only until 2.4 adds completion. If only `tasks_of` changes, a Frequency change would move an already completed instance.
@@ -81,6 +85,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-6-add-and-remove-tasks.md`
   summary: Give a Tenant a neutral text when every Task of the Home is archived («Ingen oppgaver i hjemmet ennå.») instead of «Utleier har ikke satt opp oppgaver ennå.», which is only true before setup.
   evidence: Code review of Story 2.6 (Blind Hunter, Edge Case Hunter). The wording follows EXPERIENCE.md's «No active Tasks» row (decided 2026-11-09), so changing it is a UX decision, not a patch; `TASK_MESSAGES.tenantWaiting` is used for both states in `TaskOverview.tsx`.
+  outcome: Settled 2026-11-21 (`fix/smaating`): a Tenant of a Home whose Tasks are all archived reads «Ingen oppgaver i hjemmet ennå.» (`TASK_MESSAGES.tenantNoTasks`); «Utleier har ikke satt opp oppgaver ennå.» stays for a Home before setup.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-1-contextual-quick-answer.md`
   summary: Check «?» with a screen reader: the live region sits in a `hidden` panel, so the skeleton text at the moment of opening may not be announced, and the failure text has `role="alert"` inside the polite region.
   evidence: Code review of Story 5.1 (Blind Hunter). Jest-dom cannot show what a screen reader says. Fix if it matters: keep a visually hidden status element outside the panel and drop `role="alert"` there.
@@ -119,6 +125,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
   summary: Add a test that the one-task push path (`/hjem/<home>/oppgaver/<task>`) matches a route in `frontend/src/App.tsx`.
   evidence: Code review of Story 3.2 (Verification Gap), low. The backend builds the path and the frontend defines the route; only string literals tie them together.
+  outcome: Settled 2026-11-21 (`fix/smaating`): `test_the_one_task_push_path_matches_a_route_in_the_frontend` reads the `<Route path>` list in `frontend/src/App.tsx` and matches the url the due-check builds.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Decide whether a Landlord needs a limit on how many broadcasts can be sent per Home per day.
   evidence: Story 3.4 decision 3: none built. A Landlord can send many messages and every Tenant device gets each one. No FR asks for a limit; add one if the PRD does.
@@ -129,6 +137,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Mark the Landlord's send confirmation as a demo when the mock sender is active (like the `demo` flag in Story 5.1), so «Sendt til N» is not read as delivered on Vercel without VAPID keys.
   evidence: Blind Hunter on Story 3.4. README now says it; the UI does not. Low until the hosted demo is shown to someone who sends as Landlord.
+  outcome: Settled 2026-11-21 (`fix/smaating`): `BroadcastOut.demo` is true for the mock sender, and the confirmation adds «Demo: ingen ekte varsler er sendt.» (`test_the_confirmation_says_demo_only_for_the_mock_sender`).
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Check with a screen reader that a second send with the same count is announced (the live region gets identical text), together with the open screen reader check of the AI popover.
   evidence: Blind Hunter on Story 3.4. The notice is cleared and set in the same render batch, so the region may not see an empty state.
@@ -140,9 +150,13 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
   summary: Show a Norwegian message with a retry when a request fails without a response (offline), in the Landlord Home Admin sections of Stories 3.4, 3.5 and 4.1.
   evidence: Edge Case Hunter on Story 4.1. A thrown network error is not an ApiError, so its raw text is shown and some retry buttons are hidden. One fix in `api/client.ts` or `errors.ts` would cover all three.
+  outcome: Settled 2026-11-21 (`fix/smaating`): `failureText` in `api/errors.ts` turns an error without an answer into «Vi fikk ikke kontakt med tjenesten. Sjekk nettverket og prøv igjen.» in the three Landlord Home Admin sections, each with its retry.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
   summary: Tell the Landlord when a change of a task to Bør removed its Photo Evidence requirement.
   evidence: Blind Hunter on Story 4.1. A household editor or the Landlord changing Must to Should silently drops the requirement (FR-18 decision 3).
+  outcome: Settled 2026-11-21 (`fix/smaating`): saving a task with a photo requirement as Bør says «Lagret. Kravet om bilde er fjernet, siden oppgaven nå er Bør.»
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Run the Blob adapter against a real private store and confirm `put_blob` with `allow_overwrite` and `get_blob` behave as `BlobPhotoStore` assumes.
   evidence: The adapter is written from the SDK signatures and tested only with fakes. It cannot be exercised offline; a store has to be created in Vercel first.
@@ -197,7 +211,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-3-ai-generated-onboarding-guide.md`
   summary: A Home that got the fixed introduction (AI failed or the Landlord had used the day's calls) keeps it; add a Landlord action to write it again if this matters.
   evidence: Blind Hunter on Story 5.3; `store_guide` never replaces a row by design (written once), and FR-16 now says so.
-
+  outcome: Accepted 2026-11-21 (audit): written once by design (FR-16); a «write it again» action is not built. The Home keeps the fixed text, which is correct and general.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-1-landlord-portfolio-dashboard.md`
   summary: Screen reader check of the Portfolio: nothing announces that the detail column changed when a row is selected, and focus does not move.

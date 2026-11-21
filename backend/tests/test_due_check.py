@@ -543,3 +543,33 @@ def test_the_route_uses_the_utc_today_of_the_clock(
 
 def test_the_internal_route_is_not_in_the_api_document(client: TestClient) -> None:
     assert "/api/internal/run-due-check" not in client.get("/openapi.json").json()["paths"]
+
+
+def test_the_one_task_push_path_matches_a_route_in_the_frontend(session: Session) -> None:
+    # Guards the string tie between the backend's push url and the frontend's route: the path the
+    # job builds (`/hjem/<home>/oppgaver/<task>`) must match a <Route path> in frontend/src/App.tsx.
+    import re
+    from pathlib import Path
+
+    app_tsx = Path(__file__).resolve().parents[2] / "frontend" / "src" / "App.tsx"
+    # The catch-all "*" would match anything, so it is left out.
+    patterns = [
+        p for p in re.findall(r'<Route\s+path="([^"]+)"', app_tsx.read_text("utf-8")) if p != "*"
+    ]
+    assert "/hjem/:homeId/oppgaver/:taskId" in patterns  # the file was read, and the route is there
+
+    home_id, kari, anders = landlord_home(session)
+    add_task(session, home_id, kari, "Støvsuge", TODAY - timedelta(days=3))
+    device(session, anders, "a")
+    sender = MockSender()
+    run(session, sender)
+    sent = sent_to(sender)["a"].url
+
+    def matches(pattern: str, url: str) -> bool:
+        # Literal parts escaped, each :param is one path segment.
+        regex = "/".join(
+            "[^/]+" if part.startswith(":") else re.escape(part) for part in pattern.split("/")
+        )
+        return re.fullmatch(regex, url) is not None
+
+    assert any(matches(pattern, sent) for pattern in patterns), sent

@@ -664,6 +664,8 @@ export interface components {
             recipients: number;
             /** Without Push */
             without_push: number;
+            /** Demo */
+            demo: boolean;
         };
         /** CadenceIn */
         CadenceIn: {

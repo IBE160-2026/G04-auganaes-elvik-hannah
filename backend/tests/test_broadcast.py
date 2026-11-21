@@ -77,7 +77,7 @@ def test_the_push_goes_to_every_device_of_a_tenant_and_counts_tenants_not_device
 
     assert response.status_code == 200
     # Guards `sum(1 for ... if deliver(...) > 0)`: two devices of one Tenant are one recipient.
-    assert response.json() == {"recipients": 1, "without_push": 1}
+    assert response.json() == {"recipients": 1, "without_push": 1, "demo": True}
     assert endpoints_sent() == ["anders-mobil", "anders-pc"]
     message = MOCK_SENDER.sent[0][1]
     assert message.title == "Melding fra utleier"
@@ -112,7 +112,7 @@ def test_a_tenant_who_left_gets_nothing_and_is_not_counted(
     response = post(client, session, kari, home_id, "Hei")
 
     # Guards the Membership lookup (AD-16): the device row stays, the Membership is gone.
-    assert response.json() == {"recipients": 1, "without_push": 0}
+    assert response.json() == {"recipients": 1, "without_push": 0, "demo": True}
     assert endpoints_sent() == ["mari"]
 
 
@@ -261,3 +261,23 @@ def test_home_out_says_only_the_landlord_can_broadcast(
     # Guards `can_broadcast(role) == "landlord"`.
     assert flag(kari) is True
     assert flag(anders) is False
+
+
+def test_the_confirmation_says_demo_only_for_the_mock_sender(
+    client: TestClient, session: Session
+) -> None:
+    # Guards `isinstance(sender, MockSender)` in the route: «Sendt til N» must not read as delivered
+    # when no real push was made (no VAPID keys), and must not say demo when one was.
+    from app.push import get_sender
+
+    home_id, kari = landlord_home(session)
+    add_tenant(session, home_id, "Anders", "anders-mobil")
+
+    mock = post(client, session, kari, home_id, "Hei")
+    client.app.dependency_overrides[get_sender] = lambda: RecordingSender({})  # type: ignore[attr-defined]
+    try:
+        real = post(client, session, kari, home_id, "Hei igjen")
+    finally:
+        client.app.dependency_overrides.pop(get_sender, None)  # type: ignore[attr-defined]
+
+    assert (mock.json()["demo"], real.json()["demo"]) == (True, False)

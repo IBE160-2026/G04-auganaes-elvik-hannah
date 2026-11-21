@@ -56,3 +56,15 @@ def test_unknown_email_still_runs_one_hash_verification(session: Session) -> Non
 
     assert result is None
     assert verify.call_count == 1
+
+
+def test_the_database_refuses_an_email_that_is_not_lowercase(session: Session) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    from app.models.user import User
+
+    # Guards ck_users_email_lowercase: a write that skips accounts.normalize_email is refused.
+    session.add(User(email="Ola@Example.com", name="Ola", password_hash="x"))
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()
