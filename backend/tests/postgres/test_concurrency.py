@@ -387,8 +387,11 @@ def test_two_deploys_migrating_at_once_both_succeed_and_reach_head() -> None:
         drop_database(url)
 
 
-# A race between threads shows a missing lock only by chance (a narrow window). These hold the row
+# A race between threads shows a missing lock only by chance (a narrow window). These hold a row
 # lock in another transaction and require the function to wait for it: deterministic, one per lock.
+# The held lock is FOR KEY SHARE, which conflicts only with an explicit FOR UPDATE (a plain UPDATE,
+# an INSERT with a foreign key or the function's other writes are compatible with it), so the test
+# fails when the function does not take the lock, not because a write happened to collide.
 
 
 def test_adjust_task_waits_for_the_task_row(pg_engine: Engine, make_session: MakeSession) -> None:
@@ -402,7 +405,7 @@ def test_adjust_task_waits_for_the_task_row(pg_engine: Engine, make_session: Mak
         return tasks.adjust_task(session, member, task_id, frequency_days=14)  # type: ignore[arg-type]
 
     blocked, outcome = blocks_while_locked(
-        make_session, "SELECT id FROM tasks WHERE id = :id FOR UPDATE", {"id": task_id}, job
+        make_session, "SELECT id FROM tasks WHERE id = :id FOR KEY SHARE", {"id": task_id}, job
     )
 
     assert blocked and outcome[0] == "ok"
@@ -422,7 +425,7 @@ def test_set_up_tasks_waits_for_the_home_row(pg_engine: Engine, make_session: Ma
         )
 
     blocked, outcome = blocks_while_locked(
-        make_session, "SELECT id FROM homes WHERE id = :id FOR UPDATE", {"id": home_id}, job
+        make_session, "SELECT id FROM homes WHERE id = :id FOR KEY SHARE", {"id": home_id}, job
     )
 
     assert blocked and outcome[0] == "ok"
@@ -440,7 +443,7 @@ def test_add_member_waits_for_the_home_row(pg_engine: Engine, make_session: Make
         return homes.add_member(session, target, joiner)
 
     blocked, outcome = blocks_while_locked(
-        make_session, "SELECT id FROM homes WHERE id = :id FOR UPDATE", {"id": home_id}, job
+        make_session, "SELECT id FROM homes WHERE id = :id FOR KEY SHARE", {"id": home_id}, job
     )
 
     assert blocked and outcome[0] == "ok"
@@ -458,7 +461,7 @@ def test_add_member_waits_for_the_user_row(pg_engine: Engine, make_session: Make
         return homes.add_member(session, target, joiner)
 
     blocked, outcome = blocks_while_locked(
-        make_session, "SELECT id FROM users WHERE id = :id FOR UPDATE", {"id": joiner_id}, job
+        make_session, "SELECT id FROM users WHERE id = :id FOR KEY SHARE", {"id": joiner_id}, job
     )
 
     assert blocked and outcome[0] == "ok"
@@ -475,7 +478,7 @@ def test_create_home_waits_for_the_user_row(pg_engine: Engine, make_session: Mak
         return homes.create_home(session, user, name="Mitt", type="household")
 
     blocked, outcome = blocks_while_locked(
-        make_session, "SELECT id FROM users WHERE id = :id FOR UPDATE", {"id": user_id}, job
+        make_session, "SELECT id FROM users WHERE id = :id FOR KEY SHARE", {"id": user_id}, job
     )
 
     assert blocked and outcome[0] == "ok"
@@ -490,6 +493,8 @@ def test_delete_account_waits_for_the_users_row_and_the_users_homes(
     store = LocalPhotoStore(tmp_path)
     with make_session() as setup:
         owner, home = household(setup)
+        # A second member keeps the Home alive, so deleting the Home row cannot be what waits.
+        homes.add_member(setup, home, new_user(setup, "Jonas"))
         owner_id, home_id = owner.id, home.id
 
     def job(session: Session) -> object:
@@ -499,7 +504,7 @@ def test_delete_account_waits_for_the_users_row_and_the_users_homes(
 
     target = owner_id if table == "users" else home_id
     blocked, outcome = blocks_while_locked(
-        make_session, f"SELECT id FROM {table} WHERE id = :id FOR UPDATE", {"id": target}, job
+        make_session, f"SELECT id FROM {table} WHERE id = :id FOR KEY SHARE", {"id": target}, job
     )
 
     assert blocked and outcome[0] == "ok"
@@ -520,7 +525,7 @@ def test_accept_waits_for_the_link_row(pg_engine: Engine, make_session: MakeSess
 
     blocked, outcome = blocks_while_locked(
         make_session,
-        "SELECT id FROM invite_links WHERE token_hash = :h FOR UPDATE",
+        "SELECT id FROM invite_links WHERE token_hash = :h FOR KEY SHARE",
         {"h": link_hash},
         job,
     )
