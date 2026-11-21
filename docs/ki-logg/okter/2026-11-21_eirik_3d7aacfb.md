@@ -1,9 +1,9 @@
 # KI-økt 2026-11-21 – Eirik
 
 - **Økt-ID:** `3d7aacfb-6e1b-4f4e-8e34-1d9c0372fe11`
-- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 21:05
+- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 21:34
 - **Verktøy:** Claude Code
-- **Antall prompts:** 20
+- **Antall prompts:** 22
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -42,6 +42,16 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `639a314` 2026-11-21 21:10 (Eirik) Postgres-samtidighetstester for radlåsene, og lås for join mot kontosletting
 - `2f688f0` 2026-11-21 21:12 (Eirik) invites.accept: den låste lenka leses på nytt med verdiene låsen ventet på
 - `64caf75` 2026-11-21 21:14 (Eirik) SCRATCH: alle radlåser fjernet (mutasjonssjekk av Postgres-testene, skal ikke merges)
+- `e4c3f04` 2026-11-21 21:20 (Eirik) Samtidighetstester: deterministiske låstester som holder raden og krever at funksjonen venter
+- `45cbd0b` 2026-11-21 21:21 (Eirik) SCRATCH: alle radlåser fjernet (mutasjonssjekk 2, ikke merge)
+- `bcd06ef` 2026-11-21 21:23 (Eirik) SCRATCH: alle radlåser fjernet (mutasjonssjekk 3, ikke merge)
+- `77f41f5` 2026-11-21 21:23 (Eirik) Låstester holder FOR KEY SHARE, så bare en eksplisitt FOR UPDATE får dem til å vente
+- `51a8b49` 2026-11-21 21:25 (Eirik) Låsetest for kontosletting holder bare hjemmeraden (brukerraden dekkes av kappløpstesten)
+- `a70b435` 2026-11-21 21:27 (Eirik) Rett for lang docstring i samtidighetstestenes hjelpere
+- `689367e` 2026-11-21 21:30 (Eirik) Status: Postgres-samtidighetstester bygget (PR #96)
+- `b774689` 2026-11-21 21:30 (EirikAuganaes) Merge pull request #96 from IBE160-2026/story/pg-samtidighetstester
+- `acacbc5` 2026-11-21 21:31 (Eirik) Logg: story-6-1-portefolje (fortsettelse) og KI-logg for økten 21.11
+- `4ec78d9` 2026-11-21 21:34 (Eirik) Logg: migreringene mot Neon er bekreftet (issues.md)
 
 ## Logg
 
@@ -152,4 +162,12 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 27. Prompt · 2026-11-21 21:05
 
 > Ja, ta Postgres-samtidighetstestene
+
+### 28. Prompt · 2026-11-21 21:33
+
+> sjekk at Production-bygget kjørte migreringene
+
+### 29. Prompt · 2026-11-21 21:34
+
+> ja, marker som løst
 
