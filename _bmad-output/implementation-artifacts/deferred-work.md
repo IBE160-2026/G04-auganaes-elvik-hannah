@@ -207,3 +207,10 @@ Every entry above was read against the code on 2026-11-21 and the ones that were
 - **Small UX and tests** (neutral Tenant text when all Tasks are archived, offline message in Landlord Home Admin, notice when Bør removes the photo requirement, demo marker on the broadcast confirmation, `lower(email)` in the database, cross-user cache test, one-task push path test, seed `join_blocker`, regenerate the fixed guide text): one or two PRs.
 - **Push reliability** (time budget and isolation per Member, 401/403 as a stale device, `pushsubscriptionchange`, broadcast time budget, `ON DELETE`): waits for B1 (real push on a device), as decided 2026-11-21.
 - **Account deletion with anonymisation** (also scrubs the uploader's name in the photo description and decides `ON DELETE`): `bmad-correct-course`, then a story.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-10-account-deletion.md`
+  summary: Join and delete race: `homes.add_member` locks the user row but not the Home, so a Tenant who joins a Landlord Home while its Landlord deletes the account can get an unhandled integrity error (500) when the Home is gone; add a Postgres concurrency test and a `FOR UPDATE` on the Home in the join path.
+  evidence: Edge Case Hunter on Story 1.10. `delete_account` locks the Landlord's Homes, but the join path does not take the same lock. Rare, and the joiner only sees an error.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-10-account-deletion.md`
+  summary: No throttle on wrong passwords at `POST /api/auth/delete-account` (nor at sign-in), so a stolen access token could try passwords there without a limit.
+  evidence: Blind Hunter and Edge Case Hunter on Story 1.10. Accepted as a known limit at course scale: FR-25 says attempts are not limited, as for sign-in. Add a per-user or per-IP throttle for both routes if the demo gets real users.
+  outcome: Accepted 2026-11-21 (Story 1.10): stated in FR-25.

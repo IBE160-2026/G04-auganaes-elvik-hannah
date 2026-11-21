@@ -176,8 +176,8 @@ Seed-kommandoen lager disse eksempelbrukerne:
 
 1. Logg inn som Jonas, gå til **Innstillinger** og bla ned til **Slett konto**. Trykk den: teksten sier at det ikke kan angres, og at det du har gjort i andres hjem blir stående som «Tidligere medlem». Trykk **Ja, slett kontoen** uten passord: «Skriv inn passordet ditt for å bekrefte.» Med feil passord: «Passordet stemmer ikke.»
 2. Skriv `husly-demo` og trykk **Ja, slett kontoen**. Du blir sendt til innloggingen, og `jonas@example.com` kan ikke logge inn igjen. Logg inn som Mari: i «Mari og Jonas sitt hjem» står oppgavene Jonas krysset av nå som «Tidligere medlem».
-3. Logg inn som Kari (utleier) og prøv **Slett konto**: serveren svarer 409 «Du må fjerne leietakerne før du kan slette kontoen. Gjelder: Storgata 12.», så lenge Anders er leietaker. Fjern Anders under **Medlemmer og invitasjon**, og slett kontoen: «Storgata 12» slettes med oppgavene og bildene sine.
-4. Reglene står i `backend/app/domain/account_deletion.py` og testene i `backend/tests/test_account_deletion.py`. Brukerraden slettes aldri: den anonymiseres (`users.deleted_at`), så historikken henger sammen. Angre med `uv run python -m app.seed`, som lager eksempelbrukerne på nytt der de mangler.
+3. Logg inn som Kari (utleier, med «Storgata 12» som eneste utleiehjem) og prøv **Slett konto**: serveren svarer 409 «Du må fjerne leietakerne før du kan slette kontoen. Gjelder: Storgata 12.», så lenge Anders er leietaker. Fjern Anders under **Medlemmer og invitasjon**, og slett kontoen: «Storgata 12» slettes med oppgavene og bildene sine.
+4. Reglene står i `backend/app/domain/account_deletion.py` og testene i `backend/tests/test_account_deletion.py`. Brukerraden slettes aldri: den anonymiseres (`users.deleted_at`), så historikken henger sammen. Seed lager bare eksempelbrukerne på nytt der de mangler (en slettet bruker blir en ny Jonas som blir med i hjemmet igjen), ikke de slettede hjemmene eller historikken; kjør seed på en tom database for å få alt tilbake.
 
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 

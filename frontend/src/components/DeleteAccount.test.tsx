@@ -4,7 +4,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { DELETE_ACCOUNT_MESSAGES } from '../api/auth';
-import { fakeApi, json, resetApi, signedInWith } from '../test-utils/fakeApi';
+import { lastHomeKey } from '../api/lastHome';
+import { OLA, OLAS_HOME, fakeApi, fakePush, json, resetApi, signedInWith } from '../test-utils/fakeApi';
 
 const PATH = '/api/auth/delete-account';
 
@@ -90,6 +91,21 @@ describe('Slett konto', () => {
 
     expect(await screen.findByRole('heading', { name: /Logg inn/ })).toBeInTheDocument();
     expect(bodies).toEqual([{ password: 'hemmelig1' }]);
+  });
+
+  it('removes what this device kept for the user: the last Home and the browser subscription', async () => {
+    // Guards forgetLastHome and unsubscribeThisBrowser after a successful deletion.
+    const push = fakePush({ permission: 'granted', subscribed: true });
+    fakeApi({ ...signedInWith(), [`POST ${PATH}`]: () => new Response(null, { status: 204 }) });
+    localStorage.setItem(lastHomeKey(OLA.id), OLAS_HOME.id);
+    renderSettings();
+    await userEvent.type(await openConfirmation(), 'hemmelig1');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ja, slett kontoen' }));
+
+    await screen.findByRole('heading', { name: /Logg inn/ });
+    expect(localStorage.getItem(lastHomeKey(OLA.id))).toBeNull();
+    await waitFor(() => expect(push.unsubscribe).toHaveBeenCalledOnce());
   });
 
   it('closes the confirmation on «Avbryt», sends nothing and gives focus back', async () => {

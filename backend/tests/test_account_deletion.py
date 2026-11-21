@@ -14,9 +14,11 @@ from sqlmodel import Session, col, select
 from app.domain import account_deletion, accounts, homes, invites, photo_evidence
 from app.models.ai_usage import AiUsage
 from app.models.due_notification import DueNotification
+from app.models.fairness_nudge import FairnessNudge
 from app.models.home import Home
 from app.models.invite_link import InviteLink
 from app.models.membership import Membership
+from app.models.onboarding_guide import OnboardingGuide
 from app.models.photo_evidence import PhotoEvidence
 from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
@@ -122,6 +124,9 @@ def test_a_deleted_user_cannot_delete_again(session: Session) -> None:
     # Guards `is_deleted(user)` in delete_account.
     mari, _jonas, _home = household(session)
     delete(session, mari)
+    # A real hash for the right password, so only the deleted_at check can refuse the second try.
+    mari.password_hash = accounts.password_hash.hash(PASSWORD)
+    session.commit()
 
     with pytest.raises(account_deletion.WrongPassword):
         delete(session, mari)
@@ -151,10 +156,12 @@ def test_a_landlord_home_without_tenants_is_deleted_with_everything_in_it(
     landlord, home = landlord_home(session)
     instance = add_task(session, home.id)
     key = add_photo(session, instance, landlord, store)
-    task_id, home_id = instance.task_id, home.id
+    task_id, home_id, instance_id = instance.task_id, home.id, instance.id
+    session.add(OnboardingGuide(home_id=home.id, intro="Velkommen", source="ai"))
+    session.add(FairnessNudge(task_instance_id=instance.id, day=TODAY))
     session.add(DueNotification(task_instance_id=instance.id, user_id=landlord.id, day=TODAY))
     session.commit()
-    link = invites.create_invite(
+    invites.create_invite(
         session, session.exec(select(Membership).where(Membership.home_id == home.id)).one()
     )
 
@@ -166,7 +173,8 @@ def test_a_landlord_home_without_tenants_is_deleted_with_everything_in_it(
     assert not exists(session, PhotoEvidence, task_id=task_id)
     assert not exists(session, DueNotification, user_id=landlord.id)
     assert not exists(session, InviteLink, home_id=home_id)
-    assert link.token
+    assert not exists(session, OnboardingGuide, home_id=home_id)
+    assert not exists(session, FairnessNudge, task_instance_id=instance_id)
     assert store.read(key) is None
 
 
@@ -222,10 +230,16 @@ def test_what_only_exists_for_the_user_is_deleted(session: Session) -> None:
     )
     session.add(DueNotification(task_instance_id=instance.id, user_id=mari.id, day=TODAY))
     session.add(AiUsage(user_id=mari.id, day=TODAY, count=3))
+    session.add(
+        PushSubscription(
+            user_id=jonas.id, endpoint="https://fcm.googleapis.com/y", p256dh="k", auth="a"
+        )
+    )
+    session.add(DueNotification(task_instance_id=instance.id, user_id=jonas.id, day=TODAY))
     mari_member = session.exec(
         select(Membership).where(Membership.user_id == mari.id, Membership.home_id == home.id)
     ).one()
-    unused = invites.create_invite(session, mari_member)
+    invites.create_invite(session, mari_member)
     used = invites.create_invite(session, mari_member)
     newcomer = new_user(session, "Ola")
     session.commit()
@@ -240,8 +254,10 @@ def test_what_only_exists_for_the_user_is_deleted(session: Session) -> None:
         select(InviteLink).where(col(InviteLink.created_by_user_id) == mari.id)
     ).all()
     assert [link.used_by_user_id for link in remaining] == [newcomer.id]
-    assert unused.token
     assert exists(session, Membership, user_id=jonas.id, home_id=home.id)
+    # Guards the user scope of the deletes: the other Member's rows stay.
+    assert exists(session, PushSubscription, user_id=jonas.id)
+    assert exists(session, DueNotification, user_id=jonas.id)
 
 
 def test_another_users_data_is_untouched(session: Session) -> None:
@@ -264,7 +280,7 @@ def test_a_failure_in_the_middle_rolls_everything_back(
     session: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Guards the try/except around the deletes: one transaction, all or nothing.
-    landlord, home = landlord_home(session)
+    _landlord, home = landlord_home(session)
     instance = add_task(session, home.id)
     # A photo by the Tenant in a Home that stays reaches `describe`, which is made to fail.
     tenant = with_tenant(session, home)
@@ -290,7 +306,6 @@ def test_a_failure_in_the_middle_rolls_everything_back(
     session.expire_all()
     assert session.get(User, tenant.id).deleted_at is None  # type: ignore[union-attr]
     assert exists(session, Membership, user_id=tenant.id, home_id=home.id)
-    assert landlord.id
 
 
 def test_a_failing_photo_store_does_not_undo_the_deletion(
@@ -323,7 +338,8 @@ def test_every_table_that_points_at_users_or_homes_is_handled() -> None:
     }
     handled_for_homes = {"memberships", "tasks", "invite_links", "onboarding_guides"}
 
-    assert handled_for_users  # the listing found something (it saw no tables once, Epic 4 A2)
+    # The listing must have found something (it saw no tables once, Epic 4 A2).
+    assert handled_for_users and handled_for_homes
     assert account_deletion.tables_pointing_at("users") == handled_for_users
     assert account_deletion.tables_pointing_at("homes") == handled_for_homes
 
@@ -351,6 +367,15 @@ def test_tokens_of_a_deleted_account_are_refused(client: TestClient) -> None:
     )
     headers = {"Authorization": f"Bearer {registered.json()['access_token']}"}
     assert client.get("/api/auth/me", headers=headers).status_code == 200
+    # The cookie the browser holds, copied before the delete response clears it.
+    surviving = client.cookies.get("husly_refresh", path="/api/auth/refresh")
+    assert surviving is not None
+    assert (
+        client.post(
+            "/api/auth/refresh", headers={"Cookie": f"husly_refresh={surviving}"}
+        ).status_code
+        == 200
+    )
 
     gone = client.post("/api/auth/delete-account", json={"password": PASSWORD}, headers=headers)
 
@@ -358,6 +383,13 @@ def test_tokens_of_a_deleted_account_are_refused(client: TestClient) -> None:
     assert "husly_refresh" in gone.headers["set-cookie"]
     assert client.get("/api/auth/me", headers=headers).status_code == 401
     assert client.post("/api/auth/refresh").status_code == 401
+    # A refresh token that survives elsewhere (another device) is refused: deleted_at in refresh.
+    assert (
+        client.post(
+            "/api/auth/refresh", headers={"Cookie": f"husly_refresh={surviving}"}
+        ).status_code
+        == 401
+    )
     login = client.post("/api/auth/login", json={"email": "ola@example.com", "password": PASSWORD})
     assert login.status_code == 401
 

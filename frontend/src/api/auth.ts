@@ -2,7 +2,9 @@
 import { api } from './client';
 import { GENERIC_ERROR, toApiError } from './errors';
 import type { components } from './schema';
-import { setSession } from './session';
+import { forgetLastHome } from './lastHome';
+import { forgetNoteDismissed, unsubscribeThisBrowser } from './push';
+import { getSession, setSession } from './session';
 
 type AuthResponse = components['schemas']['AuthResponse'];
 type RegisterResponse = components['schemas']['RegisterResponse'];
@@ -127,10 +129,17 @@ export const DELETE_ACCOUNT_MESSAGES = {
 /**
  * Deletes the signed-in account after the password is confirmed. The server clears the refresh
  * cookie; the session is cleared here, so the routes send the user to sign-in. A failed call
- * keeps the session.
+ * keeps the session. What this device kept for the user (the push subscription of this browser,
+ * the last used Home and the closed note) goes with it.
  */
 export async function deleteAccount(password: string): Promise<void> {
   const { error, response } = await api.POST('/api/auth/delete-account', { body: { password } });
   if (!response.ok) throw toAuthError(response, error);
+  const userId = getSession()?.user.id;
   setSession(null);
+  if (userId) {
+    forgetLastHome(userId);
+    forgetNoteDismissed(userId);
+  }
+  await unsubscribeThisBrowser();
 }

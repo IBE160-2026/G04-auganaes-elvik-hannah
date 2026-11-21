@@ -276,11 +276,11 @@ So that my e-mail address and name leave the system while the history other Memb
 
 **Given** a Landlord whose Landlord Home has a Tenant
 **When** they try to delete the account
-**Then** the server answers 409 saying to remove the Tenants first (FR-23), and nothing is changed
+**Then** the server refuses, saying to remove the Tenants first (FR-23), and nothing is changed
 
 **Given** a Landlord whose Landlord Homes have no Tenants, or a Household Member who was the Home's last Member
 **When** the account is deleted
-**Then** those Homes are deleted with their tasks and photos (also in the photo store)
+**Then** those Homes are deleted with their tasks and photos (also in the photo store, after the commit; a store failure is logged and does not undo the deletion), and a Home deleted this way takes its history with it
 
 **Given** a Home that has other Members
 **When** one of them deletes their account

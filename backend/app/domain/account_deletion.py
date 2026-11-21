@@ -34,7 +34,7 @@ from app.models.photo_evidence import DESCRIPTION_MAX_LENGTH, PhotoEvidence
 from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskInstance
 from app.models.user import User
-from app.storage import PhotoStore, StorageError
+from app.storage import PhotoStore
 
 logger = logging.getLogger(__name__)
 
@@ -102,10 +102,7 @@ def _tenant_homes(session: Session, memberships: list[Membership]) -> list[str]:
     landlord_home_ids = [m.home_id for m in memberships if m.role == "landlord"]
     if not landlord_home_ids:
         return []
-    # Locked, so a Tenant cannot join a Home that is about to be deleted.
-    homes = session.exec(
-        select(Home).where(col(Home.id).in_(landlord_home_ids)).with_for_update()
-    ).all()
+    homes = session.exec(select(Home).where(col(Home.id).in_(landlord_home_ids))).all()
     with_tenant = set(
         session.exec(
             select(Membership.home_id).where(
@@ -125,6 +122,21 @@ def delete_account(session: Session, user: User, password: str, store: PhotoStor
     if is_deleted(user) or not accounts.password_hash.verify(password, user.password_hash):
         raise WrongPassword
     memberships = list(session.exec(select(Membership).where(Membership.user_id == user.id)).all())
+    # Locks, in a fixed order (no deadlock between two deleting at once): the user row, so the same
+    # account cannot be deleted twice in parallel, and the user's Homes, so two Members deleting at
+    # the same time each see the other's Membership go before deciding the Home is empty. SQLite
+    # ignores FOR UPDATE; the Postgres race is a deferred concurrency test (deferred-work.md).
+    session.exec(select(User.id).where(User.id == user.id).with_for_update()).all()
+    session.refresh(user)
+    if is_deleted(user):
+        session.rollback()
+        raise WrongPassword
+    session.exec(
+        select(Home.id)
+        .where(col(Home.id).in_([m.home_id for m in memberships]))
+        .order_by(col(Home.id))
+        .with_for_update()
+    ).all()
     blocking = _tenant_homes(session, memberships)
     if blocking:
         session.rollback()
@@ -166,8 +178,8 @@ def delete_account(session: Session, user: User, password: str, store: PhotoStor
     for key in keys:
         try:
             store.delete(key)
-        except StorageError:
-            logger.warning("Fikk ikke slettet bildet %s etter kontosletting", key)
+        except Exception:  # noqa: BLE001 - the account is already deleted; never turn it into a 500
+            logger.warning("Fikk ikke slettet bildet %s etter kontosletting", key, exc_info=True)
 
 
 def _day(evidence: PhotoEvidence) -> date:

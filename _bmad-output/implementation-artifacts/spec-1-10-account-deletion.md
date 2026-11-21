@@ -2,7 +2,7 @@
 title: 'Story 1.10: Delete an Account'
 type: 'feature'
 created: '2026-11-21'
-status: 'in-review'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: '38144e4'
@@ -67,6 +67,25 @@ context: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+Code review 2026-11-21 (Blind Hunter B, Edge Case Hunter E, Verification Gap V; about 30 findings, verified against the code):
+
+| Finding | Verdict | Route / action |
+|---|---|---|
+| The refresh route's `deleted_at` check is not guarded: the test's 401 came from the cleared cookie (E, V) | medium | patch: the test copies the cookie before the deletion and re-sends it; mutation shows it fails without the check |
+| `OnboardingGuide` and `FairnessNudge` deletes untested (V) | medium | patch: both rows added to the Home test; each delete removed in turn fails it |
+| `BlobPhotoStore.delete` untested and absent from the calling-convention guard (B, E, V) | medium | patch: `iscoroutinefunction` on `delete_blob`, a faked-SDK test of the key and both error mappings, a local read-back test |
+| `store.delete` raising something other than `StorageError` gives a 500 after the commit (E) | medium | patch: `except Exception`, logged with the traceback |
+| Two Members deleting at once can leave an empty Home; the same account deleted twice in parallel (B, E) | medium | patch: user row and all the user's Homes locked `FOR UPDATE` in id order, then the deleted check; Postgres only, test deferred |
+| `test_a_deleted_user_cannot_delete_again` passes through the unusable hash (B) | medium | patch: the test gives the user a real hash, so only `is_deleted` can refuse |
+| Filler assertions (`assert link.token` and similar); the other Member's rows not proved to survive (B, V) | low | patch: removed; the other Member's push device and notification are asserted |
+| The browser's push subscription, the last-Home key and the closed note stay on the device (B) | medium | patch: removed after a successful deletion, with a test |
+| PRD-drift: photo deletion is best effort, Home-scoped deletions, an emptied Household Home loses its history, wrong password and no attempt limit (B, E, V) | medium | patch to text: FR-25, AD-17, Story 1.10 AC, Revision log |
+| README: what seed restores; Kari's other Homes (B) | low | patch: reworded |
+| No throttle on wrong passwords (B, E) | low | accepted: stated in FR-25, `deferred-work.md` |
+| A Tenant joining while the Landlord deletes can get a 500 (E) | low | defer: `deferred-work.md` (needs a Postgres test) |
+| «answers 409» in the epics AC (E) | low | patch: «refuses» |
+| `delete_blob` against the real store not read back (B, V) | medium, not testable here | defer: confirmed by the Postgres/Blob smoke after deploy (see PR) |
 
 ## Verification
 
