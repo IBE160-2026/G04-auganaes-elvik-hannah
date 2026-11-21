@@ -2,6 +2,16 @@
 
 Alle stories i planen er ferdige (Epic 1–6, med Story 1.10 «Slett konto» lagt til 21.11), og alle utsatte punkter er gjort bortsett fra push-påliteligheten (B2). Det som står igjen er å **se appen fungere** på ekte enheter og i nettleser, og å bestemme hva som skjer med B2. Rekkefølgen under er anbefalt: det som avgjør noe kommer først.
 
+## Gjort 21.11 (Eirik og Claude)
+
+- **Story 6.1, portefølje for utleier** (PR #87): fanen «Portefølje» med én rad per utleiehjem, status i tekst og to kolonner fra 600 px. FR-20 og AC rettet til «per hjem», siden modellen ikke har bygning.
+- **Epic 5- og Epic 6-retrospektiv** skrevet, og Gemini-røyktest på Production: chat med historikk og velkomstguide svarer med ekte Gemini.
+- **D1 og D2 fra Epic 5-retroen:** chatpolering (auto-scroll, makshøyde, mislykket melding blir stående, PR #88) og regelen om at KI-stories sier hva KI-en ikke skal gjøre (PR #89). A4 godtatt som kjent grense.
+- **Story 1.10, slett konto** (FR-25, AD-17, `correct-course` i PR #91, bygget i PR #93): brukeren anonymiseres, avhengige rader og tomme hjem slettes med bilder, og en utleier med leietaker må fjerne leietakerne først.
+- **Utsatt arbeid ryddet** (`deferred-work.md` har nå utfall per punkt, PR #90): fotorobusthet (avkuttet JPEG, gammelt bilde tilbake, PR #94), småfikser (e-post i små bokstaver i databasen, offline-melding, Bør-varsel, demo-markering, PR #95).
+- **Postgres-samtidighetstester** for radlåsene (PR #96): 89 tester i CI, mutasjonssjekket (58 feilet uten låsene). De fant en feil i `invites.accept`, rettet.
+- Alle PR-er har kjørt tre reviewere (eller én samlet for de små), og CI var grønn før merge. Migreringene er bekreftet kjørt mot Neon.
+
 ## 0. Oppstart (begge, i hver sin terminal)
 
 Før dere begynner: `git pull`, og to personer skal ikke redigere samme planleggingsdokument samtidig.
