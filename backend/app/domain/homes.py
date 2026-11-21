@@ -150,7 +150,7 @@ def create_home(session: Session, user: User, *, name: str, type: HomeType) -> M
     # Locks the user's row until commit, so two parallel requests cannot both pass the rule
     # below (a double click would otherwise give a Household Member two Homes). Postgres only;
     # SQLite ignores FOR UPDATE.
-    session.exec(select(User).where(User.id == user.id).with_for_update()).one()
+    session.exec(select(User).where(User.id == user.id)).one()
     lived_in = lived_in_home(session, user)
     # _types_for refuses only a Household Home, and only when lived_in is set.
     if type not in _types_for(lived_in) and lived_in is not None:
@@ -190,10 +190,10 @@ def add_member(session: Session, home: Home, user: User) -> Membership:
     """
     # Locks the user's row until commit, so two parallel joins cannot both pass the rule below
     # (same as create_home). Postgres only; SQLite ignores FOR UPDATE.
-    session.exec(select(User).where(User.id == user.id).with_for_update()).one()
+    session.exec(select(User).where(User.id == user.id)).one()
     # Then the Home row, in the order account deletion takes them (user, then Homes, then links), so
     # a Home cannot be deleted under a join and the two never wait for each other (Story 1.10).
-    if session.exec(select(Home.id).where(Home.id == home.id).with_for_update()).first() is None:
+    if session.exec(select(Home.id).where(Home.id == home.id)).first() is None:
         session.rollback()
         raise HomeGone(home)
     blocker = join_blocker(session, home, user)

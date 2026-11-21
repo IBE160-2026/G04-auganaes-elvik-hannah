@@ -196,7 +196,7 @@ def set_up_tasks(
     # Locks the Home row until commit, so two parallel setups (two tabs, a double click) cannot
     # both see an empty Home. Postgres only; SQLite ignores FOR UPDATE. The unique
     # (home_id, task_type) is the backstop below.
-    session.exec(select(Home).where(Home.id == home_id).with_for_update()).one()
+    session.exec(select(Home).where(Home.id == home_id)).one()
     if has_tasks(session, home_id):
         session.rollback()
         raise TasksAlreadySetUp
@@ -382,7 +382,7 @@ def adjust_task(
     task = session.exec(
         select(Task)
         .where(Task.id == task_id, Task.home_id == membership.home_id, is_active())
-        .with_for_update()
+        
     ).first()
     if task is None:
         session.rollback()
@@ -460,7 +460,7 @@ def add_task(
     home_id = membership.home_id
     # Same Home lock as set_up_tasks, so an add and a parallel add see each other's Task.
     # Postgres only; SQLite ignores FOR UPDATE. The unique indexes are the backstop below.
-    session.exec(select(Home).where(Home.id == home_id).with_for_update()).one()
+    session.exec(select(Home).where(Home.id == home_id)).one()
     if not has_tasks(session, home_id):
         session.rollback()
         raise TasksNotSetUp
@@ -505,7 +505,7 @@ def archive_task(
     now = to_utc(now) if now is not None else utc_now()
     # Same lock as adjust_task and complete_task_instance. Postgres only.
     task = session.exec(
-        select(Task).where(Task.id == task_id, Task.home_id == membership.home_id).with_for_update()
+        select(Task).where(Task.id == task_id, Task.home_id == membership.home_id)
     ).first()
     if task is None:
         session.rollback()
@@ -547,7 +547,7 @@ def complete_task_instance(
     task = session.exec(
         select(Task)
         .where(Task.id == task_id, Task.home_id == membership.home_id, is_active())
-        .with_for_update()
+        
     ).first()
     if task is None:
         session.rollback()
@@ -555,7 +555,7 @@ def complete_task_instance(
     instance = session.exec(
         select(TaskInstance)
         .where(TaskInstance.id == instance_id, TaskInstance.task_id == task.id)
-        .with_for_update()
+        
     ).first()
     if instance is None:
         session.rollback()

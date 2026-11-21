@@ -100,7 +100,7 @@ def set_requirement(
     task = session.exec(
         select(Task)
         .where(Task.id == task_id, Task.home_id == membership.home_id, tasks.is_active())
-        .with_for_update()
+        
     ).first()
     if task is None:
         session.rollback()
@@ -178,7 +178,7 @@ def complete_with_photo(
     task = session.exec(
         select(Task)
         .where(Task.id == task_id, Task.home_id == membership.home_id, tasks.is_active())
-        .with_for_update()
+        
     ).first()
     if task is None:
         session.rollback()
@@ -189,7 +189,7 @@ def complete_with_photo(
     instance = session.exec(
         select(TaskInstance)
         .where(TaskInstance.id == instance_id, TaskInstance.task_id == task.id)
-        .with_for_update()
+        
     ).first()
     if instance is None:
         session.rollback()

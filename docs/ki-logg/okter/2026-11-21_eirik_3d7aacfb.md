@@ -1,9 +1,9 @@
 # KI-økt 2026-11-21 – Eirik
 
 - **Økt-ID:** `3d7aacfb-6e1b-4f4e-8e34-1d9c0372fe11`
-- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 20:06
+- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 20:20
 - **Verktøy:** Claude Code
-- **Antall prompts:** 16
+- **Antall prompts:** 19
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -24,6 +24,12 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `c720cdb` 2026-11-21 20:03 (EirikAuganaes) Merge pull request #88 from IBE160-2026/fix/5-2-chat-polering
 - `7e95efe` 2026-11-21 20:05 (Eirik) D2: KI-stories sier hva KI-en ikke skal gjøre (CLAUDE.md og reviewkonvensjoner)
 - `741f9c1` 2026-11-21 20:08 (EirikAuganaes) Merge pull request #89 from IBE160-2026/chore/d2-ki-ac-regel
+- `8a0baf0` 2026-11-21 20:09 (Eirik) KI-logg: eksport av økten 21.11 (Story 6.1, retrospektiver, D1 og D2)
+- `0e76000` 2026-11-21 20:14 (Eirik) Opprydding i deferred-work.md: utfall på 17 punkter og plan for resten
+- `a0f5e06` 2026-11-21 20:17 (EirikAuganaes) Merge pull request #90 from IBE160-2026/chore/deferred-work-opprydding
+- `cbdb8ec` 2026-11-21 20:21 (Eirik) Correct-course: kontosletting med anonymisering (FR-25, AD-17, Story 1.10)
+- `38144e4` 2026-11-21 20:24 (EirikAuganaes) Merge pull request #91 from IBE160-2026/docs/correct-course-kontosletting
+- `575357c` 2026-11-21 20:32 (Eirik) Story 1.10: slett konto med anonymisering (FR-25, AD-17)
 
 ## Logg
 
@@ -110,4 +116,24 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 21. Prompt · 2026-11-21 20:06
 
 > merge PR #89
+
+### 22. Prompt · 2026-11-21 20:09
+
+> commit KI-loggen og push
+
+### 23. Prompt · 2026-11-21 20:10
+
+> Vakkert. Noe annet vi mangler som ligger i defered? Vi har fortsatt 2 - 3 uker og god tid.
+
+### 24. Prompt · 2026-11-21 20:13
+
+> Start med opprydding og correct-course for kontosletting. Du får mandat til å fikse alt her. Konferer med meg ved spørsmål
+
+### 25. Svar på spørsmål fra KI · 2026-11-21 20:16
+
+> "Jeg lager flere PR-er (opprydding #90, småfikser, fotorobusthet, Postgres-tester, kontosletting). Skal jeg merge hver PR selv når CI er grønn, eller vente på ditt ok per PR?"="Merge selv når CI er grønn".
+
+### 26. Svar på spørsmål fra KI · 2026-11-21 20:20
+
+> "En utleier med leietakere kan ikke bare forsvinne (FR-3: nøyaktig én utleier, FR-23: utleier kan ikke forlate hjemmet). Hva skjer når en utleier sletter kontoen sin?"="Må fjerne leietakerne først (Recommended)", "Når en husstandsbruker eller leietaker sletter kontoen: anonymisere brukerraden (navn blir «Tidligere medlem», e-post og passord fjernes, raden beholdes så historikken henger sammen), fjerne medlemskap, push-enheter, varslingshistorikk og KI-telling, og slette hjem som ikke har flere medlemmer (med bilder)? Er du enig?"="Ja, slik (Recommended)".
 
