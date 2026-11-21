@@ -34,6 +34,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-21 | Chat polish (Epic 5 retro, D1): FR-15 says a failed message stays in the chat when another is sent, a retry moves it to the end, and the chat scrolls to the newest line | `epic-5-retro-2026-11-21.md` |
 | 2026-11-21 | FR-25 added (delete an account, anonymising the user; a Landlord removes the Tenants first); §5 no longer lists account deletion as a non-goal | `sprint-change-proposal-2026-11-21.md` |
 | 2026-11-21 | Story 1.10 built: FR-25 lists exactly what is deleted (no fairness records: fairness reads completions, which stay as «Tidligere medlem»), that an emptied Home takes its history with it, that photos are removed best effort after the deletion, and that wrong-password attempts are not limited | `spec-1-10-account-deletion.md` |
+| 2026-11-21 | Photo robustness (deferred work from Stories 4.2 and 4.3): FR-19 says a cut-off JPEG is refused and that a failed completion puts the previous photo back | `deferred-work.md`, `fix/foto-robusthet` |
 
 # PRD: AI-Driven Household Task App
 
@@ -365,7 +366,7 @@ Uploaded Photo Evidence auto-approves the task completion immediately; the photo
 **Consequences (testable):**
 - A Tenant uploading required Photo Evidence sees the task marked complete without waiting on Landlord action.
 - A Tenant who ticks a task that requires Photo Evidence, without a photo, is refused; the Landlord and Household Members are not affected. Completing with a photo uses the same completion as the checkbox, so the next due date is set the same way.
-- A photo must be a JPEG of at most 3.5 MB. The browser shrinks the picture first; the server checks type and size and refuses anything else with a clear message, without completing the task.
+- A photo must be a complete JPEG of at most 3.5 MB. The browser shrinks the picture first; the server checks type, that the file is not cut off, and size, and refuses anything else with a clear message, without completing the task. If the completion fails after the photo was stored, the photo that was there before is put back (or none).
 - Each photo is saved with a description the system writes («Bildebevis lastet opp av Martin, 29. sep»); the user is never asked for one and the file name is never shown.
 - The upload is shown as done only after the server has answered. A failed upload shows a retry and the task stays open.
 - A task whose instance was already completed (by another Member, or by a retry) keeps its first completer and photo; the later upload changes nothing.

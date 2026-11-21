@@ -18,7 +18,7 @@ from app.models.task import Task, TaskInstance
 from app.models.user import User
 from tests.helpers import auth_for, new_user
 
-JPEG = b"\xff\xd8\xff\xe0" + b"jpegdata" * 50
+JPEG = b"\xff\xd8\xff\xe0" + b"jpegdata" * 50 + b"\xff\xd9"
 
 
 def landlord_home(session: Session) -> tuple[uuid.UUID, User, User]:
@@ -192,7 +192,7 @@ def test_a_bad_photo_is_refused_before_anything_is_stored_or_completed(
 def test_exactly_the_size_limit_is_accepted(client: TestClient, session: Session) -> None:
     home_id, _kari, martin = landlord_home(session)
     task, instance_id = add_task(session, home_id)
-    body = JPEG + b"x" * (photo_evidence.MAX_PHOTO_BYTES - len(JPEG))
+    body = JPEG[:-2] + b"x" * (photo_evidence.MAX_PHOTO_BYTES - len(JPEG)) + b"\xff\xd9"
 
     assert upload(client, martin, home_id, task, instance_id, body).status_code == 200
 
@@ -204,7 +204,7 @@ def test_a_second_completion_overwrites_the_photo_and_keeps_one_row(
     task, first_instance = add_task(session, home_id)
     first = upload(client, martin, home_id, task, first_instance)
     second_instance = first.json()["instance_id"]
-    newer = JPEG + b"newer"
+    newer = JPEG[:-2] + b"newer" + b"\xff\xd9"
 
     second = upload(client, martin, home_id, task, second_instance, newer)
 
@@ -283,8 +283,7 @@ def test_only_the_landlord_view_routes_serve_a_photo(client: TestClient) -> None
         c.path: has_require_role(c)
         for c in api_routes(client.app)  # type: ignore[arg-type]
         if "GET" in (c.original_route.methods or ())  # type: ignore[union-attr]
-        and "evidence" in c.path
-        and "tasks" in c.path
+        and ("evidence" in c.path or "photo" in c.path or "image" in c.path)
     }
 
     # Story 4.3: exactly the two Landlord routes (see test_photo_view.py); a new GET that could
@@ -394,3 +393,47 @@ def test_the_description_is_written_by_the_server_with_a_norwegian_short_month()
     assert (
         photo_evidence.describe("Mari", date(2026, 5, 1)) == "Bildebevis lastet opp av Mari, 1. mai"
     )
+
+
+def test_check_photo_refuses_a_cut_off_jpeg_and_accepts_padding() -> None:
+    # Guards the end-marker check in check_photo: a file that starts like a JPEG but is cut off.
+    with pytest.raises(photo_evidence.InvalidPhoto) as cut:
+        photo_evidence.check_photo(JPEG[:-2] + b"abc")
+    with pytest.raises(photo_evidence.InvalidPhoto) as glued:
+        photo_evidence.check_photo(JPEG + b"trailing")
+
+    assert (cut.value.too_large, glued.value.too_large) == (False, False)
+    photo_evidence.check_photo(JPEG + b"\x00\x00")
+
+
+@pytest.mark.parametrize("had_photo", [True, False])
+def test_a_failed_completion_puts_the_old_photo_back(
+    client: TestClient,
+    session: Session,
+    local_photo_store: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    had_photo: bool,
+) -> None:
+    # Guards `_restore` in complete_with_photo: the photo is stored before the completion commits,
+    # so a failing completion must not leave the new photo under the Task's key.
+    from app.storage import LocalPhotoStore
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    store = LocalPhotoStore(local_photo_store)
+    key = photo_evidence.evidence_key(task.id)
+    if had_photo:
+        store.put(key, b"old")
+    membership = session.exec(
+        select(Membership).where(Membership.user_id == martin.id, Membership.home_id == home_id)
+    ).one()
+
+    def boom(*_a: object, **_k: object) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(tasks, "complete_task_instance", boom)
+
+    with pytest.raises(RuntimeError):
+        photo_evidence.complete_with_photo(session, store, membership, task.id, instance_id, JPEG)
+
+    assert store.read(key) == (b"old" if had_photo else None)

@@ -150,6 +150,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Make a photo that was stored but whose completion then failed impossible to leave behind, for example by writing to a temporary key first.
   evidence: Story 4.2 decision 6: the photo is stored before the completion commits, so a failed commit leaves the new photo under the key until the next upload.
+  outcome: Settled 2026-11-21 (`fix/foto-robusthet`): `complete_with_photo` reads the previous photo before storing and puts it back (or deletes the new one) when the completion fails (`test_a_failed_completion_puts_the_old_photo_back`). A crash between the store and the restore can still leave one photo; that is the same window as before, now one write wide.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Show a Tenant who uploaded the text that was saved with the photo, or confirm the Landlord's view (Story 4.3) is the only place it appears.
   evidence: Story 4.2 saves the description but no screen shows it yet.
@@ -162,6 +164,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Check that a JPEG upload is decodable (end marker or a decode) before storing it, and test two parallel uploads against Postgres.
   evidence: Edge Case Hunter on Story 4.2. Only the JPEG signature is checked, and the row lock that serializes parallel uploads does nothing on SQLite, so it is not exercised by the tests.
+  outcome: Settled 2026-11-21 (`fix/foto-robusthet`): `check_photo` also requires the JPEG end marker (padding zeros allowed), so a cut-off or glued-on file is refused (`test_check_photo_refuses_a_cut_off_jpeg_and_accepts_padding`). A full decode was not added. The parallel-upload Postgres test stays with the concurrency tests.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
   summary: Guard against the Blob cache serving old bytes for up to 60 s after a replacement (compare the object's upload time with `uploaded_at`, or set a short cache control on write), and make the info and image reads one consistent pair.
   evidence: Blind Hunter on Story 4.3 against AD-5 («the review view relies on the pointer's timestamp, not on the cached object»). The view reads straight from the store; only the local store is tested, and the real Blob behaviour is unverified.
@@ -169,6 +173,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
   summary: Map any non-SDK exception from the Blob read (network, timeout) to `StorageError`, and add a test that the photo-serving route guard also catches a GET under another path name.
   evidence: Edge Case Hunter on Story 4.3; the adapter catches only `BlobError` and `BlobNotFoundError`, and the route guard filters on «evidence» and «tasks» in the path.
+  outcome: Settled 2026-11-21 (`fix/foto-robusthet`): the Blob adapter maps every failure of the SDK or the network to `StorageError` (`test_any_failure_of_the_blob_sdk_is_a_storage_error`), and the route guard test now covers any GET whose path names evidence, photo or image.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-3-fairness-based-targeted-notification.md`
   summary: Add a test that drives `fairness._claim` into its `IntegrityError` branch (a parallel run inserted the nudge row), and batch the per-instance history queries in `apply_nudges`.
   evidence: Verification Gap and Blind Hunter on Story 3.3. The race path and the N+1 queries are untested and unbudgeted; they sit with the 3.2 time-budget item.

@@ -175,3 +175,24 @@ def test_the_local_store_deletes_a_photo_and_a_missing_one_is_fine(tmp_path: Pat
 
     # Guards `unlink(missing_ok=True)` and that the file is really gone (read-back).
     assert store.read(KEY) is None
+
+
+def test_any_failure_of_the_blob_sdk_is_a_storage_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.storage.blob as blob_module
+    from app.storage import StorageError
+
+    def down(*_a: object, **_k: object) -> None:
+        raise TimeoutError("nettverket er nede")
+
+    for name in ("put_blob", "get_blob", "delete_blob"):
+        monkeypatch.setattr(blob_module, name, down)
+    store = BlobPhotoStore()
+
+    # Guards `except Exception` in the adapter: a network or timeout error is not a BlobError, and
+    # would otherwise be an unhandled 500 (Story 4.3 Edge Case Hunter).
+    with pytest.raises(StorageError):
+        store.put(KEY, b"x")
+    with pytest.raises(StorageError):
+        store.read(KEY)
+    with pytest.raises(StorageError):
+        store.delete(KEY)

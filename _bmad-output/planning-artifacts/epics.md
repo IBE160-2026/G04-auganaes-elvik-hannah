@@ -1320,7 +1320,7 @@ So that I'm never blocked waiting on my Landlord.
 **When** they complete a task that requires Photo Evidence
 **Then** it completes as before: the requirement is for Tenants only
 
-**Given** a photo that is not a JPEG or is over 3.5 MB
+**Given** a photo that is not a complete JPEG (also a cut-off file) or is over 3.5 MB
 **When** it is uploaded
 **Then** the server refuses it with a clear message and the task stays open; the browser shrinks the picture to at most 1600 px as JPEG before sending
 
