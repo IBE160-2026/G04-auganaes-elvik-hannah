@@ -49,7 +49,7 @@
 - [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Merge PR #33 (correct-course for #30 og #31) (løst 2026-11-09: merget `48ce2fe`)
 - [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 1.9 (én regel for å opprette hjem) med `bmad-build`, issue #30, før Story 2.2 (løst 2026-11-10)
 - [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.2 må ta med ny AC om bytte mellom hjem («Dine hjem», `/hjem/<id>`) (løst 2026-11-10, PR #38)
-- [ ] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.6 (legge til og fjerne oppgaver, issue #31) etter Story 2.5
+- [x] 2026-11-09 [correct-course-opprettingsregel-og-egne-oppgaver](988-2026-11-09-21-25-11-correct-course-opprettingsregel-og-egne-oppgaver.md) — Story 2.6 (legge til og fjerne oppgaver, issue #31) etter Story 2.5 (løst 2026-11-21)
 - [x] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Story 2.2 må ta med AC-et om at Husly-logoen lenker til `/` (løst 2026-11-10, PR #38)
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Hytte / flere husstandshjem per bruker (issue #34): mulig senere versjon, planlegges med correct-course
 - [ ] 2026-11-10 [story-1-9-opprettingsregel](987-2026-11-10-18-25-16-story-1-9-opprettingsregel.md) — Seed: `_seed_household` bør bruke `join_blocker` for Jonas (deferred-work)
@@ -75,7 +75,7 @@
 - [x] 2026-11-12 [story-2-6-legg-til-og-fjern-oppgaver](982-2026-11-12-19-05-00-story-2-6-legg-til-og-fjern-oppgaver.md) — Merge statuscommit-PR-en (`chore/status-etter-story-2-6`) og start Story 5.1 med `bmad-build` (løst 2026-11-12: PR #49 merget og Story 5.1 bygget og merget i PR #51; PRD-sjekken fant drift som ble rettet)
 - [ ] 2026-11-12 [story-2-6-legg-til-og-fjern-oppgaver](982-2026-11-12-19-05-00-story-2-6-legg-til-og-fjern-oppgaver.md) — UX-beslutning: egen tekst til leietaker når alle oppgaver er arkivert (`deferred-work.md`)
 - [x] 2026-11-12 [story-2-6-legg-til-og-fjern-oppgaver](982-2026-11-12-19-05-00-story-2-6-legg-til-og-fjern-oppgaver.md) — Første review med PRD-sjekken (`PRD-drift`) i Story 5.1: sjekk at funnene er nyttige og ikke støy (løst 2026-11-12: PR #49 merget og Story 5.1 bygget og merget i PR #51; PRD-sjekken fant drift som ble rettet)
-- [ ] 2026-11-12 [story-5-1-ki-svar](981-2026-11-12-23-01-00-story-5-1-ki-svar.md) — Eirik: legge `GEMINI_API_KEY` og `GEMINI_MODEL` under Production i Vercel hvis hovedversjonen skal ha ekte KI-svar (nå svarer mocken der)
+- [x] 2026-11-12 [story-5-1-ki-svar](981-2026-11-12-23-01-00-story-5-1-ki-svar.md) — Eirik: legge `GEMINI_API_KEY` og `GEMINI_MODEL` under Production i Vercel hvis hovedversjonen skal ha ekte KI-svar (nå svarer mocken der) (løst 2026-11-21)
 - [ ] 2026-11-12 [story-5-1-ki-svar](981-2026-11-12-23-01-00-story-5-1-ki-svar.md) — Skjermlesersjekk av KI-popoveren (live-region i skjult panel, `role="alert"` i polite region); ligger i `deferred-work.md`
 - [ ] 2026-11-12 [story-5-1-ki-svar](981-2026-11-12-23-01-00-story-5-1-ki-svar.md) — Valgfritt: stramme KI-instruksjonen til oppgaven og husarbeid (nå fritt tema), må prøves mot ekte Gemini
 - [ ] 2026-11-12 [story-5-1-ki-svar](981-2026-11-12-23-01-00-story-5-1-ki-svar.md) — Epic 2-retrospektiv (valgfri) og Trinn 2 i kuttrekkefølgen (Må: FR-10, FR-12, FR-13, FR-18/19) (retrospektivet løst 2026-11-12; Trinn 2 gjenstår)
@@ -103,15 +103,20 @@
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: bekreft en ekte push til en enhet på Production, og se første cron-kjøring 06:00 UTC (Settings → Cron Jobs)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Se over `.env.local` i prosjektmappen: `vercel blob create-store` overskrev den (git-ignorert)
 - [x] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Merge PR #76 (Story 4.3) når CI er grønn; så `done` i `sprint-status.yaml` på `main` (løst 2026-11-20)
-- [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Blob-cache kan gi gammelt bilde i opptil 60 s etter erstatning (AD-5, `deferred-work.md`)
+- [x] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Blob-cache kan gi gammelt bilde i opptil 60 s etter erstatning (AD-5, `deferred-work.md`) (løst 2026-11-21)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: vurder å slette gamle preview-deployments i Vercel (75 % funksjonslagring brukt)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: B1 ekte push og første cron-kjøring 06:00 UTC; B2 avgjør push-pålitelighet; A3 skjermlesersjekk; A4 Blob-cache (anbefales godtatt)
 - [ ] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Eirik: skal nudgen (FR-11) erstatte eller komme i tillegg til den vanlige påminnelsen?
 - [x] 2026-11-20 [story-4-bildebevis](976-2026-11-20-18-30-00-story-4-bildebevis.md) — Story 5.2 (KI-chat) er neste; start i ny terminal fra `main` (løst 2026-11-20: bygget på `story/5-2-ki-chat`)
 - [x] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Eirik: bekreft valgene i spec 5.2, push `story/5-2-ki-chat`, lag issue og PR, walkthrough og merge (løst 2026-11-20: PR #83 merget, valgene er godkjent ved at Eirik testet og ba om endringer)
-- [ ] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Røyktest av KI-chat med historikk mot ekte Gemini på Preview
+- [x] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Røyktest av KI-chat med historikk mot ekte Gemini på Preview (løst 2026-11-21)
 - [ ] 2026-11-20 [story-5-2-ki-chat](975-2026-11-20-21-53-23-story-5-2-ki-chat.md) — Chat: auto-scroll/makshøyde og feilet melding som egen linje (deferred-work)
-- [ ] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Merge PR #85 (Story 5.3) når CI er grønn, deretter 5-3 til `done` og Status i CLAUDE.md
-- [ ] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Røyktest av velkomstguiden mot ekte Gemini på Preview
+- [x] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Merge PR #85 (Story 5.3) når CI er grønn, deretter 5-3 til `done` og Status i CLAUDE.md (løst 2026-11-21)
+- [x] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Røyktest av velkomstguiden mot ekte Gemini på Preview (løst 2026-11-21)
 - [ ] 2026-11-20 [story-5-3-velkomstguide](974-2026-11-20-23-00-00-story-5-3-velkomstguide.md) — Eirik: bekreft valgene i spec 5.3 («Decisions»)
 
+- [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Eirik: B1 ekte push og første cron-kjøring 06:00 UTC (CLI-logger beholdes bare ca. 1 time på Hobby, så dette krever Vercel-innlogging: Settings → Cron Jobs); B2 avventer B1
+- [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Eirik: C1 skjermlesersjekk (VoiceOver) av PhotoUpload, PhotoEvidenceView, KI-popoveren og porteføljens detaljkolonne i én runde
+- [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Eirik: C2 testbrukeren `rooktest-…@example.com` og hjemmet «Røyktest 6.1 …» ligger i den delte Neon-databasen (Production); slett eller si fra til sensor
+- [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Sjekke porteføljen i nettleser (header vs. utvidet hovedkolonne via `:has`, 320/700/1200 px): bare sett av Eirik, ikke av Claude
+- [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Epic 5-retrospektiv står fortsatt som `optional`; Windows-testen (issue #14) og Neon-sjekken gjenstår fra før
