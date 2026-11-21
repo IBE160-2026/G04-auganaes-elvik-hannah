@@ -100,7 +100,7 @@ FR-18: Landlord-required Photo Evidence. A Landlord can mark a specific Must tas
 
 FR-19: Auto-approve with Landlord review, auto-replacing storage. Uploaded Photo Evidence auto-approves the task completion immediately; the photo remains accessible for Landlord review and is automatically replaced the next time the same task is completed (no accumulating history).
 
-FR-20: Portfolio-level status dashboard. A Landlord with more than one Home sees a single view summarizing task status (on track / behind) per Home and per unit.
+FR-20: Portfolio-level status dashboard. A Landlord who is Landlord in two or more Homes sees a single view summarizing task status (on track / behind) per Home; each unit is its own Home.
 
 FR-21: Responsive layout across device classes. The web application renders a usable, complete layout on phone, tablet, and desktop viewport widths.
 
@@ -160,8 +160,8 @@ UX-DR3: Implement the spacing scale (4/8/12/16/24/32/48px) and rounded-corner to
 UX-DR4: Primary button — pill shape, one dominant action per screen; default/pressed (8% darker overlay)/disabled (`ink-secondary` background)/in-flight ("Sender…" text swap, never a spinner alone) states; disabled state carries an accessible reason via `aria-describedby` when the disable condition is non-obvious.
 UX-DR5: Task card — checkbox + title + inline Must/Should badge + due date below; checkbox and row are two independently focusable tap targets, checkbox first in tab order, row second (row tap → Task Detail, checkbox → direct self-checkoff per FR-17); completed state shows filled checkbox, strikethrough title, due-date line replaced by a success-colored completion note.
 UX-DR6: Must/Should badge — pill shape, badge typography, always renders the text label ("Must"/"Should") inline with the task title; color is reinforcement only, never the sole cue.
-UX-DR7: Status tag (Portfolio row's overdue/on-track indicator) — pill shape, always carries a text label ("Forsinket"/"Alt i orden"), never color alone; danger tag if any Must task is overdue in that Home, success tag if fully on-track.
-UX-DR8: Portfolio row — tighter padding than task card, `sm` radius, building name + unit count + the status tag (UX-DR7); tap navigates to that Home's Landlord Home Admin.
+UX-DR7: Status tag (Portfolio row's overdue/on-track indicator) — pill shape, always carries a text label ("Forsinket"/"Alt i orden"), never color alone; danger tag if any Must task is overdue in that Home, success tag if fully on-track; a neutral «Ikke satt opp» tag for a Home that has never had Tasks (Story 6.1).
+UX-DR8: Portfolio row — tighter padding than task card, `sm` radius, the Home's name + the status tag (UX-DR7) + overdue and due-soon Must counts; below the tablet width a tap navigates to that Home's Landlord Home Admin (Story 6.1: one row per Home, no building).
 UX-DR9: Quick-answer popover — anchored to the task's "?" affordance, opens inline (not a full navigation); loading state is a skeleton line (not a spinner) announced via `aria-live="polite"`; the arriving answer is announced the same way; always shows the FR-14 disclaimer beneath the answer; a second tap ("Ask more") pushes into AI Chat carrying the task as context (FR-15).
 UX-DR10: Photo evidence upload — renders only when FR-18 applies to the specific task; camera/file-picker affordance; upload auto-approves the task immediately with no pending/review state (FR-19); every uploaded photo requires an accessible description on save (for example, "Bildebevis lastet opp av Martin, 29. sep" — never the file input's default filename).
 UX-DR11: Invite link control — renders only for roles permitted to invite (any Household Member or a Landlord); for a Tenant, the control is absent from the layout entirely, not present-and-disabled.
@@ -208,7 +208,7 @@ UX-DR43: `prefers-reduced-motion` is honored for every transition and loading sk
 
 **Responsive & platform**
 UX-DR44: Implement the committed breakpoints — phone up to 599px, tablet 600–1023px, desktop 1024px and above — mobile-first.
-UX-DR45: Task Overview and Task Detail remain single-column at every width. The Landlord Portfolio Dashboard is the one surface that gains a second column (building list + detail split) at the tablet breakpoint and above.
+UX-DR45: Task Overview and Task Detail remain single-column at every width. The Landlord Portfolio Dashboard is the one surface that gains a second column (Home list + detail split) at the tablet breakpoint and above.
 UX-DR46: At 320 CSS px width / 400% browser zoom, every surface — including the two-column Dashboard — collapses to single-column with no horizontal scroll.
 UX-DR47: Ship as an installable PWA from day one (`manifest.json` + registered service worker), with a shared "Add to Home Screen" install-prompt shown once per Member per device.
 
@@ -274,7 +274,7 @@ Any Member can tap "?" on a task for an immediate, disclaimer-carrying how-to an
 **Stage:** FR-14 (Story 5.1) is Trinn 1; FR-15 and FR-16 (Stories 5.2, 5.3) are Trinn 2
 
 ### Epic 6: Landlord Portfolio Dashboard
-A Landlord who owns more than one Home sees a single aggregated view of on-track/behind status across all their Homes and units, letting them triage without a site visit — including the dashboard's own tablet-and-up two-column (list + detail) responsive behavior.
+A Landlord who owns more than one Home sees a single aggregated view of on-track/behind status across all their Homes (each unit is its own Home), letting them triage without a site visit — including the dashboard's own tablet-and-up two-column (list + detail) responsive behavior.
 **FRs covered:** FR-20 (+ FR-21 dashboard-specific behavior)
 **Stage:** Trinn 2
 
@@ -1507,6 +1507,8 @@ A Landlord who owns more than one Home sees a single aggregated view of on-track
 
 ### Story 6.1: Landlord Portfolio Dashboard
 
+> **Note 2026-11-21 (team decisions, Story 6.1 spec, `spec-6-1-landlord-portfolio-dashboard.md`):** There is no building entity: each unit is its own Home (UJ-2), so the dashboard has one row per Landlord Home and «per unit» and «building list» became «per Home» and «Home list». A Home shows «Forsinket» with at least one overdue Must task, «Alt i orden» otherwise, and «Ikke satt opp» while it has no Tasks. The detail column lists the overdue Must tasks and links to «Administrer hjemmet». The Portfolio exists for a Landlord of two or more Landlord Homes, decided on the server (`HomesOut.has_portfolio`).
+
 **Stage:** Trinn 2
 
 As a Landlord who owns multiple Homes,
@@ -1517,7 +1519,7 @@ So that I can triage without visiting each one individually.
 
 **Given** a Landlord who owns more than one Home
 **When** they open the Portfolio Dashboard
-**Then** they see a single view summarizing task status (on track / behind) per Home and per unit (FR-20)
+**Then** they see a single view summarizing task status (on track / behind) per Home, one row per Home, since each unit is its own Home (FR-20)
 
 **Given** a Home with at least one overdue Must task
 **When** the dashboard renders that Home's row
@@ -1527,13 +1529,13 @@ So that I can triage without visiting each one individually.
 **When** data hasn't arrived yet
 **Then** skeleton rows render for each known Home rather than a blank screen
 
-**Given** a Landlord taps a portfolio row
+**Given** a Landlord taps a portfolio row on a viewport narrower than the tablet width
 **When** the tap registers
-**Then** they navigate to that Home's Landlord Home Admin
+**Then** they navigate to that Home's Landlord Home Admin (from the tablet width a row selects the Home for the second column instead)
 
 **Given** the dashboard on a tablet (600-1023px) or desktop (≥1024px) viewport
 **When** it renders
-**Then** it gains a second column (building list alongside the selected building's detail) rather than list-then-navigate
+**Then** it gains a second column (the Home list alongside the selected Home's overdue Must tasks, with a link to its Landlord Home Admin) rather than list-then-navigate
 
 **Given** the dashboard at 320 CSS px width / 400% browser zoom
 **When** rendered

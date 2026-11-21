@@ -244,6 +244,7 @@ def test_list_without_homes_is_empty_with_both_types(client: TestClient) -> None
         "homes": [],
         "allowed_types": ["household", "landlord"],
         "lived_in_home_id": None,
+        "has_portfolio": False,
     }
 
 
@@ -481,6 +482,7 @@ def test_household_member_leaves(client: TestClient, engine: Engine, household) 
         "homes": [],
         "allowed_types": ["household", "landlord"],
         "lived_in_home_id": None,
+        "has_portfolio": False,
     }
     assert fr3_violations(engine) == []
 

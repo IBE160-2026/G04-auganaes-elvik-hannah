@@ -16,7 +16,7 @@
 // Story 2.6 (FR-24): «Legg til oppgave» in the header for whoever may adjust Tasks (the server's
 // can_adjust_tasks); a Home whose every Task is archived shows «Ingen oppgaver i hjemmet ennå.»
 // with the same link, or the Tenant's waiting text, never the «nothing due» text.
-import { useEffect, useRef, useState, type RefObject, type TouchEvent } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '../api/errors';
 import { ROLE_LABELS, type Home } from '../api/homes';
@@ -44,11 +44,10 @@ import { OnboardingGuide } from '../components/OnboardingGuide';
 import { PendingNotice } from '../components/PendingNotice';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
+import { usePullToRefresh } from './usePullToRefresh';
 import './AuthForm.css';
 import './TaskOverview.css';
 
-// How far (in CSS pixels) a pull from the top must go before releasing refreshes.
-export const PULL_THRESHOLD = 64;
 const SKELETON_ROWS = 4;
 
 export function TaskOverview() {
@@ -176,20 +175,6 @@ function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh
   const { tasks, views } = useTasksWithPending(home.id);
   const [announcement, setAnnouncement] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [pulled, setPulled] = useState(false);
-  const pullStart = useRef<number | null>(null);
-
-  // Decision 9: the document is what scrolls, so the browser's own pull-to-reload is turned off
-  // there while the list is shown, and the app's pull is the only one. Restored on unmount.
-  useEffect(() => {
-    const root = document.documentElement;
-    const previous = root.style.overscrollBehaviorY;
-    root.style.overscrollBehaviorY = 'contain';
-    return () => {
-      root.style.overscrollBehaviorY = previous;
-    };
-  }, []);
-
   async function refresh() {
     if (refreshing) return;
     // Cleared first, so a second «Oppdatert» in a row is announced again.
@@ -205,23 +190,7 @@ function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh
     }
   }
 
-  // Pull-to-refresh: only a pull that starts with the page scrolled to the top.
-  function onTouchStart(event: TouchEvent) {
-    const atTop = (document.scrollingElement?.scrollTop ?? 0) <= 0;
-    pullStart.current = atTop ? event.touches[0].clientY : null;
-  }
-
-  function onTouchMove(event: TouchEvent) {
-    if (pullStart.current === null) return;
-    setPulled(event.touches[0].clientY - pullStart.current >= PULL_THRESHOLD);
-  }
-
-  function onTouchEnd() {
-    const release = pulled;
-    pullStart.current = null;
-    setPulled(false);
-    if (release) void refresh();
-  }
+  const { pulled, handlers } = usePullToRefresh(() => void refresh());
 
   return (
     <>
@@ -241,13 +210,7 @@ function TaskSection({ home, titleRef, canSwitch }: Omit<HeaderProps, 'onRefresh
         className="task-overview__tasks"
         aria-labelledby="task-overview-tasks"
         aria-busy={tasks.isPending || refreshing || undefined}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={() => {
-          pullStart.current = null;
-          setPulled(false);
-        }}
+        {...handlers}
       >
         <h2 id="task-overview-tasks" className="task-overview__visually-hidden">
           Oppgaver

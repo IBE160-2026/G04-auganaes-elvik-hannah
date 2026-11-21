@@ -172,3 +172,7 @@
   summary: A Home that got the fixed introduction (AI failed or the Landlord had used the day's calls) keeps it; add a Landlord action to write it again if this matters.
   evidence: Blind Hunter on Story 5.3; `store_guide` never replaces a row by design (written once), and FR-16 now says so.
 
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-6-1-landlord-portfolio-dashboard.md`
+  summary: Screen reader check of the Portfolio: nothing announces that the detail column changed when a row is selected, and focus does not move.
+  evidence: Review (Verification Gap, Blind Hunter): `aria-pressed` and the swapped detail section are the only signals on tablet and up; to be checked with VoiceOver together with Story 5.1's popover check.

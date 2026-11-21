@@ -23,7 +23,7 @@ from pydantic import BaseModel, StringConstraints
 from sqlmodel import Session
 
 from app.clock import UtcDatetime
-from app.domain import broadcast, cadence, homes, onboarding, photo_evidence, tasks
+from app.domain import broadcast, cadence, homes, onboarding, photo_evidence, portfolio, tasks
 from app.models.home import HOME_NAME_MAX_LENGTH, HomeType
 from app.models.membership import Role
 from app.permissions.current_user import CurrentUser
@@ -81,6 +81,8 @@ class HomesOut(BaseModel):
     allowed_types: list[HomeType]
     # The Home where the caller is Household Member or Tenant, if any (the one-Home limit).
     lived_in_home_id: uuid.UUID | None
+    # Story 6.1: whether the caller has a Portfolio (Landlord in two or more Homes).
+    has_portfolio: bool
 
 
 def home_out(member_home: homes.MemberHome, *, has_tasks: bool) -> HomeOut:
@@ -118,6 +120,7 @@ def list_homes(user: CurrentUser, session: SessionDep) -> HomesOut:
         homes=[home_out(h, has_tasks=h.home.id in with_tasks) for h in member_homes],
         allowed_types=homes.allowed_types(session, user),
         lived_in_home_id=lived_in.id if lived_in is not None else None,
+        has_portfolio=portfolio.has_portfolio(member_homes),
     )
 
 

@@ -165,6 +165,13 @@ Seed-kommandoen lager disse eksempelbrukerne:
 5. Legg til den samme katalogoppgaven igjen: den blir en ny oppgave med ny første frist. Fjerner du alle oppgavene, står det «Ingen oppgaver i hjemmet ennå.» med **Legg til oppgave**; oppsettet av oppgaver tilbys ikke på nytt.
 6. Logg inn som Anders (leietaker): han ser verken **Legg til oppgave** eller **Fjern oppgaven**, og serveren svarer 403 på `POST /api/homes/{home_id}/tasks` og `DELETE /api/homes/{home_id}/tasks/{task_id}` (prøv i <http://localhost:8000/docs> som i Story 2.3). Før oppgavene er satt opp, svarer serveren 409 «Sett opp oppgavene først.» på en `POST`.
 
+**Prøv porteføljen (Story 6.1, FR-20):** Forutsetter en nyseedet database, siden stegene lager et nytt hjem. Seed-dataene gir Kari bare ett utleiehjem, og porteføljen finnes først når en utleier har to.
+
+1. Logg inn som Kari: fanelinja har ingen **Portefølje**, siden hun bare har «Storgata 12», og `GET /api/portfolio` svarer 403 (prøv i <http://localhost:8000/docs>).
+2. Gå til **Innstillinger**, trykk **Opprett nytt hjem**, velg **Utleiebolig** og sett opp oppgavene. Nå står **Portefølje** i fanelinja.
+3. Åpne den: «Storgata 12» står øverst som **Forsinket**, siden seed-dataene har forfalte Må-oppgaver mens de er ferske, og det nye hjemmet står som **Alt i orden**. Et hjem uten oppgaver står som **Ikke satt opp**. Statusen avgjøres på serveren (`backend/app/domain/portfolio.py`) og er alltid en tekst, ikke bare en farge.
+4. På mobil (under 600 px) er hver rad en lenke til **Administrer hjemmet**. På nettbrett og desktop velger du en rad og får forfalte Må-oppgaver i kolonnen ved siden av. **Oppdater** (eller et trekk ned fra toppen på mobil) henter statusen på nytt.
+
 Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
 
 ### Mock-modus og ekte nøkler

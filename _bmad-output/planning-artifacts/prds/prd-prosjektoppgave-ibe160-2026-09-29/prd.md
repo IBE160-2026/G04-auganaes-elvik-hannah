@@ -30,6 +30,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-20 | Story 5.2 built: FR-15 states that each chat message counts toward the 20, what a chat sends besides the question (the user's earlier questions and the AI's answers, at most five exchanges), that nothing is stored, and how a failed message behaves; FR-14's data rule points to it | `spec-5-2-escalate-to-full-ai-chat.md` |
 | 2026-11-20 | Story 5.2 walkthrough: the quick-answer has no question field of its own; the user's own questions are typed in the chat (FR-14, Eirik's decision) | `spec-5-2-escalate-to-full-ai-chat.md` |
 | 2026-11-20 | Story 5.3 built: FR-16 states the two parts of the guide (live Home name and Must tasks, stored AI introduction), who gets it, that it counts as one of the Landlord's AI calls, what is sent, the fallback, the dismissal and where it is read again | `spec-5-3-ai-generated-onboarding-guide.md` |
+| 2026-11-21 | Story 6.1 built: FR-20 and UJ-2 say «per Home» (each unit is its own Home, there is no building), and FR-20 states when a Home is behind, what a row and the detail show, and who has the dashboard | `spec-6-1-landlord-portfolio-dashboard.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -99,9 +100,9 @@ For Trinn 1 the Household is this product's primary user, per the brief's §Who 
 
 - **UJ-2. Johan manages a property portfolio without visiting every unit.**
   - **In Trinn 1:** Johan creates a Landlord Home, invites Tenants with a link and adjusts the Must tasks (FR-1 to FR-5, FR-8). The portfolio dashboard, broadcast and onboarding guide are Trinn 2.
-  - **Persona + context:** Johan owns several apartment buildings, each with multiple units, each set up as its own Home with Tenants.
+  - **Persona + context:** Johan owns several apartment units, each set up as its own Home with Tenants.
   - **Entry state:** Johan, authenticated, opens the app to his portfolio dashboard.
-  - **Path:** He sees aggregated maintenance/cleaning status per building and unit, notices one kollektiv is behind on cleaning, and sends a targeted reminder message straight to that Home's Tenants. Separately, he pre-provisions a new Home for a unit he's taking over next week — creating the Home, generating an invite link for the incoming Tenants, and triggering the AI-generated onboarding guide tailored to that Home. He reviews the app's suggested Must tasks for the new Home and adjusts a few to match his judgment.
+  - **Path:** He sees aggregated maintenance/cleaning status per Home (one per unit), notices one kollektiv is behind on cleaning, and sends a targeted reminder message straight to that Home's Tenants. Separately, he pre-provisions a new Home for a unit he's taking over next week — creating the Home, generating an invite link for the incoming Tenants, and triggering the AI-generated onboarding guide tailored to that Home. He reviews the app's suggested Must tasks for the new Home and adjusts a few to match his judgment.
   - **Climax:** Johan gets portfolio-wide visibility and can intervene precisely, without a site visit.
   - **Resolution:** The lagging Home receives Johan's message; the new Home is ready for Tenants before they've even moved in.
   - **Edge case:** If a Tenant later disputes a locked Must task, Johan (not the Tenant) is the only one who can change it.
@@ -369,10 +370,13 @@ Uploaded Photo Evidence auto-approves the task completion immediately; the photo
 **Functional Requirements:**
 
 #### FR-20: Portfolio-level status dashboard
-A Landlord with more than one Home sees a single view summarizing task status (on track / behind) per Home and per unit. Realizes UJ-2.
+A Landlord with more than one Home sees a single view summarizing task status (on track / behind) per Home. Each unit is its own Home. Realizes UJ-2.
 
 **Consequences (testable):**
 - The dashboard identifies, at minimum, which Homes have overdue Must tasks, without requiring the Landlord to open each Home individually.
+- A Home is behind when it has at least one overdue Must task; a Home that has never had Tasks is shown as not set up, not as on track. A Home whose Tasks are all archived has had Task Setup and shows as on track. Archived Tasks do not count (FR-24). Should tasks do not make a Home behind.
+- Each row shows the Home's name, its status, and the numbers of overdue and soon-due (within 3 days) Must tasks. Homes that are behind come first, then by name. The detail view of a Home lists its overdue Must tasks with the days overdue and links to the Home's admin page.
+- The dashboard exists for a Landlord who is Landlord in two or more Homes (Homes where they are Household Member or Tenant do not count); the server decides this.
 
 ### 4.8 Responsive Platform
 

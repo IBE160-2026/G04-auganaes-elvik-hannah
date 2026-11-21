@@ -26,7 +26,7 @@ import {
   taskServer,
   tasksPath,
 } from '../test-utils/fakeApi';
-import { PULL_THRESHOLD } from './TaskOverview';
+import { PULL_THRESHOLD } from './usePullToRefresh';
 
 const PAGE = `/hjem/${OLAS_HOME.id}`;
 const RENTAL: Home = {

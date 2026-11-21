@@ -215,6 +215,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio */
+        get: operations["get_portfolio_api_portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homes/{home_id}/notification-cadence": {
         parameters: {
             query?: never;
@@ -789,6 +806,8 @@ export interface components {
             allowed_types: ("household" | "landlord")[];
             /** Lived In Home Id */
             lived_in_home_id: string | null;
+            /** Has Portfolio */
+            has_portfolio: boolean;
         };
         /** InviteOut */
         InviteOut: {
@@ -863,6 +882,47 @@ export interface components {
         MembersOut: {
             /** Members */
             members: components["schemas"]["MemberOut"][];
+        };
+        /** OverdueTaskOut */
+        OverdueTaskOut: {
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Days Overdue */
+            days_overdue: number;
+        };
+        /** PortfolioHomeOut */
+        PortfolioHomeOut: {
+            /**
+             * Home Id
+             * Format: uuid
+             */
+            home_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "behind" | "on_track" | "not_set_up";
+            /** Overdue Tasks */
+            overdue_tasks: components["schemas"]["OverdueTaskOut"][];
+            /** Due Soon Count */
+            due_soon_count: number;
+        };
+        /** PortfolioOut */
+        PortfolioOut: {
+            /** Homes */
+            homes: components["schemas"]["PortfolioHomeOut"][];
         };
         /** PushConfigOut */
         PushConfigOut: {
@@ -1463,6 +1523,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_api_portfolio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioOut"];
+                };
+            };
+            /** @description Landlord in fewer than two Homes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
