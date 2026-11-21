@@ -3,6 +3,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1-project-scaffold-design-tokens-responsive-app-shell.md`
   summary: Assign the tab bar from EXPERIENCE.md (Task Overview, Settings/Profile, Portfolio for Landlords) to a concrete story, since no story's acceptance criteria currently own it.
   evidence: The team chose a minimal shell without a tab bar in Story 1.1 (2026-10-25) to avoid navigation that leads nowhere. Story 1.2 (team decision 2026-11-01) also leaves it out, since every tab would lead to an empty page; moved to Story 1.3, the first story with a second signed-in page.
+  outcome: Settled in Story 2.2 (PR #38, 2026-11-10): the tab bar with «Oppgaver» and «Innstillinger»; the Portfolio tab came with Story 6.1 (PR #87, 2026-11-21). Audit 2026-11-21.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1-project-scaffold-design-tokens-responsive-app-shell.md`
   summary: Add an automated check that `npm run build` emits `dist/service-worker.js` at the root (no hash), so a Vite config change cannot silently break PWA registration.
   evidence: Verification-gap review of Story 1.1; the check needs a build step in the test run, which the repo does not have yet. Today it is only verified by hand via `npm run preview`.
@@ -22,10 +23,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm a preview build can never migrate Neon's main branch when preview branching is off or branch creation fails (unverified, would be medium).
   evidence: Code review of Story 1.7 (R9); check what DATABASE_URL a preview gets when branching fails, and add a VERCEL_ENV guard if it is main's URL.
+  outcome: Open 2026-11-21 (audit): the build step is `[tool.vercel.scripts] build` in `backend/pyproject.toml`, and `DATABASE_URL` for Preview is a hidden secret, so the CLI cannot show whether a failed branch creation would fall back to main. Eirik can check in the Neon console (Epic 1 retro, action 5).
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm the Vite service on Vercel falls back to index.html for client-side deep links (unverified, would be medium).
   evidence: Code review of Story 1.7 (R10); no client routes exist yet, so settle in the first story that adds one.
-  outcome: Fixed in Story 1.2, not yet confirmed. Production answered 404 for `/logg-inn` (checked 2026-11-01), so `vercel.json` now gives the frontend service a rewrite `/(.*)` → `/index.html`; Vercel applies it only after static files, so `/service-worker.js` and other files are unaffected, and `/assets/*` is excluded so a missing chunk still gives 404. Confirm on the Story 1.2 preview that `/logg-inn` loads and `/api/health` still reaches FastAPI. Confirmed 2026-11-01 on the Story 1.2 preview: `/logg-inn` loads directly and `/api/health` still reaches FastAPI (`.logs/eirik/issues.md`, R10 row; recorded 2026-11-08, Epic 1 retro, action 4).
+  outcome: Fixed in Story 1.2, not yet confirmed. Production answered 404 for `/logg-inn` (checked 2026-11-01), so `vercel.json` now gives the frontend service a rewrite `/(.*)` → `/index.html`; Vercel applies it only after static files, so `/service-worker.js` and other files are unaffected, and `/assets/*` is excluded so a missing chunk still gives 404. Confirm on the Story 1.2 preview that `/logg-inn` loads and `/api/health` still reaches FastAPI. Confirmed 2026-11-01 on the Story 1.2 preview: `/logg-inn` loads directly and `/api/health` still reaches FastAPI (`.logs/eirik/issues.md`, R10 row; recorded 2026-11-08, Epic 1 retro, action 4). Confirmed 2026-11-21 (audit): Production answers 200 for `/logg-inn`, `/portefolje` and `/hjem/x`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-7-hosted-demo-vercel-services-neon.md`
   summary: Confirm the Neon integration names preview branches exactly `preview/<git-branch>` so the cleanup workflow deletes them (unverified, would be medium).
   evidence: Code review of Story 1.7 (R11); settle with AC 4 after the merge.
@@ -37,6 +39,7 @@
 - source_spec: none
   summary: Build the tab bar from EXPERIENCE.md (Task Overview, Settings/Profile, Portfolio for Landlords with ≥2 Homes) in Story 2.2, and add it to 2.2's acceptance criteria in epics.md.
   evidence: Split from Story 1.3 by the team (2026-11-07). After 1.3 only a placeholder Home page and sign-out exist, so the tab bar would point at near-empty pages; Story 2.2 delivers Task Overview, its first real content. 1.3 gives Landlords a plain "create another Home" link instead.
+  outcome: Settled in Story 2.2 (PR #38, 2026-11-10) and Story 6.1 (PR #87, Portfolio tab, shown when `HomesOut.has_portfolio`). Audit 2026-11-21.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-create-a-home.md`
   summary: Add a concurrent Postgres test that two parallel `POST /api/homes` for a user without a Home create exactly one Home (the `with_for_update` lock in `domain/homes.create_home`).
   evidence: Code review of Story 1.3; SQLite ignores `FOR UPDATE` and CI runs pytest only on SQLite, so deleting the lock passes every check. Needs a Postgres-backed test harness (same gap as the 1.7 `env.py` lock entry).
@@ -81,19 +84,24 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-1-contextual-quick-answer.md`
   summary: Check «?» with a screen reader: the live region sits in a `hidden` panel, so the skeleton text at the moment of opening may not be announced, and the failure text has `role="alert"` inside the polite region.
   evidence: Code review of Story 5.1 (Blind Hunter). Jest-dom cannot show what a screen reader says. Fix if it matters: keep a visually hidden status element outside the panel and drop `role="alert"` there.
+  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/paminnelse-eirik-steffen-2026-11-22.md`.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
   summary: Before Story 3.2 sends pushes, check that a stored endpoint does not point at an internal address, and consider an allowlist of known push-service hosts.
   evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). 3.1 only accepts an ASCII https URL; the server does not yet POST to it, so the SSRF risk starts with 3.2.
+  outcome: Settled in Story 3.2 (PR #61): `domain/push.py` checks the push address against allowed hosts before sending, so an address outside them is dropped, not called (SSRF). Audit 2026-11-21.
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
   summary: In the service worker, focus and navigate an existing app window on `notificationclick` before opening a new one, and give notifications a `tag`, `icon` and `badge` so several pushes do not stack.
   evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). Today every tap opens a new tab. It belongs with the message text and deep links of Story 3.2.
+  outcome: Settled in Story 3.2 (PR #61): `frontend/src/service-worker.ts` focuses an existing window on `notificationclick` and gives each notification a `tag` and `badge`. Audit 2026-11-21.
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
   summary: When real VAPID keys are set after devices subscribed with the dev key, compare the browser subscription's `applicationServerKey` with the server's key and re-subscribe on a mismatch.
   evidence: Code review of Story 3.1 (Edge Case Hunter). A stale subscription is stored and the push service rejects the real pushes. Matters when the hosted demo gets real keys (Story 3.2); locally the key never changes.
+  outcome: Settled in Story 3.1/3.2: `frontend/src/api/push.ts` compares the subscription's `applicationServerKey` with the server's key and re-subscribes on a mismatch. Audit 2026-11-21.
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
   summary: Remove the device's push row also when the session ends without the «Logg ut» button (expired token), or let the server drop it.
   evidence: Code review of Story 3.1 (Blind Hunter, Edge Case Hunter). FR-10 now says removal is best effort. The 3-second timeout of the sign-out request is untested (a real timer would slow the suite).
+  outcome: Accepted 2026-11-21 (audit): FR-10 says removal is best effort. The server deletes a row the push service reports as gone (404/410, `domain/push.py`), so a stale device disappears on the next send. An expired session without «Logg ut» leaves the row until then.
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
   summary: Give `run_due_check` a time budget and isolate each Member's send block, so a slow push service or an unexpected error cannot cost later Members their notification.
   evidence: Code review of Story 3.2 (Edge Case Hunter, Blind Hunter), unverified, would be medium. Sends are sequential with 10 s per device and claims are committed per Member before sending. Fine at course scale; revisit if the demo gets many devices.
@@ -112,6 +120,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Decide whether a Landlord needs a limit on how many broadcasts can be sent per Home per day.
   evidence: Story 3.4 decision 3: none built. A Landlord can send many messages and every Tenant device gets each one. No FR asks for a limit; add one if the PRD does.
+  outcome: Accepted 2026-11-21 (audit): no FR asks for a limit (Story 3.4 decision 3). Revisit only if the PRD gets one.
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Time budget for the synchronous broadcast: each device send can wait 10 s, so a Home with many Tenants and slow push services could pass the function limit.
   evidence: Story 3.4 sends in one request (AD-14). Fine for a few Tenants. Same family as the due-check's open time-budget item from Story 3.2.
@@ -121,9 +130,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Check with a screen reader that a second send with the same count is announced (the live region gets identical text), together with the open screen reader check of the AI popover.
   evidence: Blind Hunter on Story 3.4. The notice is cleared and set in the same render batch, so the region may not see an empty state.
+  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/paminnelse-eirik-steffen-2026-11-22.md`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
   summary: Decide whether a Tenant should see on Task Detail that the Landlord requires a photo, before Story 4.2 adds the upload.
   evidence: Story 4.1 stores the requirement but shows it only to the Landlord. Until 4.2 a Tenant can still complete the task without a photo, so the setting has no effect.
+  outcome: Settled in Story 4.2 (PR #73): a Tenant on a task that requires a photo sees «Last opp bilde» instead of the checkbox, and the server answers 409 for a tick without a photo. Audit 2026-11-21.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
   summary: Show a Norwegian message with a retry when a request fails without a response (offline), in the Landlord Home Admin sections of Stories 3.4, 3.5 and 4.1.
   evidence: Edge Case Hunter on Story 4.1. A thrown network error is not an ApiError, so its raw text is shown and some retry buttons are hidden. One fix in `api/client.ts` or `errors.ts` would cover all three.
@@ -150,6 +161,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
   summary: Guard against the Blob cache serving old bytes for up to 60 s after a replacement (compare the object's upload time with `uploaded_at`, or set a short cache control on write), and make the info and image reads one consistent pair.
   evidence: Blind Hunter on Story 4.3 against AD-5 («the review view relies on the pointer's timestamp, not on the cached object»). The view reads straight from the store; only the local store is tested, and the real Blob behaviour is unverified.
+  outcome: Accepted 2026-11-21 (Epic 4 retro A4, Eirik): known limit in AD-5. No fix built.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-3-landlord-reviews-evidence-auto-replacing-photo-storage.md`
   summary: Map any non-SDK exception from the Blob read (network, timeout) to `StorageError`, and add a test that the photo-serving route guard also catches a GET under another path name.
   evidence: Edge Case Hunter on Story 4.3; the adapter catches only `BlobError` and `BlobNotFoundError`, and the route guard filters on «evidence» and «tasks» in the path.
@@ -159,15 +171,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
   summary: The chat stream has no auto-scroll to the newest message and no maximum height, so after several exchanges the input can sit below the fold; do the screen-reader pass together with the popover (A3).
   evidence: Blind Hunter on Story 5.2; the stream is a plain growing `div`. Cosmetic for five exchanges, but the `role="log"` announces content the user may not see.
+  outcome: Settled 2026-11-21 (PR #88, Epic 5 retro D1): the stream has a maximum height, scrolls to the newest line and is reachable by keyboard. The screen reader pass stays with C1.
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
   summary: A failed chat message is shown from the mutation state, so sending a different message instead of pressing «Prøv igjen» removes it from the transcript; keep failed messages as their own list items if this matters.
   evidence: Blind Hunter on Story 5.2; the retry and the history rule (a failed turn is never sent) hold, only the transcript forgets the failed line.
+  outcome: Settled 2026-11-21 (PR #88, Epic 5 retro D1): a failed message is its own line with its own «Prøv igjen», and a retry moves it to the end.
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-2-escalate-to-full-ai-chat.md`
   summary: Smoke test a follow-up with history against real Gemini on Preview: multi-turn `contents` with plain-text model turns must still give the JSON schema answer within 10 s.
   evidence: Verification Gap on Story 5.2; the Gemini provider is covered only over `httpx.MockTransport` and no key exists locally.
+  outcome: Settled 2026-11-21: on Production three chat messages with growing history answered `ok`, `demo: false`, in 1.7–2.5 s (`epic-6-retro-2026-11-21.md`, Behavior verification).
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-3-ai-generated-onboarding-guide.md`
   summary: Smoke test the guide against real Gemini on Preview: the guide instruction and the `{intro}` JSON schema must give a Norwegian introduction of at most 120 words within 10 s.
   evidence: Blind Hunter and Verification Gap on Story 5.3; the Gemini guide path is covered only over `httpx.MockTransport` and no key exists locally.
+  outcome: Settled 2026-11-21: on Production the guide came back with `source: "ai"`, a Norwegian introduction of about 75 words, within 2.3 s including Task Setup (`epic-6-retro-2026-11-21.md`).
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-3-ai-generated-onboarding-guide.md`
   summary: A Home that got the fixed introduction (AI failed or the Landlord had used the day's calls) keeps it; add a Landlord action to write it again if this matters.
   evidence: Blind Hunter on Story 5.3; `store_guide` never replaces a row by design (written once), and FR-16 now says so.
@@ -176,3 +192,14 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-1-landlord-portfolio-dashboard.md`
   summary: Screen reader check of the Portfolio: nothing announces that the detail column changed when a row is selected, and focus does not move.
   evidence: Review (Verification Gap, Blind Hunter): `aria-pressed` and the swapped detail section are the only signals on tablet and up; to be checked with VoiceOver together with Story 5.1's popover check.
+  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/paminnelse-eirik-steffen-2026-11-22.md`.
+
+## Audit 2026-11-21
+
+Every entry above was read against the code on 2026-11-21 and the ones that were already done or decided got an `outcome:` line. The entries without an `outcome:` are open, and are planned as follows (the fixing PR adds the outcome):
+
+- **Postgres concurrency tests** (create_home, invites.accept and add_member, set_up_tasks, adjust_task, photo upload, `fairness._claim`, `env.py` lock): one story with a Postgres-backed test job in CI.
+- **Photo robustness** (decodable JPEG, a stored photo left behind when the completion fails, non-SDK Blob exceptions, the route guard test): one PR.
+- **Small UX and tests** (neutral Tenant text when all Tasks are archived, offline message in Landlord Home Admin, notice when Bør removes the photo requirement, demo marker on the broadcast confirmation, `lower(email)` in the database, cross-user cache test, one-task push path test, seed `join_blocker`, regenerate the fixed guide text): one or two PRs.
+- **Push reliability** (time budget and isolation per Member, 401/403 as a stale device, `pushsubscriptionchange`, broadcast time budget, `ON DELETE`): waits for B1 (real push on a device), as decided 2026-11-21.
+- **Account deletion with anonymisation** (also scrubs the uploader's name in the photo description and decides `ON DELETE`): `bmad-correct-course`, then a story.
