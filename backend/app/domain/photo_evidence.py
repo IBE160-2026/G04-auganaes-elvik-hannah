@@ -14,6 +14,7 @@ Story 4.3 (FR-19, NFR5, NFR6): `current_evidence` and `read_photo` are the Landl
 photo. The routes run `require_role("landlord")` first; the key comes from the Task id only.
 """
 
+import logging
 import uuid
 from datetime import date, datetime
 
@@ -26,6 +27,8 @@ from app.models.photo_evidence import DESCRIPTION_MAX_LENGTH, PhotoEvidence
 from app.models.task import Task, TaskInstance
 from app.models.user import User
 from app.storage import PhotoStore, StorageError
+
+logger = logging.getLogger(__name__)
 
 NOT_ELIGIBLE = "Denne oppgavetypen kan ikke kreve bildebevis."
 NOT_MUST = "Bare Må-oppgaver kan kreve bildebevis."
@@ -41,6 +44,9 @@ STORE_FAILED = "Vi fikk ikke lagret bildet. Prøv igjen."
 # Vercel's request body limit is 4.5 MB; the photo is the whole body, so this keeps clear of it.
 MAX_PHOTO_BYTES = 3_500_000
 JPEG_SIGNATURE = b"\xff\xd8\xff"
+# A complete JPEG ends with this marker (padding zeros allowed). The browser re-encodes every photo
+# before it is sent (PhotoUpload), so a cut-off or glued-on file is not one of ours.
+JPEG_END = b"\xff\xd9"
 _MONTHS = ("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")
 
 
@@ -141,7 +147,7 @@ def check_photo(data: bytes) -> None:
     """Raises InvalidPhoto unless `data` is a JPEG within the size limit."""
     if len(data) > MAX_PHOTO_BYTES:
         raise InvalidPhoto(TOO_LARGE, too_large=True)
-    if not data.startswith(JPEG_SIGNATURE):
+    if not data.startswith(JPEG_SIGNATURE) or not data.rstrip(b"\x00").endswith(JPEG_END):
         raise InvalidPhoto(NOT_JPEG)
 
 
@@ -188,6 +194,7 @@ def complete_with_photo(
     if instance is None:
         session.rollback()
         raise tasks.TaskNotFound
+    stored: tuple[str, bytes | None] | None = None
     if instance.completed_at is None:
         try:
             check_photo(data)
@@ -196,31 +203,83 @@ def complete_with_photo(
             raise
         user = session.get(User, membership.user_id)
         assert user is not None
+        key = evidence_key(task.id)
+        evidence = session.get(PhotoEvidence, task.id)
         try:
-            store.put(evidence_key(task.id), data)
+            # The previous photo is read only when there is one, so a first upload costs no read.
+            previous = store.read(key) if evidence is not None else None
+            store.put(key, data)
         except StorageError:
             session.rollback()
             raise
-        description = describe(user.name, now.date())[:DESCRIPTION_MAX_LENGTH]
-        evidence = session.get(PhotoEvidence, task.id)
-        if evidence is None:
-            evidence = PhotoEvidence(
-                task_id=task.id,
-                task_instance_id=instance.id,
-                uploaded_by_user_id=user.id,
-                uploaded_at=now,
-                description=description,
-            )
-        else:
-            evidence.task_instance_id = instance.id
-            evidence.uploaded_by_user_id = user.id
-            evidence.uploaded_at = now
-            evidence.description = description
-        # Pending until complete_task_instance commits it with the completion.
-        session.add(evidence)
-    return tasks.complete_task_instance(
-        session, membership, task.id, instance_id, now=now, photo_attached=True
+        stored = (key, previous)
+    try:
+        if stored is not None:
+            description = describe(user.name, now.date())[:DESCRIPTION_MAX_LENGTH]
+            if evidence is None:
+                evidence = PhotoEvidence(
+                    task_id=task.id,
+                    task_instance_id=instance.id,
+                    uploaded_by_user_id=user.id,
+                    uploaded_at=now,
+                    description=description,
+                )
+            else:
+                evidence.task_instance_id = instance.id
+                evidence.uploaded_by_user_id = user.id
+                evidence.uploaded_at = now
+                evidence.description = description
+            # Pending until complete_task_instance commits it with the completion.
+            session.add(evidence)
+        result = tasks.complete_task_instance(
+            session, membership, task.id, instance_id, now=now, photo_attached=True
+        )
+    except Exception:
+        # The photo was stored before the completion could commit. Put back what was there (or
+        # nothing), unless the database shows the new evidence committed after all (the connection
+        # may have dropped after the commit): then the new photo is the right one.
+        if stored is not None and _evidence_committed(session, task.id, instance_id, now) is False:
+            _restore(store, *stored)
+        raise
+    # complete_task_instance can swallow a lost race (rolls back and returns normally): the photo
+    # is then not the Task's evidence, so it goes the same way.
+    if stored is not None and _evidence_committed(session, task.id, instance_id, now) is False:
+        _restore(store, *stored)
+    return result
+
+
+def _evidence_committed(
+    session: Session, task_id: uuid.UUID, instance_id: uuid.UUID, now: datetime
+) -> bool | None:
+    """Whether the Task's evidence row is the one this upload wrote. None when it cannot be read."""
+    try:
+        session.rollback()  # Nothing of this upload is pending any more, committed or not.
+        row = session.exec(
+            select(PhotoEvidence)
+            .where(PhotoEvidence.task_id == task_id)
+            .execution_options(populate_existing=True)
+        ).first()
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Fikk ikke lest bildebeviset for %s etter opplasting", task_id, exc_info=True
+        )
+        return None
+    return (
+        row is not None and row.task_instance_id == instance_id and to_utc(row.uploaded_at) == now
     )
+
+
+def _restore(store: PhotoStore, key: str, previous: bytes | None) -> None:
+    """Best effort: a failure is only logged, the completion's own error is what the caller sees."""
+    try:
+        if previous is None:
+            store.delete(key)
+        else:
+            store.put(key, previous)
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Fikk ikke satt tilbake bildet %s etter en mislykket fullføring", key, exc_info=True
+        )
 
 
 class NoEvidence(Exception):

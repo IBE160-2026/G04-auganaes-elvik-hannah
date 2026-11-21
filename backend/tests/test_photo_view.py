@@ -18,7 +18,7 @@ from app.storage import StorageError, get_photo_store
 from tests.helpers import auth_for, new_user
 from tests.test_photo_upload import JPEG, add_task, landlord_home, upload
 
-SECOND = b"\xff\xd8\xff\xe1" + b"second" * 40
+SECOND = b"\xff\xd8\xff\xe1" + b"second" * 40 + b"\xff\xd9"
 
 
 def base(home_id: uuid.UUID, task: Task) -> str:

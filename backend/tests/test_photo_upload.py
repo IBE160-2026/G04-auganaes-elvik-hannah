@@ -4,7 +4,7 @@ Each test that guards a rule names the line it guards (review convention, Epic 2
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -18,7 +18,7 @@ from app.models.task import Task, TaskInstance
 from app.models.user import User
 from tests.helpers import auth_for, new_user
 
-JPEG = b"\xff\xd8\xff\xe0" + b"jpegdata" * 50
+JPEG = b"\xff\xd8\xff\xe0" + b"jpegdata" * 50 + b"\xff\xd9"
 
 
 def landlord_home(session: Session) -> tuple[uuid.UUID, User, User]:
@@ -162,6 +162,7 @@ def test_an_upload_for_a_task_that_needs_no_photo_is_409_and_stores_nothing(
         pytest.param(b"\x89PNG\r\n\x1a\n" + b"x" * 100, 415, photo_evidence.NOT_JPEG, id="png"),
         pytest.param(b"", 415, photo_evidence.NOT_JPEG, id="empty"),
         pytest.param(b"just text", 415, photo_evidence.NOT_JPEG, id="text"),
+        pytest.param(JPEG[:-2] + b"abc", 415, photo_evidence.NOT_JPEG, id="cut-off"),
         pytest.param(
             JPEG + b"x" * photo_evidence.MAX_PHOTO_BYTES, 413, photo_evidence.TOO_LARGE, id="large"
         ),
@@ -192,7 +193,7 @@ def test_a_bad_photo_is_refused_before_anything_is_stored_or_completed(
 def test_exactly_the_size_limit_is_accepted(client: TestClient, session: Session) -> None:
     home_id, _kari, martin = landlord_home(session)
     task, instance_id = add_task(session, home_id)
-    body = JPEG + b"x" * (photo_evidence.MAX_PHOTO_BYTES - len(JPEG))
+    body = JPEG[:-2] + b"x" * (photo_evidence.MAX_PHOTO_BYTES - len(JPEG)) + b"\xff\xd9"
 
     assert upload(client, martin, home_id, task, instance_id, body).status_code == 200
 
@@ -204,7 +205,7 @@ def test_a_second_completion_overwrites_the_photo_and_keeps_one_row(
     task, first_instance = add_task(session, home_id)
     first = upload(client, martin, home_id, task, first_instance)
     second_instance = first.json()["instance_id"]
-    newer = JPEG + b"newer"
+    newer = JPEG[:-2] + b"newer" + b"\xff\xd9"
 
     second = upload(client, martin, home_id, task, second_instance, newer)
 
@@ -283,8 +284,7 @@ def test_only_the_landlord_view_routes_serve_a_photo(client: TestClient) -> None
         c.path: has_require_role(c)
         for c in api_routes(client.app)  # type: ignore[arg-type]
         if "GET" in (c.original_route.methods or ())  # type: ignore[union-attr]
-        and "evidence" in c.path
-        and "tasks" in c.path
+        and ("evidence" in c.path or "photo" in c.path or "image" in c.path)
     }
 
     # Story 4.3: exactly the two Landlord routes (see test_photo_view.py); a new GET that could
@@ -394,3 +394,114 @@ def test_the_description_is_written_by_the_server_with_a_norwegian_short_month()
     assert (
         photo_evidence.describe("Mari", date(2026, 5, 1)) == "Bildebevis lastet opp av Mari, 1. mai"
     )
+
+
+def test_check_photo_refuses_a_cut_off_jpeg_and_accepts_padding() -> None:
+    # Guards the end-marker check in check_photo: a file that starts like a JPEG but is cut off.
+    with pytest.raises(photo_evidence.InvalidPhoto) as cut:
+        photo_evidence.check_photo(JPEG[:-2] + b"abc")
+    with pytest.raises(photo_evidence.InvalidPhoto) as glued:
+        photo_evidence.check_photo(JPEG + b"trailing")
+
+    assert (cut.value.too_large, glued.value.too_large) == (False, False)
+    photo_evidence.check_photo(JPEG + b"\x00\x00")
+
+
+@pytest.mark.parametrize("had_photo", [True, False])
+def test_a_failed_completion_puts_the_old_photo_back(
+    client: TestClient,
+    session: Session,
+    local_photo_store: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    had_photo: bool,
+) -> None:
+    # Guards `_restore` in complete_with_photo: the photo is stored before the completion commits,
+    # so a failing completion must not leave the new photo under the Task's key.
+    from app.storage import LocalPhotoStore
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    store = LocalPhotoStore(local_photo_store)
+    key = photo_evidence.evidence_key(task.id)
+    if had_photo:
+        store.put(key, b"old")
+        session.add(
+            PhotoEvidence(
+                task_id=task.id,
+                task_instance_id=instance_id,
+                uploaded_by_user_id=martin.id,
+                uploaded_at=datetime(2026, 11, 1, tzinfo=UTC),
+                description="Bildebevis lastet opp av Martin, 1. nov",
+            )
+        )
+        session.commit()
+    membership = session.exec(
+        select(Membership).where(Membership.user_id == martin.id, Membership.home_id == home_id)
+    ).one()
+
+    def boom(*_a: object, **_k: object) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(tasks, "complete_task_instance", boom)
+
+    with pytest.raises(RuntimeError):
+        photo_evidence.complete_with_photo(session, store, membership, task.id, instance_id, JPEG)
+
+    assert store.read(key) == (b"old" if had_photo else None)
+
+
+def _membership(session: Session, user: User, home_id: uuid.UUID) -> Membership:
+    return session.exec(
+        select(Membership).where(Membership.user_id == user.id, Membership.home_id == home_id)
+    ).one()
+
+
+def test_a_commit_that_went_through_before_the_error_keeps_the_new_photo(
+    session: Session, local_photo_store: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Guards `_evidence_committed` in the except branch: when the connection drops after the commit
+    # the database has the new evidence, so restoring the old photo would show the wrong picture.
+    from app.storage import LocalPhotoStore
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    store = LocalPhotoStore(local_photo_store)
+    original = tasks.complete_task_instance
+
+    def commits_then_fails(*args: object, **kwargs: object) -> None:
+        original(*args, **kwargs)  # type: ignore[arg-type]
+        raise RuntimeError("the connection dropped after the commit")
+
+    monkeypatch.setattr(tasks, "complete_task_instance", commits_then_fails)
+
+    with pytest.raises(RuntimeError):
+        photo_evidence.complete_with_photo(
+            session, store, _membership(session, martin, home_id), task.id, instance_id, JPEG
+        )
+
+    assert store.read(photo_evidence.evidence_key(task.id)) == JPEG
+
+
+def test_a_completion_that_swallowed_a_lost_race_puts_the_old_photo_back(
+    session: Session, local_photo_store: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Guards the check after a normal return: complete_task_instance can roll back and return.
+    from app.storage import LocalPhotoStore
+
+    home_id, _kari, martin = landlord_home(session)
+    task, instance_id = add_task(session, home_id)
+    store = LocalPhotoStore(local_photo_store)
+
+    def rolls_back_and_returns(*args: object, **kwargs: object) -> str:
+        session.rollback()
+        return "returned"
+
+    monkeypatch.setattr(tasks, "complete_task_instance", rolls_back_and_returns)
+
+    result = photo_evidence.complete_with_photo(
+        session, store, _membership(session, martin, home_id), task.id, instance_id, JPEG
+    )
+
+    assert result == "returned"
+    assert store.read(photo_evidence.evidence_key(task.id)) is None
+    assert session.get(PhotoEvidence, task.id) is None
