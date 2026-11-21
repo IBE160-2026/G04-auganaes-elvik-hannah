@@ -85,7 +85,7 @@ development_status:
   epic-5-retrospective: optional
 
   epic-6: in-progress
-  6-1-landlord-portfolio-dashboard: review
+  6-1-landlord-portfolio-dashboard: done
   epic-6-retrospective: optional
 action_items:
   - id: "epic-1-retro-item-1-chore-pr-ci-cancels-only-pr-runs-test-po"
