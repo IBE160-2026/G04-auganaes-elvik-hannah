@@ -4,9 +4,12 @@
 // the path, so the AI keeps it as context. Every message is one AI call under the same timeout,
 // data and daily-limit rules as «?». The disclaimer sits outside the live region and is always
 // shown once an answer has arrived; new messages are announced politely.
+// Polish (D1, Epic 5 retro): the stream has a maximum height and scrolls to the newest line, and a
+// failed message stays in the transcript as its own line, with its own «Prøv igjen», when another
+// message is sent instead. A retry moves the message to the end; a failed turn is never history.
 // Guards as on Task Detail: an unknown Home goes to "/", a Home without Tasks or a Task that is
 // gone goes back to the overview.
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
 import {
   AI_MESSAGES,
@@ -75,25 +78,54 @@ function carriedExchanges(state: unknown): Exchange[] {
   );
 }
 
+/** One line of the transcript: an exchange, or a message that failed (answer is then undefined). */
+type Item = { id: number; question: string; answer?: Answer; error: Error | null };
+
 function Chat({ home, task }: { home: Home; task: { id: string; name: string } }) {
   const titleRef = useFocusOnMount<HTMLHeadingElement>();
   const location = useLocation();
   const ask = useAskTask(home.id);
-  const [exchanges, setExchanges] = useState<Exchange[]>(() => carriedExchanges(location.state));
+  const [carried] = useState<Item[]>(() =>
+    carriedExchanges(location.state).map((e, id) => ({ id, ...e, error: null })),
+  );
+  const nextId = useRef(carried.length);
+  const [items, setItems] = useState<Item[]>(carried);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const streamRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
+  const completed: Exchange[] = items.flatMap((i) => (i.answer ? [{ question: i.question, answer: i.answer }] : []));
+
+  // Always show the newest line, also while waiting for the answer.
+  useEffect(() => {
+    const stream = streamRef.current;
+    if (stream) stream.scrollTop = stream.scrollHeight;
+  }, [items.length, ask.isPending]);
+
+  function add(item: Omit<Item, 'id'>) {
+    setItems((all) => [...all, { id: nextId.current++, ...item }]);
+  }
 
   function send(question: string) {
     // Only completed exchanges go along as history; a failed message never does.
     ask.mutate(
-      { taskId: task.id, question, history: historyOf(exchanges) },
+      { taskId: task.id, question, history: historyOf(completed) },
       {
-        onSuccess: (answer) => {
-          if (answer.status !== 'error') setExchanges((all) => [...all, { question, answer }]);
+        onSuccess: (answer) =>
+          add(answer.status === 'error' ? { question, error: null } : { question, answer, error: null }),
+        onError: (error) => {
+          // 403 is the global handler's and 404 the Task guard's: nothing to keep in the transcript.
+          if (!(error instanceof ApiError && (error.status === 403 || error.status === 404))) {
+            add({ question, error });
+          }
         },
       },
     );
+  }
+
+  function retry(item: Item) {
+    setItems((all) => all.filter((i) => i.id !== item.id));
+    send(item.question);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -106,9 +138,8 @@ function Chat({ home, task }: { home: Home; task: { id: string; name: string } }
   }
 
   const asked = ask.variables?.question;
-  const failed = ask.isError || ask.data?.status === 'error';
   // The newest answer in hand, a failed one included: its disclaimer is shown all the same.
-  const newest: Answer | undefined = ask.data ?? exchanges.at(-1)?.answer;
+  const newest: Answer | undefined = ask.data ?? completed.at(-1)?.answer;
   const disclaimer = newest?.disclaimer ?? FALLBACK_DISCLAIMER;
   const demo = newest?.demo;
 
@@ -124,26 +155,36 @@ function Chat({ home, task }: { home: Home; task: { id: string; name: string } }
         <p className="task-chat__disclaimer">{disclaimer}</p>
         {newest && <p className="task-chat__note">{demo ? AI_MESSAGES.demo : AI_MESSAGES.external}</p>}
       </div>
-      <div className="task-chat__stream" role="log" aria-live="polite" aria-label={AI_MESSAGES.chatLabel(task.name)}>
-        {exchanges.length === 0 && !ask.isPending && !failed && (
+      <div
+        ref={streamRef}
+        tabIndex={0}
+        className="task-chat__stream"
+        role="log"
+        aria-live="polite"
+        aria-label={AI_MESSAGES.chatLabel(task.name)}
+      >
+        {items.length === 0 && !ask.isPending && (
           <p className="task-chat__empty">{AI_MESSAGES.chatEmpty(task.name)}</p>
         )}
-        {exchanges.map((e, i) => (
-          <Messages key={i} question={e.question} answer={e.answer} />
-        ))}
+        {items.map((item) =>
+          item.answer ? (
+            <Messages key={item.id} question={item.question} answer={item.answer} />
+          ) : (
+            <Failure
+              key={item.id}
+              question={item.question}
+              error={item.error}
+              canRetry={!ask.isPending}
+              onRetry={() => retry(item)}
+            />
+          ),
+        )}
         {ask.isPending && asked !== undefined && (
           <>
             <Message who="you" text={asked} />
             <p className="task-chat__visually-hidden">{AI_MESSAGES.loading}</p>
             <span className="task-chat__skeleton" aria-hidden="true" data-testid="answer-skeleton" />
           </>
-        )}
-        {failed && asked !== undefined && (
-          <Failure
-            question={asked}
-            error={ask.error}
-            onRetry={() => send(asked)}
-          />
         )}
       </div>
       <form className="task-chat__form" onSubmit={submit} noValidate>
@@ -188,9 +229,17 @@ function Messages({ question, answer }: { question: string; answer: Answer }) {
   );
 }
 
-function Failure({ question, error, onRetry }: { question: string; error: Error | null; onRetry: () => void }) {
-  // 403 is the global handler's and 404 the Task guard's: nothing to say here.
-  if (error instanceof ApiError && (error.status === 403 || error.status === 404)) return null;
+function Failure({
+  question,
+  error,
+  canRetry,
+  onRetry,
+}: {
+  question: string;
+  error: Error | null;
+  canRetry: boolean;
+  onRetry: () => void;
+}) {
   return (
     <>
       <Message who="you" text={question} />
@@ -201,7 +250,7 @@ function Failure({ question, error, onRetry }: { question: string; error: Error 
           <p className="task-chat__unsure" role="alert">
             {AI_MESSAGES.failed}
           </p>
-          <button type="button" className="task-chat__button task-chat__retry" onClick={onRetry}>
+          <button type="button" className="task-chat__button task-chat__retry" onClick={onRetry} disabled={!canRetry}>
             {AI_MESSAGES.retry}
           </button>
         </>
