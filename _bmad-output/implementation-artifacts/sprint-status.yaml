@@ -286,5 +286,6 @@ action_items:
     action: "Story template: when a story lets the AI answer, the AC says what it
       may talk about and what it may not (D2)"
     owner: "Eirik + Claude"
-    status: open
+    status: done
+    decision: "2026-11-21: written into CLAUDE.md and _bmad/custom/review-conventions.md (Eirik approved the wording)."
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-11-21.md"

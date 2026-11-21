@@ -60,3 +60,13 @@ What to do, for a diff that adds or changes an adapter to an external SDK or ser
 Source: same retrospective, finding F2, action A2. The Story 4.2 test «no route returns a photo» walked `app.routes`, which does not list routers added with `include_router`, so it saw no routes and passed for any code.
 
 A test that enumerates routes, files, rows or components in order to assert that something is absent or present only everywhere must also assert that it found the thing it looks at (at least one known route, a known count, or a known item). Report a finding starting with `Verification gap:` when the guard would still pass on an empty list.
+
+## Required check: does an AI story say what the AI may not do?
+
+Source: Epic 5 retrospective (`_bmad-output/implementation-artifacts/epic-5-retro-2026-11-21.md`, finding F5, lesson L1, action D2). The acceptance criteria of Story 5.1 said what the AI should answer, not what it should refuse, so it answered any topic until a follow-up PR (#52) limited it to the task and housework.
+
+What to do, for a diff or a story where the AI writes or answers something for a user:
+
+1. Check that the story's acceptance criteria (and FR/AD text) say which topics the AI must decline, what is sent to the provider (and what never is, such as a Home's name), and what the user sees on a failure, a timeout and when the daily limit is reached.
+2. Report a finding starting with `PRD-drift:` when the code limits or sends something the requirements do not state, or the requirements are silent on a refusal rule the code relies on.
+3. At story start, the same questions are asked of the acceptance criteria before the spec is written (CLAUDE.md, «Les AC-ene på nytt ved storystart»).
