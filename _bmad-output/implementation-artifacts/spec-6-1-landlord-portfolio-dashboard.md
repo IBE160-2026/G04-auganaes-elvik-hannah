@@ -2,7 +2,7 @@
 title: 'Story 6.1: Landlord Portfolio Dashboard'
 type: 'feature'
 created: '2026-11-21'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 'fa782aa8dca15fd7a76d1ca3360d2b34b5a3e0f2'
@@ -75,6 +75,20 @@ context: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+| Finding | Verdict | Route | Evidence |
+|---|---|---|---|
+| Role filter unguarded (landlord + household mix) | medium | patch | Test gave no case with one Landlord and one Household Home; added `test_one_landlord_home_plus_a_household_home_has_no_portfolio` |
+| `tasks.is_open()` untested | medium | patch | No completed instance in any test; added `test_a_completed_overdue_instance_is_not_overdue` |
+| Route body only tested with not_set_up | medium | patch | Added `test_route_body_carries_the_overdue_tasks_and_counts` |
+| Instance query had no date bound (spec said +3 days) | low | patch | Added `due_on <= today + DUE_SOON_DAYS`; spec query description corrected |
+| 403 on cold load flashed «Vi fikk ikke hentet porteføljen» | medium | patch | Error branch now skips 403; test added |
+| Redirect tests pass on a blank page | low | patch | Now assert `window.location.pathname` |
+| Misnamed tenant/household test with no household member | low | patch | Replaced |
+| PRD-drift: due-soon count, sort, detail, archived-only Home, «two or more» wording, UJ-2 building, UX-DR7 third tag | medium | patch | Text fixed in PRD (FR-20, UJ-2, Revision log) and epics.md (FR-20, UX-DR7) |
+| Announce detail change on selection, `aria-controls` | low | defer | Screen reader check, like Story 5.1's popover (`deferred-work.md`) |
+| No separate TabBar test file | false | none | Tab visibility is tested in `Portfolio.test.tsx` («Portfolio tab»); the pull gesture keeps its TaskOverview test, which now imports the shared threshold |
+| No test of cached `has_portfolio` in `useCreateHome` | low | none | Cache-shape only; the refetch brings the server's value, as with `allowed_types` |
 
 ## Verification
 

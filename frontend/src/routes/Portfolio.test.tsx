@@ -156,16 +156,17 @@ describe('Portfolio', () => {
     expect(server.calls('GET', '/api/portfolio')).toHaveLength(2);
   });
 
-  it('sends a Landlord without a Portfolio to "/", with no tab', async () => {
+  it('sends a Landlord without a Portfolio to their Home, with no tab', async () => {
     fakeApi({ ...homes([STORGATA], false), 'GET /api/portfolio': () => json(403, { detail: 'x' }) });
     renderAt('/portefolje');
 
-    await screen.findByRole('navigation', { name: 'Hovedmeny' });
+    await vi.waitFor(() => expect(window.location.pathname).toBe(`/hjem/${STORGATA.id}`));
+    const nav = await screen.findByRole('navigation', { name: 'Hovedmeny' });
     expect(screen.queryByRole('heading', { name: 'Portefølje' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Portefølje' })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'Portefølje' })).not.toBeInTheDocument();
   });
 
-  it('refetches the Homes when the server answers 403, and the guard routes', async () => {
+  it('shows no load error when the server answers 403, and the Homes refetch routes away', async () => {
     let portfolio = true;
     const server = fakeApi({
       ...signedInWith([STORGATA, BAKGATA]),
@@ -177,8 +178,10 @@ describe('Portfolio', () => {
     });
     renderAt('/portefolje');
 
+    await screen.findByRole('heading', { name: 'Portefølje' });
     await vi.waitFor(() => expect(server.calls('GET', '/api/homes').length).toBeGreaterThan(1));
-    await vi.waitFor(() => expect(screen.queryByRole('heading', { name: 'Portefølje' })).not.toBeInTheDocument());
+    await vi.waitFor(() => expect(window.location.pathname).not.toBe('/portefolje'));
+    expect(screen.queryByText(PORTFOLIO_MESSAGES.loadFailed)).not.toBeInTheDocument();
   });
 
   it('refetches from «Oppdater» and announces it', async () => {

@@ -39,6 +39,10 @@ function useTwoColumns(): boolean {
   return useSyncExternalStore(subscribe, () => window.matchMedia?.(TWO_COLUMNS).matches ?? false);
 }
 
+function isForbidden(error: Error | null): boolean {
+  return error instanceof ApiError && error.status === 403;
+}
+
 const adminPath = (homeId: string) => `/hjem/${homeId}/utleier`;
 
 export function Portfolio() {
@@ -68,7 +72,7 @@ function PortfolioPage({ landlordHomes }: { landlordHomes: readonly Home[] }) {
     const result = await portfolio.refetch();
     setRefreshing(false);
     if (!result.isError) setAnnouncement(PORTFOLIO_MESSAGES.refreshed);
-    else if (!(result.error instanceof ApiError && result.error.status === 403)) {
+    else if (!isForbidden(result.error)) {
       setAnnouncement(PORTFOLIO_MESSAGES.refreshFailed);
     }
   }
@@ -121,7 +125,7 @@ function PortfolioPage({ landlordHomes }: { landlordHomes: readonly Home[] }) {
             </section>
             {twoColumns && selected && <Detail row={selected} />}
           </>
-        ) : portfolio.isError ? (
+        ) : portfolio.isError && !isForbidden(portfolio.error) ? (
           <div className="portfolio__error">
             <p className="auth-form__error" role="alert">
               {PORTFOLIO_MESSAGES.loadFailed}

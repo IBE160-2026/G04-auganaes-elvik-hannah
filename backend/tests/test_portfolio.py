@@ -1,7 +1,7 @@
 """Story 6.1 (FR-20, FR-24, AD-3): the Landlord Portfolio and who has one."""
 
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -124,15 +124,39 @@ def test_fewer_than_two_landlord_homes_has_no_portfolio(session: Session, count:
         portfolio.portfolio_of(session, landlord, TODAY)
 
 
-def test_a_tenant_and_a_household_member_have_no_portfolio(session: Session) -> None:
-    landlord, (a, b) = landlord_with_homes(session, "A", "B")
-    tenant = new_user(session, "Anders")
-    for home_id in (a, b):
-        home = next(h.home for h in homes.homes_for(session, landlord) if h.home.id == home_id)
-        if home_id == a:
-            homes.add_member(session, home, tenant)
+def test_one_landlord_home_plus_a_household_home_has_no_portfolio(
+    session: Session, client: TestClient
+) -> None:
+    # Guards landlord_homes' `m.role == "landlord"`: two Homes in total are not two Landlord Homes.
+    user = new_user(session, "Kari")
+    homes.create_home(session, user, name="Utleie", type="landlord")
+    homes.create_home(session, user, name="Husstand", type="household")
 
-    assert not portfolio.has_portfolio(homes.homes_for(session, tenant))
+    assert not portfolio.has_portfolio(homes.homes_for(session, user))
+    with pytest.raises(portfolio.NotInPortfolio):
+        portfolio.portfolio_of(session, user, TODAY)
+    headers = auth_for(client, user.email)
+    assert client.get("/api/portfolio", headers=headers).status_code == 403
+    assert client.get("/api/homes", headers=headers).json()["has_portfolio"] is False
+
+
+def test_a_completed_overdue_instance_is_not_overdue(session: Session) -> None:
+    # Guards `tasks.is_open()` in portfolio_of: a done instance never makes a Home behind.
+    landlord, (a, _b) = landlord_with_homes(session, "A", "B")
+    task = add_task(session, a, "Støvsuge", TODAY + timedelta(days=7))
+    session.add(
+        TaskInstance(
+            task_id=task.id,
+            due_on=TODAY - timedelta(days=5),
+            completed_at=datetime(2026, 11, 15, tzinfo=UTC),
+            completed_by_user_id=landlord.id,
+        )
+    )
+    session.commit()
+
+    row = row_of(portfolio.portfolio_of(session, landlord, TODAY), a)
+
+    assert (row.status, row.overdue) == ("on_track", [])
 
 
 def queries_for(session: Session, engine: Engine, home_count: int) -> int:
@@ -173,6 +197,20 @@ def test_route_answers_the_portfolio_and_homes_say_has_portfolio(
     assert {h["status"] for h in portfolio_body.json()["homes"]} == {"not_set_up"}
     assert homes_body.json()["has_portfolio"] is True
     assert str(a) in {h["home_id"] for h in portfolio_body.json()["homes"]}
+
+
+def test_route_body_carries_the_overdue_tasks_and_counts(
+    client: TestClient, session: Session
+) -> None:
+    landlord, (a, _b) = landlord_with_homes(session, "A", "B")
+    add_task(session, a, "Vaske bad", date.today() - timedelta(days=4))
+    add_task(session, a, "Støvsuge", date.today() + timedelta(days=1))
+
+    body = client.get("/api/portfolio", headers=auth_for(client, landlord.email)).json()
+
+    behind = body["homes"][0]
+    assert (behind["home_id"], behind["status"], behind["due_soon_count"]) == (str(a), "behind", 1)
+    assert [(t["name"], t["days_overdue"]) for t in behind["overdue_tasks"]] == [("Vaske bad", 4)]
 
 
 @pytest.mark.parametrize("kind", ["one_home", "tenant"])

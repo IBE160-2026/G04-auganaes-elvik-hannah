@@ -9,7 +9,7 @@ lives here and reaches the frontend as HomesOut.has_portfolio.
 
 import uuid
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal, NamedTuple
 
 from sqlmodel import Session, col, select
@@ -59,8 +59,8 @@ def has_portfolio(member_homes: Sequence[MemberHome]) -> bool:
 def portfolio_of(session: Session, user: User, today: date) -> list[PortfolioHome]:
     """One row per Landlord Home: behind first, then by name and id. Raises NotInPortfolio.
 
-    Two queries for the whole list, never one per Home: which Homes have Tasks, and the open
-    Må instances of their active Tasks.
+    Three queries for the whole list, never one per Home: the caller's Homes, which of them have
+    Tasks (archived ones count: Task Setup has run), and the open Må instances due by today + 3.
     """
     member_homes = homes_for(session, user)
     if not has_portfolio(member_homes):
@@ -77,6 +77,8 @@ def portfolio_of(session: Session, user: User, today: date) -> list[PortfolioHom
             Task.classification == "must",
             tasks.is_active(),
             tasks.is_open(),
+            # Only overdue and due-soon Må tasks are read, never the whole list.
+            col(TaskInstance.due_on) <= today + timedelta(days=tasks.DUE_SOON_DAYS),
         )
         .order_by(col(TaskInstance.due_on), col(Task.name), col(Task.id))
     ).all()
