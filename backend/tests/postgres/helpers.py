@@ -82,7 +82,7 @@ def blocks_while_locked(
     job: Callable[[Session], Any],
     hold: float = 1.5,
 ) -> tuple[bool, Outcome]:
-    """Holds `lock_sql` (a SELECT ... FOR KEY SHARE) open in one transaction and runs `job` meanwhile.
+    """Holds `lock_sql` (a SELECT ... FOR KEY SHARE) in one open transaction, runs `job` meanwhile.
 
     Returns whether the job was still waiting after `hold` seconds (it needs that row lock) and its
     outcome once the lock was released. A deterministic check that a function takes a given lock,
