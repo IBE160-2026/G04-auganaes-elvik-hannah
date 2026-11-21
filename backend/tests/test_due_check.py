@@ -552,8 +552,11 @@ def test_the_one_task_push_path_matches_a_route_in_the_frontend(session: Session
     from pathlib import Path
 
     app_tsx = Path(__file__).resolve().parents[2] / "frontend" / "src" / "App.tsx"
-    patterns = re.findall(r'<Route\s+path="([^"]+)"', app_tsx.read_text("utf-8"))
-    assert patterns  # the file was read and has routes
+    # The catch-all "*" would match anything, so it is left out.
+    patterns = [
+        p for p in re.findall(r'<Route\s+path="([^"]+)"', app_tsx.read_text("utf-8")) if p != "*"
+    ]
+    assert "/hjem/:homeId/oppgaver/:taskId" in patterns  # the file was read, and the route is there
 
     home_id, kari, anders = landlord_home(session)
     add_task(session, home_id, kari, "Støvsuge", TODAY - timedelta(days=3))
@@ -563,7 +566,10 @@ def test_the_one_task_push_path_matches_a_route_in_the_frontend(session: Session
     sent = sent_to(sender)["a"].url
 
     def matches(pattern: str, url: str) -> bool:
-        regex = re.sub(r":[A-Za-z]+", "[^/]+", pattern)
+        # Literal parts escaped, each :param is one path segment.
+        regex = "/".join(
+            "[^/]+" if part.startswith(":") else re.escape(part) for part in pattern.split("/")
+        )
         return re.fullmatch(regex, url) is not None
 
     assert any(matches(pattern, sent) for pattern in patterns), sent

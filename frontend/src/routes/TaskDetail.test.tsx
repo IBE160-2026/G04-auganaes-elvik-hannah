@@ -157,7 +157,9 @@ describe('Adjust a Task (Story 2.3)', () => {
     fakeApi({
       ...signedInWith(),
       [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks: [withPhoto, ...OLAS_TASKS.slice(1)] }),
-      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(withPhoto),
+      // The server drops the requirement with the change to Bør.
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: async (request) =>
+        json(200, { ...withPhoto, ...(await request.json()), requires_photo_evidence: false }),
     });
     await openDetail();
 

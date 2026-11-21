@@ -7,6 +7,11 @@ import { ApiError } from './errors';
 import { homesKey, inviteKey, isTransient, membersKey, portfolioKey, tasksKey, useHomes } from './queries';
 import { setSession } from './session';
 
+afterEach(() => {
+  resetApi();
+  setSession(null);
+});
+
 describe('isTransient', () => {
   it('retries a network error', () => {
     expect(isTransient(new TypeError('Failed to fetch'))).toBe(true);
@@ -53,7 +58,5 @@ describe('the user id in the query keys', () => {
     // Guards homesKey(session?.user.id): without the id the cache of user A answers at once.
     expect(result.current.data).toBeUndefined();
     await waitFor(() => expect(result.current.data?.homes[0].name).toBe(OLAS_TENANCY.name));
-    resetApi();
-    setSession(null);
   });
 });

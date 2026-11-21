@@ -35,7 +35,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-21 | FR-25 added (delete an account, anonymising the user; a Landlord removes the Tenants first); §5 no longer lists account deletion as a non-goal | `sprint-change-proposal-2026-11-21.md` |
 | 2026-11-21 | Story 1.10 built: FR-25 lists exactly what is deleted (no fairness records: fairness reads completions, which stay as «Tidligere medlem»), that an emptied Home takes its history with it, that photos are removed best effort after the deletion, and that wrong-password attempts are not limited | `spec-1-10-account-deletion.md` |
 | 2026-11-21 | Photo robustness (deferred work from Stories 4.2 and 4.3): FR-19 says a cut-off JPEG is refused and that a failed completion puts the previous photo back | `deferred-work.md`, `fix/foto-robusthet` |
-| 2026-11-21 | Small fixes from deferred work: FR-12 says the confirmation is marked as a demo when no real push was sent; FR-18 says a change to Should tells the editor the photo requirement was removed; FR-24 says a Tenant sees a neutral text when every Task is archived | `deferred-work.md`, `fix/smaating` |
+| 2026-11-21 | Small fixes from deferred work: FR-12 says the confirmation is marked as a demo when no real push was sent; FR-18 says a change to Should tells the editor the photo requirement was removed; FR-24 says a Tenant sees a neutral text when every Task is archived; FR-1 says the database keeps e-mail addresses lowercase | `deferred-work.md`, `fix/smaating` |
 
 # PRD: AI-Driven Household Task App
 
@@ -138,6 +138,7 @@ A user can create a Home. If created as a Household Home, the creator becomes a 
 - A newly created Household Home has one or more Household Members, all with equal permissions from the moment they join, including the creator.
 - A newly created Landlord Home has exactly one Landlord and zero or more Tenants.
 - Creating a Home does not require prior membership in any other Home.
+- E-mail addresses are stored in lowercase, and the database refuses any other spelling, so `Ola@…` and `ola@…` are never two accounts.
 - A Landlord-created Home supports full configuration (Must tasks, Frequency) with zero Tenants present.
 - A user may create any number of Landlord Homes, and a Household Home only while they are not a Household Member or Tenant of another Home (the same one-Home limit as joining through an invite). A Landlord can therefore create their own Household Home, and a Household Member or Tenant can create a Landlord Home.
 

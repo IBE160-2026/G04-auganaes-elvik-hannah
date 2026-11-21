@@ -26,11 +26,14 @@ export class ApiError extends Error {
 /**
  * The text to show under a form for a failed mutation, or null when another part of the app
  * handles it (a 403: the global handler refetches and the guards route). An error that is not an
- * ApiError never got an answer, so it reads as offline, never as the browser's raw text.
+ * ApiError is a fetch failure (a TypeError: no answer, so offline) or a bug (the generic text);
+ * the browser's raw text is never shown.
  */
 export function failureText(error: Error | null): string | null {
   if (!error) return null;
-  if (!(error instanceof ApiError)) return OFFLINE_ERROR;
+  // fetch rejects with a TypeError when it got no answer; anything else is not a network problem.
+  if (error instanceof TypeError) return OFFLINE_ERROR;
+  if (!(error instanceof ApiError)) return GENERIC_ERROR;
   return error.status === 403 ? null : error.message;
 }
 

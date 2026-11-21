@@ -186,14 +186,15 @@ function AdjustForm({ home, task }: { home: Home; task: Task }) {
       { taskId: task.id, changes },
       {
         // A field changed again while the save was in flight keeps its newer draft.
-        onSuccess: () => {
+        onSuccess: (saved) => {
           if (changes.classification !== undefined) {
             setClassification((draft) => (draft === changes.classification ? null : draft));
           }
           if (changes.frequency_days !== undefined) {
             setFrequency((draft) => (draft === changes.frequency_days ? null : draft));
           }
-          const dropsPhotoRequirement = changes.classification === 'should' && task.requires_photo_evidence;
+          // From the server's answer, not the render: it says what was removed (FR-18, decision 3).
+          const dropsPhotoRequirement = task.requires_photo_evidence && !saved.requires_photo_evidence;
           setStatus(dropsPhotoRequirement ? TASK_MESSAGES.savedWithoutPhotoRequirement : TASK_MESSAGES.saved);
         },
       },

@@ -12,6 +12,7 @@ Create Date: 2026-11-21 22:00:00.000000
 
 from collections.abc import Sequence
 
+import sqlalchemy as sa
 from alembic import op
 
 revision: str = "b8d0f2a4c6e1"
@@ -21,6 +22,15 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    clashes = bind.execute(
+        sa.text("SELECT lower(email) FROM users GROUP BY lower(email) HAVING count(*) > 1")
+    ).scalars().all()
+    if clashes:
+        # Lowercasing would break uq_users_email: say which addresses, so a person can merge them.
+        raise RuntimeError(f"Flere brukere har samme e-post bortsett fra store bokstaver: {clashes}")
+    # Normally nothing to do, since accounts.register stores every address lowercased.
+    op.execute("UPDATE users SET email = lower(email) WHERE email <> lower(email)")
     op.create_check_constraint("ck_users_email_lowercase", "users", "email = lower(email)")
 
 
