@@ -145,6 +145,20 @@ def accept(
     homes.InOtherHome. A refused join leaves the link unused.
     """
     now = now or utc_now()
+    # Lock order: the user, the Home, then the link (the order account deletion uses), so a Landlord
+    # deleting the account and a Tenant accepting never wait for each other. The link is found
+    # without a lock first, to know the Home; the locked read below is the one that counts.
+    unlocked = _find(session, token)
+    if unlocked is None:
+        session.rollback()
+        raise InviteInvalid(None)
+    session.exec(select(User).where(User.id == user.id).with_for_update()).one()
+    if (
+        session.exec(select(Home.id).where(Home.id == unlocked.home_id).with_for_update()).first()
+        is None
+    ):
+        session.rollback()
+        raise InviteInvalid(None)
     # Locks the link until commit, so two parallel accepts cannot both use it. Postgres only.
     link = _find(session, token, lock=True)
     if link is None:
@@ -161,5 +175,8 @@ def accept(
     link.used_by_user_id = user.id
     session.add(link)
     # add_member commits the link and the Membership together, or rolls both back.
-    membership = homes.add_member(session, home, user)
+    try:
+        membership = homes.add_member(session, home, user)
+    except homes.HomeGone:
+        raise InviteInvalid(None) from None
     return homes.MemberHome(home, membership.role)

@@ -754,3 +754,39 @@ def test_only_leave_and_remove_tenant_delete_a_membership() -> None:
         start = source.index(function)
         end = source.find("\ndef ", start + 1)
         assert statement.search(source[start:end]), function
+
+
+def test_joining_a_home_that_is_gone_raises_home_gone(session: Session) -> None:
+    # Guards the Home lock in add_member (Story 1.10): a Home deleted under a join is HomeGone, not
+    # an integrity error from the Membership insert.
+    from sqlalchemy import delete as sql_delete
+
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    stale = session.get(Home, home.id)
+    assert stale is not None
+    session.execute(sql_delete(Membership).where(Membership.home_id == home.id))
+    session.execute(sql_delete(Home).where(Home.id == home.id))
+    session.commit()
+
+    with pytest.raises(homes.HomeGone):
+        homes.add_member(session, stale, anders)
+
+
+def test_accepting_an_invite_to_a_home_that_is_gone_is_an_invalid_invite(session: Session) -> None:
+    # Guards the HomeGone mapping in invites.accept: the route and the page already show this case.
+    from sqlalchemy import delete as sql_delete
+
+    from app.domain import invites
+    from app.models.invite_link import InviteLink
+
+    kari, anders = new_user(session, "Kari"), new_user(session, "Anders")
+    home = homes.create_home(session, kari, name="Storgata 12", type="landlord").home
+    token = invites.create_invite(session, membership_of(session, kari, home)).token
+    session.execute(sql_delete(InviteLink).where(InviteLink.home_id == home.id))
+    session.execute(sql_delete(Membership).where(Membership.home_id == home.id))
+    session.execute(sql_delete(Home).where(Home.id == home.id))
+    session.commit()
+
+    with pytest.raises(invites.InviteInvalid):
+        invites.accept(session, token, anders)
