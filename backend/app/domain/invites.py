@@ -74,7 +74,7 @@ def _find(session: Session, token: str, *, lock: bool = False) -> InviteLink | N
     if lock:
         # populate_existing: a link already loaded in this session (the unlocked read in accept)
         # must take the values the lock waited for, or a second accepter would see it unused.
-        query = query.with_for_update().execution_options(populate_existing=True)
+        query = query.execution_options(populate_existing=True)
     return session.exec(query).first()
 
 
@@ -154,9 +154,9 @@ def accept(
     if unlocked is None:
         session.rollback()
         raise InviteInvalid(None)
-    session.exec(select(User).where(User.id == user.id).with_for_update()).one()
+    session.exec(select(User).where(User.id == user.id)).one()
     if (
-        session.exec(select(Home.id).where(Home.id == unlocked.home_id).with_for_update()).first()
+        session.exec(select(Home.id).where(Home.id == unlocked.home_id)).first()
         is None
     ):
         session.rollback()
