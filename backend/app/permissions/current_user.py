@@ -37,7 +37,8 @@ def current_user(
     except tokens.InvalidToken:
         raise _unauthorized() from None
     user = session.get(User, user_id)
-    if user is None:
+    # Story 1.10: a deleted account's tokens stop working at once.
+    if user is None or user.deleted_at is not None:
         raise _unauthorized()
     return user
 

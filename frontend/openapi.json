@@ -225,6 +225,52 @@
         ]
       }
     },
+    "/api/auth/delete-account": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Delete Account",
+        "description": "Story 1.10 (FR-25): anonymises the caller and deletes what only exists for them.\n\nA wrong password is 400, not 401 or 403, which the frontend answers with a refresh or a\nreload of the Homes. The refresh cookie is cleared with the answer.",
+        "operationId": "delete_account_api_auth_delete_account_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The password does not match"
+          },
+          "409": {
+            "description": "A Landlord Home still has Tenants (FR-23)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/homes": {
       "get": {
         "tags": [
@@ -2364,6 +2410,21 @@
           "type"
         ],
         "title": "CreateHomeRequest"
+      },
+      "DeleteAccountRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "DeleteAccountRequest"
       },
       "EndpointIn": {
         "properties": {

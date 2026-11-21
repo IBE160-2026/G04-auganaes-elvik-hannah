@@ -114,6 +114,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
   summary: Decide `ON DELETE` behaviour for `push_subscriptions` and `due_notifications` when account deletion (PRD §5) is built, and test that deleting a user leaves no such rows.
   evidence: Code review of Story 3.2 (Blind Hunter, Edge Case Hunter). Both tables have foreign keys to `users` without `ON DELETE`; no account deletion exists yet.
+  outcome: Settled in Story 1.10 (2026-11-21, AD-17): the user row is anonymised and kept, so no foreign key is ever broken and no `ON DELETE` is needed; `domain/account_deletion` deletes the user's push devices and claimed notifications by statement. Guarded by `test_every_table_that_points_at_users_or_homes_is_handled`.
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-2-due-overdue-push-notifications-via-due-check-job.md`
   summary: Add a test that the one-task push path (`/hjem/<home>/oppgaver/<task>`) matches a route in `frontend/src/App.tsx`.
   evidence: Code review of Story 3.2 (Verification Gap), low. The backend builds the path and the frontend defines the route; only string literals tie them together.
@@ -155,6 +157,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Scrub or derive the uploader's name in the saved description when account deletion and anonymisation (PRD §5) are built.
   evidence: Blind Hunter and Edge Case Hunter on Story 4.2. `photo_evidence.description` keeps the display name at upload time, so anonymising the user row would not remove it.
+  outcome: Settled in Story 1.10 (2026-11-21): `delete_account` rewrites the uploader's name in `photo_evidence.description` to «Tidligere medlem» for Homes that remain (`test_a_home_with_other_members_stays_and_keeps_the_history`).
+
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-tenant-uploads-photo-evidence-with-immediate-auto-approval.md`
   summary: Check that a JPEG upload is decodable (end marker or a decode) before storing it, and test two parallel uploads against Postgres.
   evidence: Edge Case Hunter on Story 4.2. Only the JPEG signature is checked, and the row lock that serializes parallel uploads does nothing on SQLite, so it is not exercised by the tests.

@@ -33,6 +33,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-21 | Story 6.1 built: FR-20 and UJ-2 say «per Home» (each unit is its own Home, there is no building), and FR-20 states when a Home is behind, what a row and the detail show, and who has the dashboard | `spec-6-1-landlord-portfolio-dashboard.md` |
 | 2026-11-21 | Chat polish (Epic 5 retro, D1): FR-15 says a failed message stays in the chat when another is sent, a retry moves it to the end, and the chat scrolls to the newest line | `epic-5-retro-2026-11-21.md` |
 | 2026-11-21 | FR-25 added (delete an account, anonymising the user; a Landlord removes the Tenants first); §5 no longer lists account deletion as a non-goal | `sprint-change-proposal-2026-11-21.md` |
+| 2026-11-21 | Story 1.10 built: FR-25 lists exactly what is deleted (no fairness records: fairness reads completions, which stay as «Tidligere medlem») | `spec-1-10-account-deletion.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -169,7 +170,7 @@ A signed-in user can delete their own account, after confirming with their passw
 
 **Consequences (testable):**
 - The account's e-mail address and password are removed and the display name becomes «Tidligere medlem»; the user cannot sign in again, and an access or refresh token issued before is refused.
-- The user's Memberships, push devices, claimed notifications, daily AI counts, fairness records and unused invite links are deleted.
+- The user's Memberships, push devices, claimed notifications, daily AI counts and unused invite links are deleted.
 - Completions and Photo Evidence the user made in Homes that remain are kept and shown as «Tidligere medlem»; the uploader's name in a saved photo description is replaced the same way.
 - A Landlord cannot delete the account while one of their Landlord Homes has a Tenant: the request is refused and says to remove the Tenants first (FR-23). Landlord Homes without Tenants are deleted with the account, with their tasks and photos.
 - A Household Home left without any Member is deleted with its tasks.

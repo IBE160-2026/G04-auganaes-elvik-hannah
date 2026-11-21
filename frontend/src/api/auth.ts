@@ -115,3 +115,22 @@ export async function fetchMe() {
   if (!data) throw toAuthError(response, error);
   return data;
 }
+
+/** Story 1.10 (FR-25): the texts of «Slett konto». The server's own 400 and 409 texts are shown. */
+export const DELETE_ACCOUNT_MESSAGES = {
+  explanation:
+    'Kontoen din slettes for alltid, og dette kan ikke angres. Navnet og e-postadressen din fjernes, og det du har gjort i andres hjem blir stående som «Tidligere medlem». Hjem uten andre medlemmer slettes.',
+  passwordLabel: 'Passord',
+  passwordMissing: 'Skriv inn passordet ditt for å bekrefte.',
+} as const;
+
+/**
+ * Deletes the signed-in account after the password is confirmed. The server clears the refresh
+ * cookie; the session is cleared here, so the routes send the user to sign-in. A failed call
+ * keeps the session.
+ */
+export async function deleteAccount(password: string): Promise<void> {
+  const { error, response } = await api.POST('/api/auth/delete-account', { body: { password } });
+  if (!response.ok) throw toAuthError(response, error);
+  setSession(null);
+}

@@ -5,11 +5,13 @@
 // Story 3.1 (FR-10, UX-DR31): «Varsler» shows the browser's push permission plainly and turns push
 // on for this device with one tap; with permission already granted the device is registered
 // silently, so a user who signs in on a browser that allowed push is not left without a row.
+// Story 1.10 (FR-25): «Slett konto» at the bottom, an inline confirmation with the password.
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { ROLE_LABELS, type Home } from '../api/homes';
 import { PUSH_MESSAGES, readPushStatus, type PushStatus } from '../api/push';
 import { useEnablePush, useHomes, useMe, useRegisterDevice, useSignOut } from '../api/queries';
+import { DeleteAccount } from '../components/DeleteAccount';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { HomesLoadError } from './HomesLoadError';
 import { useFocusOnMount } from './useFocusOnMount';
@@ -108,6 +110,12 @@ function SettingsPage({ homes, canCreate }: { homes: readonly Home[]; canCreate:
       <PrimaryButton onClick={() => signOut.mutate()} pending={signOut.isPending}>
         Logg ut
       </PrimaryButton>
+      <section className="settings__section" aria-labelledby="settings-delete">
+        <h2 id="settings-delete" className="settings__subtitle">
+          Slett konto
+        </h2>
+        <DeleteAccount />
+      </section>
     </div>
   );
 }

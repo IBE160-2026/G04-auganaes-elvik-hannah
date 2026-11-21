@@ -107,7 +107,7 @@ FR-21: Responsive layout across device classes. The web application renders a us
 FR-22: Run locally without external accounts. The application runs on a developer's or reviewer's machine using a local Docker-based database, seed data and mock modes for the external services (AI, and in Trinn 2 push), with no account or key from the team.
 FR-23: Leave a Home and remove Members (added 2026-11-08, Sprint Change Proposal 2026-11-08). A Household Member or Tenant can leave their Home; a Landlord can remove a Tenant from a Landlord Home. A Landlord cannot leave their own Landlord Home, and a Household Member cannot remove another Household Member. History stays and shows «Tidligere medlem»; only current Members count.
 
-FR-25: Delete an account (added 2026-11-21, Sprint Change Proposal 2026-11-21). A signed-in user can delete their own account after confirming the password: the user is anonymised (name «Tidligere medlem», e-mail and password removed), their devices, claimed notifications, AI counts, fairness records and unused invite links are deleted, history in other Members' Homes is kept, a Landlord must remove the Tenants first, and Homes left without Members are deleted.
+FR-25: Delete an account (added 2026-11-21, Sprint Change Proposal 2026-11-21). A signed-in user can delete their own account after confirming the password: the user is anonymised (name «Tidligere medlem», e-mail and password removed), their devices, claimed notifications, AI counts and unused invite links are deleted, history in other Members' Homes is kept, a Landlord must remove the Tenants first, and Homes left without Members are deleted.
 
 FR-24: Add and archive Tasks (added 2026-11-09, Sprint Change Proposal 2026-11-09). After Task Setup, a Household Member or Landlord can add a catalog or custom Task and archive a Task; Tenants cannot. Custom Tasks never require Photo Evidence; archiving keeps history.
 
@@ -286,7 +286,7 @@ So that my e-mail address and name leave the system while the history other Memb
 **When** one of them deletes their account
 **Then** their completions and photo evidence stay, shown as «Tidligere medlem», the name in the saved photo description is replaced, and the others' data is untouched
 
-**Given** the user's push devices, claimed notifications, AI counts, fairness records and unused invite links
+**Given** the user's push devices, claimed notifications, AI counts and unused invite links
 **When** the account is deleted
 **Then** none remain, and the deletion is one transaction: a failure leaves everything as it was
 

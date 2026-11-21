@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { askTask, type ChatTurn } from './ai';
-import { fetchMe, register, signIn, signOut } from './auth';
+import { deleteAccount, fetchMe, register, signIn, signOut } from './auth';
 import { ApiError } from './errors';
 import { enablePush, forgetDevice, registerDevice } from './push';
 import {
@@ -109,6 +109,15 @@ export function useSignOut() {
       await signOut();
     },
     onSettled: () => queryClient.clear(),
+  });
+}
+
+// Story 1.10 (FR-25): after a deletion nothing of the account may stay in the cache.
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: () => queryClient.clear(),
   });
 }
 

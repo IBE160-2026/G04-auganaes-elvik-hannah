@@ -129,6 +129,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/delete-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Account
+         * @description Story 1.10 (FR-25): anonymises the caller and deletes what only exists for them.
+         *
+         *     A wrong password is 400, not 401 or 403, which the frontend answers with a refresh or a
+         *     reload of the Homes. The refresh cookie is cleared with the answer.
+         */
+        post: operations["delete_account_api_auth_delete_account_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homes": {
         parameters: {
             query?: never;
@@ -683,6 +706,11 @@ export interface components {
              * @enum {string}
              */
             type: "household" | "landlord";
+        };
+        /** DeleteAccountRequest */
+        DeleteAccountRequest: {
+            /** Password */
+            password: string;
         };
         /** EndpointIn */
         EndpointIn: {
@@ -1291,6 +1319,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+        };
+    };
+    delete_account_api_auth_delete_account_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The password does not match */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A Landlord Home still has Tenants (FR-23) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
