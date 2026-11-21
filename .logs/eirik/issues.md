@@ -121,3 +121,4 @@
 - [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Sjekke porteføljen i nettleser (header vs. utvidet hovedkolonne via `:has`, 320/700/1200 px): bare sett av Eirik, ikke av Claude
 - [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Windows-testen (issue #14) og Neon-sjekken gjenstår fra før (Epic 5-retrospektivet er gjort 2026-11-21, `epic-5-retro-2026-11-21.md`)
 - [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Eirik + Claude: D1 chatpolering (auto-scroll, mislykket melding) før demo eller kjent grense; D2 AC for KI-stories sier hva KI ikke skal svare på
+- [ ] 2026-11-21 [story-6-1-portefolje](973-2026-11-21-19-52-47-story-6-1-portefolje.md) — Sjekk at Production-bygget kjørte migreringene `a7c9e1b3d5f2` (`users.deleted_at`) og `b8d0f2a4c6e1` (e-post-CHECK) mot Neon; og se kontosletting, portefølje og chat i nettleser
