@@ -18,6 +18,7 @@ from app.routes import (
     invites,
     onboarding,
     photo_evidence,
+    portfolio,
     push,
     tasks,
 )
@@ -31,6 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router, prefix="/api")
     app.include_router(homes.router, prefix="/api")
     app.include_router(broadcast.router, prefix="/api")
+    app.include_router(portfolio.router, prefix="/api")
     app.include_router(cadence.router, prefix="/api")
     app.include_router(photo_evidence.router, prefix="/api")
     app.include_router(invites.router, prefix="/api")

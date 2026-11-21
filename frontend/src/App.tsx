@@ -11,6 +11,7 @@ import { HomePage } from './routes/HomePage';
 import { InvitePage } from './routes/InvitePage';
 import { LandlordAdmin } from './routes/LandlordAdmin';
 import { MembersPage } from './routes/MembersPage';
+import { Portfolio } from './routes/Portfolio';
 import { Register } from './routes/Register';
 import { RequireAuth } from './routes/RequireAuth';
 import { Settings } from './routes/Settings';
@@ -103,6 +104,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <GuidePage />
+          </RequireAuth>
+        }
+      />
+      {/* Story 6.1: the Landlord Portfolio, for a Landlord of two or more Homes. */}
+      <Route
+        path="/portefolje"
+        element={
+          <RequireAuth>
+            <Portfolio />
           </RequireAuth>
         }
       />

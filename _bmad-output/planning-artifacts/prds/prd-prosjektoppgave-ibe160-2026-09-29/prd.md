@@ -30,6 +30,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-20 | Story 5.2 built: FR-15 states that each chat message counts toward the 20, what a chat sends besides the question (the user's earlier questions and the AI's answers, at most five exchanges), that nothing is stored, and how a failed message behaves; FR-14's data rule points to it | `spec-5-2-escalate-to-full-ai-chat.md` |
 | 2026-11-20 | Story 5.2 walkthrough: the quick-answer has no question field of its own; the user's own questions are typed in the chat (FR-14, Eirik's decision) | `spec-5-2-escalate-to-full-ai-chat.md` |
 | 2026-11-20 | Story 5.3 built: FR-16 states the two parts of the guide (live Home name and Must tasks, stored AI introduction), who gets it, that it counts as one of the Landlord's AI calls, what is sent, the fallback, the dismissal and where it is read again | `spec-5-3-ai-generated-onboarding-guide.md` |
+| 2026-11-21 | Story 6.1 built: FR-20 says «per Home» (each unit is its own Home, there is no building), and states when a Home is behind and who has the dashboard | `spec-6-1-landlord-portfolio-dashboard.md` |
 
 # PRD: AI-Driven Household Task App
 
@@ -369,10 +370,12 @@ Uploaded Photo Evidence auto-approves the task completion immediately; the photo
 **Functional Requirements:**
 
 #### FR-20: Portfolio-level status dashboard
-A Landlord with more than one Home sees a single view summarizing task status (on track / behind) per Home and per unit. Realizes UJ-2.
+A Landlord with more than one Home sees a single view summarizing task status (on track / behind) per Home. Each unit is its own Home. Realizes UJ-2.
 
 **Consequences (testable):**
 - The dashboard identifies, at minimum, which Homes have overdue Must tasks, without requiring the Landlord to open each Home individually.
+- A Home is behind when it has at least one overdue Must task; a Home without Tasks is shown as not set up, not as on track. Archived Tasks do not count (FR-24).
+- The dashboard exists for a Landlord who is Landlord in two or more Homes; the server decides this.
 
 ### 4.8 Responsive Platform
 

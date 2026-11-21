@@ -1,0 +1,24 @@
+/* Story 6.1: the Portfolio status tag. Outlined, so the label carries the meaning. */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid currentcolor;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-badge);
+  font-weight: var(--font-weight-badge);
+  line-height: var(--line-height-badge);
+}
+
+.status-tag--behind {
+  color: var(--color-danger);
+}
+
+.status-tag--on_track {
+  color: var(--color-success);
+}
+
+.status-tag--not_set_up {
+  color: var(--color-ink-secondary);
+}

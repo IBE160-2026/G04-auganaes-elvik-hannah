@@ -184,8 +184,9 @@ export function homesResponse(
   homes: readonly Home[] = [OLAS_HOME],
   allowed_types: HomeType[] = [],
   lived_in_home_id: string | null = null,
+  has_portfolio = false,
 ) {
-  return { homes, allowed_types, lived_in_home_id };
+  return { homes, allowed_types, lived_in_home_id, has_portfolio };
 }
 
 // Story 1.5: Ola's own row, as GET /api/homes/<id>/members returns it.

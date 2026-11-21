@@ -553,6 +553,42 @@
         }
       }
     },
+    "/api/portfolio": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Get Portfolio",
+        "operationId": "get_portfolio_api_portfolio_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Landlord in fewer than two Homes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/homes/{home_id}/notification-cadence": {
       "put": {
         "tags": [
@@ -2634,13 +2670,18 @@
               }
             ],
             "title": "Lived In Home Id"
+          },
+          "has_portfolio": {
+            "type": "boolean",
+            "title": "Has Portfolio"
           }
         },
         "type": "object",
         "required": [
           "homes",
           "allowed_types",
-          "lived_in_home_id"
+          "lived_in_home_id",
+          "has_portfolio"
         ],
         "title": "HomesOut"
       },
@@ -2853,6 +2894,94 @@
           "members"
         ],
         "title": "MembersOut"
+      },
+      "OverdueTaskOut": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Task Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "due_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Due On"
+          },
+          "days_overdue": {
+            "type": "integer",
+            "title": "Days Overdue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "name",
+          "due_on",
+          "days_overdue"
+        ],
+        "title": "OverdueTaskOut"
+      },
+      "PortfolioHomeOut": {
+        "properties": {
+          "home_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Home Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "behind",
+              "on_track",
+              "not_set_up"
+            ],
+            "title": "Status"
+          },
+          "overdue_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/OverdueTaskOut"
+            },
+            "type": "array",
+            "title": "Overdue Tasks"
+          },
+          "due_soon_count": {
+            "type": "integer",
+            "title": "Due Soon Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "home_id",
+          "name",
+          "status",
+          "overdue_tasks",
+          "due_soon_count"
+        ],
+        "title": "PortfolioHomeOut"
+      },
+      "PortfolioOut": {
+        "properties": {
+          "homes": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHomeOut"
+            },
+            "type": "array",
+            "title": "Homes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "homes"
+        ],
+        "title": "PortfolioOut"
       },
       "PushConfigOut": {
         "properties": {

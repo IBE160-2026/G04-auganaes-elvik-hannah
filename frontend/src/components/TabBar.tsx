@@ -3,8 +3,9 @@
 // out, on sign-in/register, while the Homes load or fail, and for a user without a Home.
 // AppShell wraps SessionGate, so this reads the session and Homes itself and never assumes them.
 // It only reads the Homes the page loaded (useLoadedHomes), so the list is never fetched twice.
-// «Oppgaver» opens the Home in the URL (/hjem/<id>/…), else the Home "/" would open. The
-// Portfolio tab comes with Story 6.1 (decision 5).
+// «Oppgaver» opens the Home in the URL (/hjem/<id>/…), else the Home "/" would open.
+// Story 6.1: «Portefølje» between them, only when the server says has_portfolio (a Landlord of two
+// or more Homes), so the rule is never repeated here.
 import { Link, useLocation, useMatch } from 'react-router';
 import { pickHome, readLastHome } from '../api/lastHome';
 import { useLoadedHomes } from '../api/queries';
@@ -23,6 +24,7 @@ export function TabBar() {
     homes.data.homes.find((h) => h.id === urlHomeId) ?? pickHome(homes.data, readLastHome(session.user.id));
   if (!home) return null;
   const onSettings = pathname === '/innstillinger';
+  const onPortfolio = pathname === '/portefolje';
 
   return (
     <nav className="tab-bar" aria-label="Hovedmeny">
@@ -32,6 +34,13 @@ export function TabBar() {
             Oppgaver
           </Link>
         </li>
+        {homes.data.has_portfolio && (
+          <li className="tab-bar__item">
+            <Link to="/portefolje" className="tab-bar__tab" aria-current={onPortfolio ? 'page' : undefined}>
+              Portefølje
+            </Link>
+          </li>
+        )}
         <li className="tab-bar__item">
           <Link to="/innstillinger" className="tab-bar__tab" aria-current={onSettings ? 'page' : undefined}>
             Innstillinger

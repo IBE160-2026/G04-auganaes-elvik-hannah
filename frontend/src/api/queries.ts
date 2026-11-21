@@ -25,6 +25,7 @@ import {
   type Homes,
 } from './homes';
 import { sendBroadcast } from './broadcast';
+import { fetchPortfolio } from './portfolio';
 import { saveCadence, type CadenceDays } from './cadence';
 import { dismissGuide, fetchGuide, type Guide } from './onboarding';
 import {
@@ -141,6 +142,20 @@ export function useHomes() {
 export function useLoadedHomes() {
   const session = useSession();
   return useQuery({ queryKey: homesKey(session?.user.id), queryFn: fetchHomes, enabled: false });
+}
+
+// Story 6.1: the Portfolio, keyed on the user. Refetched on mount and window focus (AD-10).
+export function portfolioKey(userId: string | undefined) {
+  return ['portfolio', userId] as const;
+}
+
+export function usePortfolio() {
+  const session = useSession();
+  return useQuery({
+    queryKey: portfolioKey(session?.user.id),
+    queryFn: fetchPortfolio,
+    enabled: session !== null,
+  });
 }
 
 // Story 1.5: keyed on the Home and the user. Refetched on mount and window focus, no polling.
@@ -383,6 +398,8 @@ export function useCreateHome() {
         // Kept until the refetch, never guessed here: the server answers a stale offer with 409.
         allowed_types: old?.allowed_types ?? [],
         lived_in_home_id: old?.lived_in_home_id ?? null,
+        // Story 6.1: the Portfolio rule is the server's too, so no tab is guessed before the refetch.
+        has_portfolio: old?.has_portfolio ?? false,
       }));
       void queryClient.invalidateQueries({ queryKey: key });
     },
@@ -545,6 +562,8 @@ export function useAcceptInvite(token: string) {
         // Kept until the refetch, never guessed here: the server answers a stale offer with 409.
         allowed_types: old?.allowed_types ?? [],
         lived_in_home_id: old?.lived_in_home_id ?? null,
+        // Story 6.1: the Portfolio rule is the server's too, so no tab is guessed before the refetch.
+        has_portfolio: old?.has_portfolio ?? false,
       }));
       void queryClient.invalidateQueries({ queryKey: key });
       void queryClient.invalidateQueries({ queryKey: ['invite', token] });
