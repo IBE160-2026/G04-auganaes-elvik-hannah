@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, StringConstraints
 
 from app.domain import broadcast
-from app.push import Sender, get_sender
+from app.push import MockSender, Sender, get_sender
 from app.routes.deps import ErrorOut, Landlord, SessionDep
 
 router = APIRouter(prefix="/homes", tags=["broadcast"])
@@ -33,6 +33,8 @@ class BroadcastOut(BaseModel):
     recipients: int
     # Current Tenants with no device that took it (no device, or every send failed).
     without_push: int
+    # Story 3.4 follow-up: the mock sender is active (no VAPID keys), so nothing reached a device.
+    demo: bool
 
 
 @router.post(
@@ -56,4 +58,4 @@ def send_broadcast(
         result = broadcast.send_broadcast(session, sender, home_id, body.message)
     except broadcast.NoTenants:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=NO_TENANTS) from None
-    return BroadcastOut(**result._asdict())
+    return BroadcastOut(**result._asdict(), demo=isinstance(sender, MockSender))

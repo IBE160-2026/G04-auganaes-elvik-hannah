@@ -35,6 +35,7 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-21 | FR-25 added (delete an account, anonymising the user; a Landlord removes the Tenants first); §5 no longer lists account deletion as a non-goal | `sprint-change-proposal-2026-11-21.md` |
 | 2026-11-21 | Story 1.10 built: FR-25 lists exactly what is deleted (no fairness records: fairness reads completions, which stay as «Tidligere medlem»), that an emptied Home takes its history with it, that photos are removed best effort after the deletion, and that wrong-password attempts are not limited | `spec-1-10-account-deletion.md` |
 | 2026-11-21 | Photo robustness (deferred work from Stories 4.2 and 4.3): FR-19 says a cut-off JPEG is refused and that a failed completion puts the previous photo back | `deferred-work.md`, `fix/foto-robusthet` |
+| 2026-11-21 | Small fixes from deferred work: FR-12 says the confirmation is marked as a demo when no real push was sent; FR-18 says a change to Should tells the editor the photo requirement was removed; FR-24 says a Tenant sees a neutral text when every Task is archived | `deferred-work.md`, `fix/smaating` |
 
 # PRD: AI-Driven Household Task App
 
@@ -235,7 +236,7 @@ After Task Setup, a Household Member or Landlord can add a Task — a catalog ta
 **Consequences (testable):**
 - A custom Task has a name (unique among the Home's active Tasks), a Must/Should classification and a Frequency chosen by the user (FR-4, FR-8). It can never require Photo Evidence (FR-18, Privacy Constraints).
 - An archived Task disappears from Task Overview, notifications, fairness and the Portfolio. Its history (completions, Photo Evidence) is kept. A catalog task type can be added again as a new Task.
-- Archiving asks for confirmation first. Archiving every Task does not reopen Task Setup, which still runs once per Home.
+- Archiving asks for confirmation first. Archiving every Task does not reopen Task Setup, which still runs once per Home. A Tenant of a Home whose Tasks are all archived is told there are no Tasks, not that setup is missing.
 - A Tenant's attempt to add or archive a Task is rejected server-side.
 
 #### FR-9: Auto-reschedule on completion
@@ -277,7 +278,7 @@ A Landlord can send a free-form reminder message to all Tenants of a specific Ho
 **Consequences (testable):**
 - A sent broadcast message is delivered as a push notification to every Tenant Member of the targeted Home, at once and not with the daily due-check. Only the Home's current Tenants receive it: the Landlord, Household Members and Tenants who have left do not.
 - Only the Home's Landlord can send. The text is 1 to 300 characters after leading and trailing spaces are removed.
-- The Landlord is told how many Tenants the message reached, not who. A Tenant counts as reached when at least one of their devices took the push; the Landlord also sees how many Tenants could not be reached (no device, or every send failed), because push is the only channel. If no Tenant could be reached, the text is kept so it can be sent again.
+- The Landlord is told how many Tenants the message reached, not who. A Tenant counts as reached when at least one of their devices took the push; the Landlord also sees how many Tenants could not be reached (no device, or every send failed), because push is the only channel. If no Tenant could be reached, the text is kept so it can be sent again. When the system sends no real push (no push keys are set), the confirmation says it is a demo, so «sent» is not read as delivered.
 - The message is not stored: it only passes through the push services to the Tenants' devices. The Landlord's notification cadence (FR-13) does not limit or delay it, and no daily limit on broadcasts applies.
 - A Home with no Tenants refuses the message with a clear text. A failed send shows an error with a retry and keeps the text; a failed send is not retried by the system.
 
@@ -353,7 +354,7 @@ A Landlord can mark a specific Must task as requiring Photo Evidence from Tenant
 - A task flagged as requiring Photo Evidence cannot be marked complete by a Tenant without an attached photo.
 - Requiring Photo Evidence is an explicit Landlord setting per task, not a system-wide default.
 - Only the Home's Landlord can set it, one task at a time. The server refuses it for a custom task, for a task type that is not marked as eligible in the catalog, and for a Should task, with a clear message (one for tasks of a type that cannot, one for Should tasks); turning it off is always allowed. A Landlord cannot change which types are eligible.
-- Changing a task to Should removes its requirement, and changing it back does not restore it.
+- Changing a task to Should removes its requirement, and changing it back does not restore it. The person who made the change is told the requirement was removed.
 - A household Home has no such setting at all.
 
 **Out of Scope:**

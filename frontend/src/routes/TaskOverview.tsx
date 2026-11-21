@@ -263,7 +263,7 @@ function TaskListBody({ home, tasks, views }: TaskListBodyProps) {
     // Every Task archived: setup has run, so setup is not offered again (has_tasks).
     return (
       <div className="task-overview__empty task-overview__empty--actions">
-        <p>{home.can_adjust_tasks ? TASK_MESSAGES.noTasks : TASK_MESSAGES.tenantWaiting}</p>
+        <p>{home.can_adjust_tasks ? TASK_MESSAGES.noTasks : TASK_MESSAGES.tenantNoTasks}</p>
         {home.can_adjust_tasks && (
           <Link to={addTaskPath(home)} className="task-overview__link">
             Legg til oppgave

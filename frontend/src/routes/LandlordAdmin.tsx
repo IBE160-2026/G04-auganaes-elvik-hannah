@@ -10,7 +10,7 @@
 // createQueryClient refetches the Homes and the guard routes.
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import { ApiError } from '../api/errors';
+import { ApiError, failureText } from '../api/errors';
 import {
   BROADCAST_MAX,
   sentNotice,
@@ -75,10 +75,7 @@ function Composer({ home }: { home: Home }) {
     attempt();
   }
 
-  const failure =
-    send.error instanceof ApiError && send.error.status === 403
-      ? null
-      : (send.error?.message ?? null);
+  const failure = failureText(send.error);
 
   return (
     <form className="landlord-admin__section" onSubmit={submit} noValidate>
@@ -138,8 +135,7 @@ function CadenceSection({ home }: { home: Home }) {
     save.mutate(days, { onSuccess: () => setNotice(CADENCE_MESSAGES.saved) });
   }
 
-  const failure =
-    save.error instanceof ApiError && save.error.status === 403 ? null : (save.error?.message ?? null);
+  const failure = failureText(save.error);
 
   return (
     <form
@@ -240,10 +236,7 @@ function PhotoEvidenceSection({ home }: { home: Home }) {
 function PhotoEvidenceRow({ home, task }: { home: Home; task: Task }) {
   const set = useSetPhotoEvidence(home.id);
   const checked = set.isPending ? set.variables.required : task.requires_photo_evidence;
-  const failure =
-    set.error instanceof ApiError && set.error.status === 403
-      ? null
-      : (set.error?.message ?? null);
+  const failure = failureText(set.error);
 
   return (
     <li className="landlord-admin__row">

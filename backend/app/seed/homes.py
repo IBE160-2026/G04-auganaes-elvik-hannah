@@ -45,11 +45,12 @@ def _seed_household(session: Session) -> None:
         home = homes.create_home(session, mari, name=EXAMPLE_HOME_NAME, type="household").home
         print(f"Opprettet hjemmet «{EXAMPLE_HOME_NAME}» med {CREATOR_EMAIL}")
 
-    jonas_homes = session.exec(select(Membership.home_id).where(Membership.user_id == jonas.id))
-    jonas_home_ids = set(jonas_homes.all())
-    if home.id in jonas_home_ids:
+    # The same rule as the app's own joining (Story 1.9): only a Household Member or Tenant
+    # elsewhere blocks it, so a Jonas who is only a Landlord somewhere still joins.
+    blocker = homes.join_blocker(session, home, jonas)
+    if isinstance(blocker, homes.AlreadyMember):
         print(f"{JOINER_EMAIL} er allerede med i «{EXAMPLE_HOME_NAME}»")
-    elif jonas_home_ids:
+    elif isinstance(blocker, homes.InOtherHome):
         print(f"Hoppet over {JOINER_EMAIL}: er allerede med i et annet hjem")
     else:
         homes.add_member(session, home, jonas)

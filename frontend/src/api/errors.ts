@@ -7,6 +7,8 @@ type ValidationError = components['schemas']['ValidationError'];
 export type FieldMessages = Partial<Record<string, string>>;
 
 export const GENERIC_ERROR = 'Noe gikk galt. Prøv igjen om litt.';
+/** A request that got no answer at all (offline, or the server is unreachable). */
+export const OFFLINE_ERROR = 'Vi fikk ikke kontakt med tjenesten. Sjekk nettverket og prøv igjen.';
 
 /** A failed API call. `message` is for the form; `fields` holds messages per input after a 422. */
 export class ApiError extends Error {
@@ -19,6 +21,17 @@ export class ApiError extends Error {
     this.status = status;
     this.fields = fields;
   }
+}
+
+/**
+ * The text to show under a form for a failed mutation, or null when another part of the app
+ * handles it (a 403: the global handler refetches and the guards route). An error that is not an
+ * ApiError never got an answer, so it reads as offline, never as the browser's raw text.
+ */
+export function failureText(error: Error | null): string | null {
+  if (!error) return null;
+  if (!(error instanceof ApiError)) return OFFLINE_ERROR;
+  return error.status === 403 ? null : error.message;
 }
 
 export type ToApiErrorOptions = {

@@ -151,6 +151,33 @@ describe('Adjust a Task (Story 2.3)', () => {
     await waitFor(() => expect(server.calls('GET', tasksPath(OLAS_HOME)).length).toBeGreaterThan(loads));
   });
 
+  it('tells the editor that changing a task with a photo requirement to Bør removes the requirement', async () => {
+    // Guards `dropsPhotoRequirement` in AdjustForm (FR-18, decision 3).
+    const withPhoto = { ...MUST, requires_photo_evidence: true };
+    fakeApi({
+      ...signedInWith(),
+      [`GET ${tasksPath(OLAS_HOME)}`]: () => json(200, { tasks: [withPhoto, ...OLAS_TASKS.slice(1)] }),
+      [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(withPhoto),
+    });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByText(TASK_MESSAGES.savedWithoutPhotoRequirement)).toBeInTheDocument();
+  });
+
+  it('says plain «Lagret» when the task had no photo requirement', async () => {
+    fakeApi({ ...signedInWith(), [`PATCH ${taskPath(OLAS_HOME, MUST)}`]: adjustHandler(MUST) });
+    await openDetail();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Bør' }));
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByText(TASK_MESSAGES.saved)).toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.savedWithoutPhotoRequirement)).not.toBeInTheDocument();
+  });
+
   it('saves only the changed interval and then shows the saved value', async () => {
     const bodies: unknown[] = [];
     fakeApi({

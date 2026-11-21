@@ -12,6 +12,8 @@ export const BROADCAST_MESSAGES = {
   empty: 'Skriv en melding først.',
   tooLong: `Meldingen kan ha maks ${BROADCAST_MAX} tegn.`,
   failed: 'Vi fikk ikke sendt meldingen. Prøv igjen.',
+  // The mock sender is active (no VAPID keys on the server): nothing reached a device.
+  demo: 'Demo: ingen ekte varsler er sendt.',
 } as const;
 
 /**
@@ -19,12 +21,13 @@ export const BROADCAST_MESSAGES = {
  * reached (no device, or every send failed). Nobody reached is not «Sendt».
  */
 export function sentNotice(result: BroadcastResult): string {
+  const demo = result.demo ? ` ${BROADCAST_MESSAGES.demo}` : '';
   if (result.recipients === 0) {
     return 'Ingen leietakere kunne nås med varsel. Teksten er beholdt, så du kan prøve igjen.';
   }
   const sent = `Sendt til ${result.recipients} ${result.recipients === 1 ? 'leietaker' : 'leietakere'}.`;
-  if (result.without_push === 0) return sent;
-  return `${sent} ${result.without_push} kunne ikke nås med varsel.`;
+  if (result.without_push === 0) return `${sent}${demo}`;
+  return `${sent} ${result.without_push} kunne ikke nås med varsel.${demo}`;
 }
 
 /** Client-side check, mirroring the server's 422 rules. Code points, as Pydantic counts them. */

@@ -193,7 +193,8 @@ function AdjustForm({ home, task }: { home: Home; task: Task }) {
           if (changes.frequency_days !== undefined) {
             setFrequency((draft) => (draft === changes.frequency_days ? null : draft));
           }
-          setStatus(TASK_MESSAGES.saved);
+          const dropsPhotoRequirement = changes.classification === 'should' && task.requires_photo_evidence;
+          setStatus(dropsPhotoRequirement ? TASK_MESSAGES.savedWithoutPhotoRequirement : TASK_MESSAGES.saved);
         },
       },
     );

@@ -2301,12 +2301,17 @@
           "without_push": {
             "type": "integer",
             "title": "Without Push"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo"
           }
         },
         "type": "object",
         "required": [
           "recipients",
-          "without_push"
+          "without_push",
+          "demo"
         ],
         "title": "BroadcastOut"
       },

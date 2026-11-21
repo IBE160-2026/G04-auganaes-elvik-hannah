@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.clock import utc_now
@@ -15,7 +15,12 @@ NAME_MAX_LENGTH = 50
 class User(SQLModel, table=True):
     # "user" is a reserved word in Postgres.
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("email", name="uq_users_email"),)
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_users_email"),
+        # The database itself keeps e-mail addresses lowercase (deferred from Story 1.2), so a write
+        # that bypasses accounts.normalize_email cannot make `Ola@…` beside `ola@…`.
+        CheckConstraint("email = lower(email)", name="ck_users_email_lowercase"),
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     # Stored stripped and lowercased (domain/accounts.py), so the constraint is case-insensitive.

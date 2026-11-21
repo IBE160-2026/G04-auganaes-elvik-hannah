@@ -672,13 +672,14 @@ describe('Task Overview, add and an empty list (Story 2.6)', () => {
     expect(window.location.pathname).toBe(PAGE);
   });
 
-  it('tells a Tenant the Landlord has not set up Tasks, with no way to add', async () => {
+  it('tells a Tenant there are no Tasks when every one is archived, not that setup is missing', async () => {
+    // Guards tenantNoTasks: setup has run (has_tasks), so «ikke satt opp ennå» would be untrue.
     fakeApi({ ...signedInWith([OLAS_TENANCY]), [`GET ${tasksPath(OLAS_TENANCY)}`]: () => json(200, { tasks: [] }) });
     renderAt(`/hjem/${OLAS_TENANCY.id}`);
 
-    expect(await screen.findByText(TASK_MESSAGES.tenantWaiting)).toBeInTheDocument();
+    expect(await screen.findByText(TASK_MESSAGES.tenantNoTasks)).toBeInTheDocument();
+    expect(screen.queryByText(TASK_MESSAGES.tenantWaiting)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Legg til oppgave' })).not.toBeInTheDocument();
-    expect(screen.queryByText(TASK_MESSAGES.noTasks)).not.toBeInTheDocument();
   });
 });
 

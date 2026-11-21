@@ -543,3 +543,27 @@ def test_the_route_uses_the_utc_today_of_the_clock(
 
 def test_the_internal_route_is_not_in_the_api_document(client: TestClient) -> None:
     assert "/api/internal/run-due-check" not in client.get("/openapi.json").json()["paths"]
+
+
+def test_the_one_task_push_path_matches_a_route_in_the_frontend(session: Session) -> None:
+    # Guards the string tie between the backend's push url and the frontend's route: the path the
+    # job builds (`/hjem/<home>/oppgaver/<task>`) must match a <Route path> in frontend/src/App.tsx.
+    import re
+    from pathlib import Path
+
+    app_tsx = Path(__file__).resolve().parents[2] / "frontend" / "src" / "App.tsx"
+    patterns = re.findall(r'<Route\s+path="([^"]+)"', app_tsx.read_text("utf-8"))
+    assert patterns  # the file was read and has routes
+
+    home_id, kari, anders = landlord_home(session)
+    add_task(session, home_id, kari, "Støvsuge", TODAY - timedelta(days=3))
+    device(session, anders, "a")
+    sender = MockSender()
+    run(session, sender)
+    sent = sent_to(sender)["a"].url
+
+    def matches(pattern: str, url: str) -> bool:
+        regex = re.sub(r":[A-Za-z]+", "[^/]+", pattern)
+        return re.fullmatch(regex, url) is not None
+
+    assert any(matches(pattern, sent) for pattern in patterns), sent
