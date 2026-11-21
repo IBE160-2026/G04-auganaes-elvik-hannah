@@ -72,7 +72,9 @@ def _find(session: Session, token: str, *, lock: bool = False) -> InviteLink | N
         return None
     query = select(InviteLink).where(InviteLink.token_hash == hash_token(token))
     if lock:
-        query = query.with_for_update()
+        # populate_existing: a link already loaded in this session (the unlocked read in accept)
+        # must take the values the lock waited for, or a second accepter would see it unused.
+        query = query.with_for_update().execution_options(populate_existing=True)
     return session.exec(query).first()
 
 
