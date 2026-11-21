@@ -484,12 +484,13 @@ def test_create_home_waits_for_the_user_row(pg_engine: Engine, make_session: Mak
     assert blocked and outcome[0] == "ok"
 
 
-@pytest.mark.parametrize("table", ["users", "homes"])
-def test_delete_account_waits_for_the_users_row_and_the_users_homes(
-    pg_engine: Engine, make_session: MakeSession, tmp_path: Path, table: str
+def test_delete_account_waits_for_the_homes_of_the_user(
+    pg_engine: Engine, make_session: MakeSession, tmp_path: Path
 ) -> None:
-    # Guards the user-row and Home locks in account_deletion.delete_account (the Home lock keeps
-    # two members deleting at once from both leaving the Home behind, and a join from racing it).
+    # Guards the Home lock in account_deletion.delete_account (it keeps two members deleting at once
+    # from both leaving the Home behind, and a join from racing it). The user-row lock is not held
+    # here: the function updates the unique e-mail column, which waits for any lock on that row
+    # anyway, so it is guarded by the race test of the same account deleted twice.
     store = LocalPhotoStore(tmp_path)
     with make_session() as setup:
         owner, home = household(setup)
@@ -502,9 +503,8 @@ def test_delete_account_waits_for_the_users_row_and_the_users_homes(
         assert user is not None
         return account_deletion.delete_account(session, user, PASSWORD, store)
 
-    target = owner_id if table == "users" else home_id
     blocked, outcome = blocks_while_locked(
-        make_session, f"SELECT id FROM {table} WHERE id = :id FOR KEY SHARE", {"id": target}, job
+        make_session, "SELECT id FROM homes WHERE id = :id FOR KEY SHARE", {"id": home_id}, job
     )
 
     assert blocked and outcome[0] == "ok"
