@@ -1,9 +1,9 @@
 # KI-økt 2026-11-21 – Eirik
 
 - **Økt-ID:** `3d7aacfb-6e1b-4f4e-8e34-1d9c0372fe11`
-- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 21:34
+- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 21:37
 - **Verktøy:** Claude Code
-- **Antall prompts:** 22
+- **Antall prompts:** 24
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -52,6 +52,7 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `b774689` 2026-11-21 21:30 (EirikAuganaes) Merge pull request #96 from IBE160-2026/story/pg-samtidighetstester
 - `acacbc5` 2026-11-21 21:31 (Eirik) Logg: story-6-1-portefolje (fortsettelse) og KI-logg for økten 21.11
 - `4ec78d9` 2026-11-21 21:34 (Eirik) Logg: migreringene mot Neon er bekreftet (issues.md)
+- `153c722` 2026-11-21 21:37 (Eirik) KI-logg: eksport av økten 21.11 (fortsettelse)
 
 ## Logg
 
@@ -170,4 +171,12 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 29. Prompt · 2026-11-21 21:34
 
 > ja, marker som løst
+
+### 30. Prompt · 2026-11-21 21:36
+
+> commit KI-loggen og push
+
+### 31. Prompt · 2026-11-21 21:37
+
+> Hva gjenstår nå?
 

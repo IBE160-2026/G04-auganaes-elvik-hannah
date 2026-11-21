@@ -98,7 +98,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-1-contextual-quick-answer.md`
   summary: Check «?» with a screen reader: the live region sits in a `hidden` panel, so the skeleton text at the moment of opening may not be announced, and the failure text has `role="alert"` inside the polite region.
   evidence: Code review of Story 5.1 (Blind Hunter). Jest-dom cannot show what a screen reader says. Fix if it matters: keep a visually hidden status element outside the panel and drop `role="alert"` there.
-  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/paminnelse-eirik-steffen-2026-11-22.md`.
+  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/plan-eirik-steffen-2026-11-22.md`.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-push-notification-permission-device-registration.md`
   summary: Before Story 3.2 sends pushes, check that a stored endpoint does not point at an internal address, and consider an allowlist of known push-service hosts.
@@ -150,7 +150,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-4-landlord-ad-hoc-broadcast-message.md`
   summary: Check with a screen reader that a second send with the same count is announced (the live region gets identical text), together with the open screen reader check of the AI popover.
   evidence: Blind Hunter on Story 3.4. The notice is cleared and set in the same render batch, so the region may not see an empty state.
-  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/paminnelse-eirik-steffen-2026-11-22.md`.
+  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/plan-eirik-steffen-2026-11-22.md`.
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-landlord-requires-photo-evidence-on-eligible-must-tasks.md`
   summary: Decide whether a Tenant should see on Task Detail that the Landlord requires a photo, before Story 4.2 adds the upload.
   evidence: Story 4.1 stores the requirement but shows it only to the Landlord. Until 4.2 a Tenant can still complete the task without a photo, so the setting has no effect.
@@ -226,7 +226,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-6-1-landlord-portfolio-dashboard.md`
   summary: Screen reader check of the Portfolio: nothing announces that the detail column changed when a row is selected, and focus does not move.
   evidence: Review (Verification Gap, Blind Hunter): `aria-pressed` and the swapped detail section are the only signals on tablet and up; to be checked with VoiceOver together with Story 5.1's popover check.
-  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/paminnelse-eirik-steffen-2026-11-22.md`.
+  outcome: Open 2026-11-21: manual check, part of C1 (screen reader pass) in `docs/plan-eirik-steffen-2026-11-22.md`.
 
 ## Audit 2026-11-21
 
