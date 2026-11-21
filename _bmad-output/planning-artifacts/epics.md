@@ -107,6 +107,8 @@ FR-21: Responsive layout across device classes. The web application renders a us
 FR-22: Run locally without external accounts. The application runs on a developer's or reviewer's machine using a local Docker-based database, seed data and mock modes for the external services (AI, and in Trinn 2 push), with no account or key from the team.
 FR-23: Leave a Home and remove Members (added 2026-11-08, Sprint Change Proposal 2026-11-08). A Household Member or Tenant can leave their Home; a Landlord can remove a Tenant from a Landlord Home. A Landlord cannot leave their own Landlord Home, and a Household Member cannot remove another Household Member. History stays and shows «Tidligere medlem»; only current Members count.
 
+FR-25: Delete an account (added 2026-11-21, Sprint Change Proposal 2026-11-21). A signed-in user can delete their own account after confirming the password: the user is anonymised (name «Tidligere medlem», e-mail and password removed), their devices, claimed notifications, AI counts, fairness records and unused invite links are deleted, history in other Members' Homes is kept, a Landlord must remove the Tenants first, and Homes left without Members are deleted.
+
 FR-24: Add and archive Tasks (added 2026-11-09, Sprint Change Proposal 2026-11-09). After Task Setup, a Household Member or Landlord can add a catalog or custom Task and archive a Task; Tenants cannot. Custom Tasks never require Photo Evidence; archiving keeps history.
 
 ### NonFunctional Requirements
@@ -243,8 +245,9 @@ FR-21: Epic 1 (foundation: responsive app shell, design tokens, PWA) - Epic 6 (d
 FR-22: Epic 1 (Story 1.6 - local run with Docker, seed data and mock modes; README and `.env.example` from Story 1.1)
 FR-23: Epic 1 (Story 1.8 - leave a Home, Landlord removes a Tenant; added 2026-11-08)
 FR-24: Epic 2 (Story 2.6 - add and remove Tasks; added 2026-11-09)
+FR-25: Epic 1 (Story 1.10 - delete an account; added 2026-11-21)
 
-Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22, FR-23, FR-24. Trinn 2 = FR-10 to FR-13, FR-15, FR-16, FR-18 to FR-20, FR-21 (dashboard behavior).
+Stage per FR: Trinn 1 = FR-1 to FR-9, FR-14, FR-17, FR-21 (shell), FR-22, FR-23, FR-24, FR-25. Trinn 2 = FR-10 to FR-13, FR-15, FR-16, FR-18 to FR-20, FR-21 (dashboard behavior).
 
 ## Epic List
 
@@ -253,7 +256,49 @@ Users can register and log in, create a Home (Household or Landlord), invite oth
 **FRs covered:** FR-1, FR-2, FR-3, FR-22, FR-23 (+ FR-21 at the shell level)
 **Stage:** Trinn 1
 
-### Epic 2: Task Management Core Loop
+#### Story 1.10: Delete an Account
+
+**Stage:** Trinn 1 · **Source:** PRD §5, Sprint Change Proposal 2026-11-21 · **FR:** FR-25, FR-23 · **AD:** AD-16, AD-17
+
+As a user,
+I want to delete my account,
+So that my e-mail address and name leave the system while the history other Members rely on stays.
+
+**Acceptance Criteria:**
+
+**Given** a signed-in user under Settings
+**When** they open «Slett konto», confirm and give their password
+**Then** the account is anonymised (name «Tidligere medlem», e-mail and password removed), they are signed out, and signing in again or a token issued before is refused (FR-25)
+
+**Given** a wrong password
+**When** the user tries to delete the account
+**Then** the server refuses and nothing is changed
+
+**Given** a Landlord whose Landlord Home has a Tenant
+**When** they try to delete the account
+**Then** the server answers 409 saying to remove the Tenants first (FR-23), and nothing is changed
+
+**Given** a Landlord whose Landlord Homes have no Tenants, or a Household Member who was the Home's last Member
+**When** the account is deleted
+**Then** those Homes are deleted with their tasks and photos (also in the photo store)
+
+**Given** a Home that has other Members
+**When** one of them deletes their account
+**Then** their completions and photo evidence stay, shown as «Tidligere medlem», the name in the saved photo description is replaced, and the others' data is untouched
+
+**Given** the user's push devices, claimed notifications, AI counts, fairness records and unused invite links
+**When** the account is deleted
+**Then** none remain, and the deletion is one transaction: a failure leaves everything as it was
+
+**Given** the tables that point at users or Homes
+**When** the tests run
+**Then** one test lists them from the database metadata and fails for a table the deletion does not handle, so a new table cannot be forgotten
+
+**Given** README and the Settings page
+**When** the story is delivered
+**Then** README says how to try the deletion, and the confirmation says plainly that it cannot be undone
+
+## Epic 2: Task Management Core Loop
 Household Members, Tenants, and Landlords can see a Must-first task list for their Home, (for Household Members/Landlords) adjust a task's Must/Should classification and Frequency inline, self-checkoff a task in one tap, see shared completion status update immediately with per-member attribution, and have the next occurrence auto-scheduled from the actual completion date. Includes the Task Setup step at Home creation (reviewing/accepting the app's recommended task list). Implements the single `complete_task_instance` domain function (AD-3) that Epic 4 (Photo Evidence) will later extend, and add or remove Tasks after setup (Story 2.6).
 **FRs covered:** FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-17, FR-24
 **Stage:** Trinn 1
