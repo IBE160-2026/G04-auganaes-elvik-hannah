@@ -43,7 +43,7 @@ story_location: _bmad-output/implementation-artifacts
 #   1-9 (én regel for å opprette hjem, issue #30) kommer før 2-2; 2-6 (legge til og fjerne oppgaver, issue #31) kommer etter 2-5 (correct-course 2026-11-09).
 #   2-5 bygges og lukkes sammen med 2-4 i samme PR (spec for Story 2.4, beslutning 2, 2026-11-11); status følger 2-4.
 development_status:
-  epic-1: done
+  epic-1: in-progress
   1-1-project-scaffold-design-tokens-responsive-app-shell: done
   1-2-account-registration-login: done
   1-3-create-a-home-household-or-landlord: done
@@ -53,6 +53,7 @@ development_status:
   1-7-hosted-demo-on-vercel-services-neon: done
   1-8-leave-a-home-landlord-removes-a-tenant: done
   1-9-one-rule-for-creating-homes: done
+  1-10-account-deletion: backlog
   epic-1-retrospective: done
 
   epic-2: done

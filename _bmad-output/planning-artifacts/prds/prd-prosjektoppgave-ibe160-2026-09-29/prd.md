@@ -32,12 +32,13 @@ Each change after the first final version, with the proposal that explains it. R
 | 2026-11-20 | Story 5.3 built: FR-16 states the two parts of the guide (live Home name and Must tasks, stored AI introduction), who gets it, that it counts as one of the Landlord's AI calls, what is sent, the fallback, the dismissal and where it is read again | `spec-5-3-ai-generated-onboarding-guide.md` |
 | 2026-11-21 | Story 6.1 built: FR-20 and UJ-2 say «per Home» (each unit is its own Home, there is no building), and FR-20 states when a Home is behind, what a row and the detail show, and who has the dashboard | `spec-6-1-landlord-portfolio-dashboard.md` |
 | 2026-11-21 | Chat polish (Epic 5 retro, D1): FR-15 says a failed message stays in the chat when another is sent, a retry moves it to the end, and the chat scrolls to the newest line | `epic-5-retro-2026-11-21.md` |
+| 2026-11-21 | FR-25 added (delete an account, anonymising the user; a Landlord removes the Tenants first); §5 no longer lists account deletion as a non-goal | `sprint-change-proposal-2026-11-21.md` |
 
 # PRD: AI-Driven Household Task App
 
 ## 0. Document Purpose
 
-This PRD translates the product brief (`brief-prosjektoppgave-ibe160-2026-09-12`) into implementable requirements for the 3-person IBE160 team. It is structured around three key user journeys, a shared glossary, and features with nested, globally numbered functional requirements (FR-1 through FR-24; FR-23 and FR-24 were added later and sit under their feature group, keeping their numbers because stories and code refer to them). It builds on the brief rather than repeating it — problem framing, competitive positioning, and long-term vision live there.
+This PRD translates the product brief (`brief-prosjektoppgave-ibe160-2026-09-12`) into implementable requirements for the 3-person IBE160 team. It is structured around three key user journeys, a shared glossary, and features with nested, globally numbered functional requirements (FR-1 through FR-25; FR-23 to FR-25 were added later and sit under their feature group, keeping their numbers because stories and code refer to them). It builds on the brief rather than repeating it — problem framing, competitive positioning, and long-term vision live there.
 
 ## 1. Vision
 
@@ -159,9 +160,20 @@ A Household Member or Tenant can leave their Home. A Landlord can remove a Tenan
 
 **Consequences (testable):**
 - After leaving or being removed, the user has no Membership in that Home: every Home-scoped request for it is rejected, and they may create a Home or join another through an invite.
-- When the last Household Member leaves a Household Home, the Home remains without Members; nothing is deleted.
+- When the last Household Member leaves a Household Home, the Home remains without Members; nothing is deleted. (Deleting the account, FR-25, is the one exception.)
 - Past activity in the Home (completions, Photo Evidence) is kept and shown as «Tidligere medlem»; only current Members count for access, notifications, fairness and overviews.
 - Both actions ask for confirmation, since neither can be undone.
+
+#### FR-25: Delete an account
+A signed-in user can delete their own account, after confirming with their password. Deleting removes the user's personal data and keeps the history other Members rely on. Realizes UJ-1, UJ-2.
+
+**Consequences (testable):**
+- The account's e-mail address and password are removed and the display name becomes «Tidligere medlem»; the user cannot sign in again, and an access or refresh token issued before is refused.
+- The user's Memberships, push devices, claimed notifications, daily AI counts, fairness records and unused invite links are deleted.
+- Completions and Photo Evidence the user made in Homes that remain are kept and shown as «Tidligere medlem»; the uploader's name in a saved photo description is replaced the same way.
+- A Landlord cannot delete the account while one of their Landlord Homes has a Tenant: the request is refused and says to remove the Tenants first (FR-23). Landlord Homes without Tenants are deleted with the account, with their tasks and photos.
+- A Household Home left without any Member is deleted with its tasks.
+- The deletion is all or nothing, and asks for confirmation since it cannot be undone.
 
 ### 4.2 Task Overview and Must/Should Prioritization
 
@@ -415,7 +427,6 @@ The application runs on a developer's or reviewer's own machine using a local Do
 - An in-app review/rating feature, deferred to v2+ — reviews/ratings are currently a hypothesis for measuring product success (brief §Success Criteria), not a scoped feature.
 - Verification or audit of Household Member (non-Landlord) task completion — a permanent non-goal, not a v1 limitation to be lifted later: that tier stays trust-based by design.
 - Photo Evidence required by default on any task — exclusively an opt-in, per-task Landlord setting, never a system-wide requirement.
-- Account deletion is not built in this course version; the team aims to add it. The user row would be anonymised (past activity is already shown as «Tidligere medlem»); the Landlord case is undecided, because FR-3 requires exactly one Landlord and FR-23 forbids a Landlord leaving. Estimated at about one day.
 - Broader home-management scope beyond cleaning/maintenance tasks — utilities, inventory, and similar — deferred to v2+, per brief Vision.
 
 ## 6. MVP Scope
@@ -493,6 +504,7 @@ The primary metrics are the testable criteria from the brief's §Success Criteri
 - Photo retention: each photo is automatically replaced the next time the same task is completed — the system never accumulates a photo history for a task. Access is restricted to the Home's Landlord only.
 - Tenant data (task history, Photo Evidence, completion records) is visible to that Tenant's Landlord by design (this is the product's core value proposition for the Landlord segment) but must not be visible to other Tenants or other Landlords outside the relevant Home.
 - Photos are kept in a private store (a folder on disk when no storage account is set); the browser never gets an address that works without signing in, and one photo exists per task.
+- Account deletion (FR-25) removes the e-mail address, the password and the display name from the account, and the user's devices, claimed notifications, AI counts and unused invite links; history in other Members' Homes stays as «Tidligere medlem».
 - Account data: an account stores an e-mail address, a display name and a password hash. Other Members of a Home see only the display name, never the e-mail address. The only user-related data sent to an external service is the minimal AI call described in FR-14, the Tenant's photo when a private file store account is set (Photo Evidence, FR-19) and, for push, the encrypted notification text (task names and an in-app link) that the browser vendor's push service delivers to the Member's own device. The app also stores, per user and day, how many AI calls were made (a number only, never the questions or answers), and, per Landlord Home, the introduction of its onboarding guide (FR-16; general text, no personal data) and, per Tenant, when they dismissed the guide card, and, per user and device that has turned push on, the browser's push address and its two public keys (never the Home or the Role). A Member has at most 10 such devices. The due-check keeps, per Member, task instance and day, a record that the notification was claimed (no text); records older than the current day are deleted by the next run. Account deletion is described in §5.
 
 ## 10. Cross-Cutting NFRs

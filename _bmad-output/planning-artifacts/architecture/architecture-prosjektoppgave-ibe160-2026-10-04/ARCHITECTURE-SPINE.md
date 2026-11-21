@@ -154,6 +154,12 @@ Layers may only depend downward (UI → routes → permission → domain → per
 - **Prevents:** a former Member keeping access, receiving a Home's notifications, or being counted in fairness or the Portfolio after leaving; and losing a Home's history when someone leaves.
 - **Rule:** Leaving a Home or being removed deletes that Membership row; nothing else is deleted (no migration: no table references `memberships`). Access (`require_role`), notifications (AD-8, AD-14), fairness (FR-11) and overviews (FR-20) read only current Memberships. History rows — completion attribution (AD-3) and Photo Evidence (AD-5) — reference the User, never the Membership, and the UI shows «Tidligere medlem» when that User has no Membership in the Home. Two Home-scoped routes, both behind `require_role`: `DELETE /api/homes/{home_id}/members/me` (Household Member, Tenant) and `DELETE /api/homes/{home_id}/members/{user_id}` (Landlord; the target must be a Tenant of that Home). Both go through domain functions in `domain/homes` (AD-3 layering).
 
+### AD-17 — Account deletion anonymises the User and deletes dependents explicitly `[ADDED 2026-11-21 — Sprint Change Proposal 2026-11-21]`
+
+- **Binds:** FR-25, FR-23; depends on AD-16, AD-1, AD-5
+- **Prevents:** a foreign key left pointing at a deleted user, a deleted account that still signs in, personal data left in a saved description, and a Landlord Home left without its Landlord.
+- **Rule:** The `users` row is never deleted: `domain/accounts.delete_account` sets the name to «Tidligere medlem», replaces the e-mail with an unusable address, clears the password hash and sets `users.deleted_at`, so history that references the User (AD-3, AD-5, AD-16) stays valid and no `ON DELETE` rule is needed. In the same transaction it deletes the user's Memberships, push subscriptions, due notifications, AI usage rows, fairness nudges and unused invite links, rewrites the uploader's name in `photo_evidence.description` for Homes that remain, and deletes every Home left without a Member, with its Tasks, instances, evidence rows and stored photos (`PhotoStore.delete`). A Landlord with a Tenant in any Landlord Home is refused (409) before anything changes. `current_user` and the refresh route answer 401 for a row with `deleted_at`. A test reads the tables that point at `users` or `homes` from the metadata and fails for one the function does not handle.
+
 ## Consistency Conventions
 
 | Concern | Convention |
