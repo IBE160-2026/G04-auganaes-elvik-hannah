@@ -27,7 +27,15 @@ from app.models.user import User
 from app.storage import LocalPhotoStore
 from tests.helpers import PASSWORD
 from tests.postgres.conftest import create_database, drop_database, start_migration
-from tests.postgres.helpers import errors, household, membership, new_user, race, wins
+from tests.postgres.helpers import (
+    blocks_while_locked,
+    errors,
+    household,
+    membership,
+    new_user,
+    race,
+    wins,
+)
 
 ROUNDS = 8
 TODAY = date(2026, 11, 21)
@@ -377,3 +385,144 @@ def test_two_deploys_migrating_at_once_both_succeed_and_reach_head() -> None:
         assert versions == 1
     finally:
         drop_database(url)
+
+
+# A race between threads shows a missing lock only by chance (a narrow window). These hold the row
+# lock in another transaction and require the function to wait for it: deterministic, one per lock.
+
+
+def test_adjust_task_waits_for_the_task_row(pg_engine: Engine, make_session: MakeSession) -> None:
+    # Guards `with_for_update()` on the Task in tasks.adjust_task.
+    with make_session() as setup:
+        landlord, home, rows, _instances = landlord_with_tasks(setup, 1)
+        task_id, landlord_id, home_id = rows[0].id, landlord.id, home.id
+
+    def job(session: Session) -> object:
+        member = membership(session, landlord_id, home_id)
+        return tasks.adjust_task(session, member, task_id, frequency_days=14)  # type: ignore[arg-type]
+
+    blocked, outcome = blocks_while_locked(
+        make_session, "SELECT id FROM tasks WHERE id = :id FOR UPDATE", {"id": task_id}, job
+    )
+
+    assert blocked and outcome[0] == "ok"
+
+
+def test_set_up_tasks_waits_for_the_home_row(pg_engine: Engine, make_session: MakeSession) -> None:
+    # Guards `with_for_update()` on the Home in tasks.set_up_tasks.
+    with make_session() as setup:
+        landlord = new_user(setup, "Kari")
+        home = homes.create_home(setup, landlord, name="Storgata 12", type="landlord").home
+        landlord_id, home_id = landlord.id, home.id
+
+    def job(session: Session) -> object:
+        member = membership(session, landlord_id, home_id)
+        return tasks.set_up_tasks(
+            session, member, [tasks.TaskChoice(TYPES[0], "must", 7)], today=TODAY
+        )
+
+    blocked, outcome = blocks_while_locked(
+        make_session, "SELECT id FROM homes WHERE id = :id FOR UPDATE", {"id": home_id}, job
+    )
+
+    assert blocked and outcome[0] == "ok"
+
+
+def test_add_member_waits_for_the_home_row(pg_engine: Engine, make_session: MakeSession) -> None:
+    # Guards the Home lock in homes.add_member (a Home cannot be deleted under a join).
+    with make_session() as setup:
+        _owner, home = household(setup)
+        joiner_id, home_id = new_user(setup, "Gjest").id, home.id
+
+    def job(session: Session) -> object:
+        joiner, target = session.get(User, joiner_id), session.get(Home, home_id)
+        assert joiner is not None and target is not None
+        return homes.add_member(session, target, joiner)
+
+    blocked, outcome = blocks_while_locked(
+        make_session, "SELECT id FROM homes WHERE id = :id FOR UPDATE", {"id": home_id}, job
+    )
+
+    assert blocked and outcome[0] == "ok"
+
+
+def test_add_member_waits_for_the_user_row(pg_engine: Engine, make_session: MakeSession) -> None:
+    # Guards the user-row lock in homes.add_member.
+    with make_session() as setup:
+        _owner, home = household(setup)
+        joiner_id, home_id = new_user(setup, "Gjest").id, home.id
+
+    def job(session: Session) -> object:
+        joiner, target = session.get(User, joiner_id), session.get(Home, home_id)
+        assert joiner is not None and target is not None
+        return homes.add_member(session, target, joiner)
+
+    blocked, outcome = blocks_while_locked(
+        make_session, "SELECT id FROM users WHERE id = :id FOR UPDATE", {"id": joiner_id}, job
+    )
+
+    assert blocked and outcome[0] == "ok"
+
+
+def test_create_home_waits_for_the_user_row(pg_engine: Engine, make_session: MakeSession) -> None:
+    # Guards the user-row lock in homes.create_home.
+    with make_session() as setup:
+        user_id = new_user(setup).id
+
+    def job(session: Session) -> object:
+        user = session.get(User, user_id)
+        assert user is not None
+        return homes.create_home(session, user, name="Mitt", type="household")
+
+    blocked, outcome = blocks_while_locked(
+        make_session, "SELECT id FROM users WHERE id = :id FOR UPDATE", {"id": user_id}, job
+    )
+
+    assert blocked and outcome[0] == "ok"
+
+
+@pytest.mark.parametrize("table", ["users", "homes"])
+def test_delete_account_waits_for_the_users_row_and_the_users_homes(
+    pg_engine: Engine, make_session: MakeSession, tmp_path: Path, table: str
+) -> None:
+    # Guards the user-row and Home locks in account_deletion.delete_account (the Home lock keeps
+    # two members deleting at once from both leaving the Home behind, and a join from racing it).
+    store = LocalPhotoStore(tmp_path)
+    with make_session() as setup:
+        owner, home = household(setup)
+        owner_id, home_id = owner.id, home.id
+
+    def job(session: Session) -> object:
+        user = session.get(User, owner_id)
+        assert user is not None
+        return account_deletion.delete_account(session, user, PASSWORD, store)
+
+    target = owner_id if table == "users" else home_id
+    blocked, outcome = blocks_while_locked(
+        make_session, f"SELECT id FROM {table} WHERE id = :id FOR UPDATE", {"id": target}, job
+    )
+
+    assert blocked and outcome[0] == "ok"
+
+
+def test_accept_waits_for_the_link_row(pg_engine: Engine, make_session: MakeSession) -> None:
+    # Guards the link lock in invites.accept: a second accepter waits and then finds it used.
+    with make_session() as setup:
+        owner, home = household(setup)
+        token = invites.create_invite(setup, membership(setup, owner.id, home.id)).token
+        joiner_id = new_user(setup, "Gjest").id
+        link_hash = invites.hash_token(token)
+
+    def job(session: Session) -> object:
+        joiner = session.get(User, joiner_id)
+        assert joiner is not None
+        return invites.accept(session, token, joiner)
+
+    blocked, outcome = blocks_while_locked(
+        make_session,
+        "SELECT id FROM invite_links WHERE token_hash = :h FOR UPDATE",
+        {"h": link_hash},
+        job,
+    )
+
+    assert blocked and outcome[0] == "ok"

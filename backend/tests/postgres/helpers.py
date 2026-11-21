@@ -73,3 +73,40 @@ def wins(outcomes: list[Outcome]) -> int:
 
 def errors(outcomes: list[Outcome]) -> list[Exception]:
     return [value for kind, value in outcomes if kind == "error"]
+
+
+def blocks_while_locked(
+    make_session: Callable[[], Session],
+    lock_sql: str,
+    params: dict[str, Any],
+    job: Callable[[Session], Any],
+    hold: float = 1.5,
+) -> tuple[bool, Outcome]:
+    """Holds `lock_sql` (a SELECT ... FOR UPDATE) open in one transaction and runs `job` meanwhile.
+
+    Returns whether the job was still waiting after `hold` seconds (it needs that row lock) and its
+    outcome once the lock was released. A deterministic check that a function takes a given lock,
+    where a race between threads only shows a missing lock by chance.
+    """
+    from sqlalchemy import text
+
+    outcome: list[Outcome] = []
+
+    def run() -> None:
+        with make_session() as session:
+            try:
+                outcome.append(("ok", job(session)))
+            except Exception as error:  # noqa: BLE001
+                session.rollback()
+                outcome.append(("error", error))
+
+    with make_session() as holder:
+        holder.execute(text(lock_sql), params)
+        thread = threading.Thread(target=run)
+        thread.start()
+        thread.join(timeout=hold)
+        blocked = thread.is_alive()
+        holder.rollback()
+    thread.join(timeout=30)
+    assert not thread.is_alive(), "the job never finished after the lock was released"
+    return blocked, outcome[0]
