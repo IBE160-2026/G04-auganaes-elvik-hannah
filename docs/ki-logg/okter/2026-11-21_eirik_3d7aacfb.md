@@ -1,9 +1,9 @@
 # KI-økt 2026-11-21 – Eirik
 
 - **Økt-ID:** `3d7aacfb-6e1b-4f4e-8e34-1d9c0372fe11`
-- **Tidsrom:** 2026-11-21 19:05 – 2026-11-21 21:43
+- **Tidsrom:** 2026-11-21 19:05 – 2026-11-22 11:23
 - **Verktøy:** Claude Code
-- **Antall prompts:** 26
+- **Antall prompts:** 28
 
 Generert automatisk av `scripts/ki-logg/eksporter_okter.py`. Promptene er gjengitt ordrett;
 personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs/ki-logg/README.md`.
@@ -55,6 +55,7 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 - `153c722` 2026-11-21 21:37 (Eirik) KI-logg: eksport av økten 21.11 (fortsettelse)
 - `b7748a9` 2026-11-21 21:41 (Eirik) Plan for 22.11 for Eirik og Steffen (erstatter påminnelsen)
 - `7a390c2` 2026-11-21 21:43 (Eirik) Plan for 22.11: kort oppsummering av det som ble gjort 21.11
+- `ea1f23d` 2026-11-22 11:22 (Eirik) KI-logg: eksport av økten (fortsettelse)
 
 ## Logg
 
@@ -189,4 +190,12 @@ personlige stier og e-postadresser er fjernet. Sammendrag av økta står i `docs
 ### 33. Prompt · 2026-11-21 21:43
 
 > Skriv kort hva som er gjort i dag også i samme dokument
+
+### 34. Prompt · 2026-11-22 11:22
+
+> commit KI-loggen og push
+
+### 35. Prompt · 2026-11-22 11:23
+
+> Takk for i dag
 
