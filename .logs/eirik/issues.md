@@ -131,3 +131,5 @@
 - [ ] 2026-11-22 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Eirik: Neon-sjekken (tiltak 5) gjenstår; vurder å migrere Cron Jobs (Legacy) til Schedules senere
 - [ ] 2026-11-22 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Merge PR #105 (Steffens seed-utf8, Windows-funn 1) etter cron-testen 23.11; en merge bygger Production på nytt
 - [ ] 2026-11-22 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Steffens vitest kjørte uten hang på Node 26.7 (603/603): avklar om README og `CLAUDE.md` om Node 24 bør justeres
+- [ ] 2026-11-22 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Push `docs/readme-hva-er-husly` (README: «Hva er Husly», `719ed43`, lokalt), åpne PR og merge etter cron-sjekken 23.11; sjekk formuleringen om Hannah
+- [ ] 2026-11-22 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Fra gjennomgangen: rett «tester (kommer)» i `docs/sensorveiledning.md`, kort ned statusen i `CLAUDE.md`, vurder `.mailmap`, tørrkjør README fra en ren klon, før skjermlesersjekk som kjent grense
