@@ -49,6 +49,25 @@ Appen kjører helt lokalt, uten gruppens kontoer eller nøkler (FR-22, AD-15). K
   - Windows: `winget install astral-sh.uv`, eller i PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`. Åpne Git Bash på nytt etterpå.
 - **Node.js 22.22.2+, 24.15+ eller 26+** (`^22.22.2 || ^24.15.0 || >=26.0.0`, det strengeste kravet blant avhengighetene, fra jsdom). `frontend/.nvmrc` peker på 24 LTS, og det er den versjonen CI bruker. Sjekk med `node --version`. **Kjør frontend-testene (`npm test`) på Node 24.** På Node 26.7 med vitest 5.0.5 starter ikke test-arbeideren («Timeout waiting for worker to respond»), mens samme tester går på 4 sekunder på 24 (Epic 3-retro, A5). Bruk `nvm use` i `frontend/`, eller last ned Node 24 og legg den først i `PATH`.
 
+### Rask start
+
+Når forutsetningene over er på plass og Docker Desktop kjører. Åpne to terminaler (Git Bash på Windows).
+
+Terminal 1, fra rotmappen:
+
+```bash
+docker compose up -d --wait
+cd backend && uv sync && uv run python -m app.seed && uv run fastapi dev
+```
+
+Terminal 2, fra rotmappen:
+
+```bash
+cd frontend && npm ci && npm run dev
+```
+
+Åpne <http://localhost:5173> og logg inn som `mari@example.com` med passordet `husly-demo`. Går noe galt, se [Hvis noe feiler](#hvis-noe-feiler). Stegene under forklarer hver kommando, og testene står under [Tester og lint](#tester-og-lint).
+
 ### 1. Database
 
 Fra rotmappen:
@@ -106,6 +125,21 @@ Seed-kommandoen lager disse eksempelbrukerne:
 5. **Logg ut** (på **Innstillinger**, eller på **Opprett hjemmet ditt** for en bruker uten hjem) sender deg tilbake til innloggingen.
 
 **Prøv resten:** Oppskrifter for hver funksjon (invitasjon, oppgaver, avkrysning, portefølje, slett konto og flere) står i [`docs/prov-appen.md`](docs/prov-appen.md).
+
+### Hvis noe feiler
+
+| Symptom | Trolig årsak | Løsning |
+|---|---|---|
+| `docker compose` svarer at den ikke får kontakt med Docker | Docker Desktop er ikke startet | Start Docker Desktop, vent til den sier at den kjører, og kjør `docker compose up -d --wait` på nytt. |
+| Seed eller backend får ikke kontakt med databasen, eller <http://localhost:8000/api/health/db> svarer ikke `{"database":"ok"}` | Databasen kjører ikke | Kjør `docker compose ps` fra rotmappen. Står ikke `db` som kjørende, kjør `docker compose up -d --wait`. Er en annen tjeneste på port 5433, avslutt den først. |
+| `uv: command not found` rett etter installasjonen | Terminalen kjenner ikke uv ennå | Lukk terminalen og åpne en ny (på Windows: åpne Git Bash på nytt). |
+| `&&` eller `npm.ps1` feiler på Windows | Du kjører i PowerShell | Bruk **Git Bash** for alle kommandoer unntatt uv-installasjonen. |
+| `npm ci` viser «EBADENGINE», eller `npm run dev` feiler rett etter oppstart | For gammel Node | Sjekk `node --version` mot kravet under Forutsetninger. Installer Node 24: på macOS `nvm install` og `nvm use` i `frontend/` (`.nvmrc` peker på 24), på Windows `nvm use 24` med nvm-windows, eller installer fra nodejs.org. |
+| `npm test` stopper med «Timeout waiting for worker to respond» | Node 26.7 med vitest 5.0.5 | Bytt til Node 24 og kjør på nytt. |
+| Innlogging avvises for en av testbrukerne | Seed er ikke kjørt, eller databasen er ny og tom | Kjør `uv run python -m app.seed` i `backend/`. Testbrukerne bruker passordet `husly-demo`. |
+| Siden åpner, men innlogging eller data feiler, og <http://localhost:5173/api/health> svarer ikke `{"status":"ok"}` | Backend kjører ikke på port 8000 | Start `uv run fastapi dev` i `backend/`, og se at porten ikke er brukt av noe annet. |
+| «Slå på varsler» sier at varsler ikke støttes | Service workeren registreres bare i produksjonsbygg, og på iPhone må appen åpnes fra Hjem-skjermen | Kjør `npm run build && npm run preview` i `frontend/` og åpne <http://localhost:4173>. På iPhone legger du appen på Hjem-skjermen og åpner den derfra, ikke fra Safari. |
+| Du vil begynne på nytt med tom database | | `docker compose down -v`, deretter `docker compose up -d --wait` og `uv run python -m app.seed`. |
 
 ### Tester og lint
 
