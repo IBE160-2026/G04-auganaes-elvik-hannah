@@ -18,11 +18,14 @@ Fortsette etter nettlesersjekken: bekrefte ekte push og første cron-kjøring (B
 - **Kunnskap:** Minste hyppighet er 7 dager, så en ny oppgave kan ikke få frist i morgen via appen. En frist må i så fall flyttes direkte i Neon (`task_instances.due_on`), og jeg gjorde ikke det. Cron-kallet registreres uavhengig av om noen får push.
 - **Lokalt:** `uv run python -m app.seed` ble kjørt (gjenskapte Kari og Jonas, 8 oppgaver i Storgata 12). Kun lokal database.
 - **Avgjort av Eirik:** skjermlesersjekken (C1) er ikke nødvendig. Windows-testen (issue #14) er gjort av Steffen.
+- **PR #104 merget** (merge-commit `1ce852f`, alle sjekker grønne, også Windows). Merge-en utløste en ny Production-deploy (`g04husly-axce76l6x`) via Git-integrasjonen. Det påvirker ikke abonnementer (de ligger i Neon, VAPID-nøklene er uendret) og cron (`vercel.json` uendret), men jeg burde ha sagt fra før merge siden jeg hadde bedt om ingen deploy før cron-testen.
+- **Steffens Windows-test (issue #14, lukket 22.11)**, lest fra GitHub: `uv run pytest` 1046 bestått og 88 Postgres-tester bestått mot Docker; vitest 603 av 603 bestått; prøvd etter README (portefølje ved 320/700/1280 px, slett konto, legge til og fjerne oppgave) uten avvik fra README; Anders (leietaker) fikk 403 på å legge til og fjerne oppgaver (testet mot API-et, ikke skjulte knapper i grensesnittet). Funn 1: seed-utskriften viste «�» for æøå på Windows, rettet i **PR #105** (`fix/seed-utf8-utskrift`, åpen, CI grønn). Funn 3 (innrykk i detaljkolonnen) er løst av PR #100. Funn 2: vitest hang ikke på Node 26.7 hos Steffen, selv om README og `CLAUDE.md` sier at 5.0.5 gjør det på Eiriks Mac.
+- **Lokalt:** `main` er i synk med `origin/main` etter at grenen ble slettet. Steffen har ikke lastet opp bilder; Blob-lagringen kunne ikke listes uten token (ikke hentet uten Eiriks ja).
 
 ### Åpne punkter
 - B1: sjekk Cron Jobs-siden etter 07:00 norsk tid 23.11 (Invocations og status). Ikke deploy Production på nytt før da. B2 avventer.
-- Issue #14 (Windows-testen): sjekk at den er lukket på GitHub, og noter resultatet.
+- PR #105 (seed-utskrift, Steffen) er åpen: merge etter cron-testen 23.11, siden en merge til `main` bygger Production på nytt.
+- Node 26.7 og vitest: Steffen kjørte 603 tester uten hang. Avklar om README og `CLAUDE.md` bør justeres (maskinavhengig?).
 - Skjermlesersjekken er droppet: de tre punktene i `deferred-work.md` (KI-popover, Story 3.4-bekreftelsen, porteføljens detaljkolonne) og de åpne Epic 2-, 4- og 6-punktene i `sprint-status.yaml` er ikke lukket. Før dem som godtatt kjent grense.
-- PR #104: gjennomgå og merge.
 - C2 (testdata i Neon) og Neon-sjekken står åpne.
 - Cron Jobs i `vercel.json` er Legacy hos Vercel: vurder migrering til Schedules senere.
