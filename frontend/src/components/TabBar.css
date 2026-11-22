@@ -13,12 +13,12 @@
   width: 100%;
   max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-2);
   list-style: none;
 }
 
 .tab-bar__item {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
 }
 
@@ -29,7 +29,7 @@
   justify-content: center;
   min-height: var(--tap-min);
   min-width: var(--tap-min);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-1);
   color: var(--color-ink-secondary);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
