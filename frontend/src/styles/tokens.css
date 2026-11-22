@@ -84,4 +84,7 @@
 
   /* layout */
   --layout-max-width: 40rem;
+  /* chat stream (Story 5.2, D1): the page around it is about 31rem; the stream never gets under 12rem */
+  --chat-page-chrome: 31rem;
+  --chat-stream-min: 12rem;
 }
