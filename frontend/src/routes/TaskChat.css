@@ -56,9 +56,12 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   box-shadow: var(--shadow-card);
-  /* D1: after several exchanges the input stays in view and the stream scrolls inside itself. */
-  max-height: 60vh;
-  max-height: 60dvh;
+  /* D1: after several exchanges the input stays in view and the stream scrolls inside itself.
+     The rest of the page (header, title, notes, input, tab bar) is --chat-page-chrome, so the
+     stream gets what is left of the viewport, never under --chat-stream-min. A flat 60dvh left
+     the input behind the sticky tab bar at 756 px high. */
+  max-height: max(var(--chat-stream-min), calc(100vh - var(--chat-page-chrome)));
+  max-height: max(var(--chat-stream-min), calc(100dvh - var(--chat-page-chrome)));
   overflow-y: auto;
 }
 
