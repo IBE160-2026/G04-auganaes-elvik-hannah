@@ -42,7 +42,7 @@ Fra svaret i popoveren: «Spør mer» (`/hjem/<id>/oppgaver/<id>/chat`).
 
 ## Del C: Portefølje (Eirik, Story 6.1)
 
-Krever en utleier med **to** utleiehjem. Seed gir bare Kari ett (Storgata 12): opprett et utleiehjem til som Kari (Innstillinger → Opprett nytt hjem → Utleiebolig, og sett opp oppgaver), se README «Prøv porteføljen». Bruk et nettleservindu på minst 600 px (da er detaljkolonnen synlig).
+Krever en utleier med **to** utleiehjem. Seed gir bare Kari ett (Storgata 12): opprett et utleiehjem til som Kari (Innstillinger → Opprett nytt hjem → Utleiebolig, og sett opp oppgaver), se `docs/prov-appen.md` «Prøv porteføljen». Bruk et nettleservindu på minst 600 px (da er detaljkolonnen synlig).
 
 - [ ] **C1.** Fanen «Portefølje» leses som en lenke i hovedmenyen, og gjeldende side sies («gjeldende side»/«current page»).
 - [ ] **C2.** Hver rad leses med hjemmenavn og status i tekst («Forsinket», «Alt i orden»), ikke bare farge, og med om den er valgt (`aria-pressed`).
