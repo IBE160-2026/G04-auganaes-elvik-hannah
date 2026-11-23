@@ -47,7 +47,10 @@ Appen kjører helt lokalt, uten gruppens kontoer eller nøkler (FR-22, AD-15). K
 - **uv** (Python-pakkehåndterer). uv henter selv riktig Python-versjon (3.12), så du trenger ikke installere Python.
   - macOS: `curl -LsSf https://astral.sh/uv/install.sh | sh` (eller `brew install uv`)
   - Windows: `winget install astral-sh.uv`, eller i PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`. Åpne Git Bash på nytt etterpå.
-- **Node.js 22.22.2+, 24.15+ eller 26+** (`^22.22.2 || ^24.15.0 || >=26.0.0`, det strengeste kravet blant avhengighetene, fra jsdom). `frontend/.nvmrc` peker på 24 LTS, og det er den versjonen CI bruker. Sjekk med `node --version`. **Kjør frontend-testene (`npm test`) på Node 24.** På Node 26.7 med vitest 5.0.5 starter ikke test-arbeideren («Timeout waiting for worker to respond»), mens samme tester går på 4 sekunder på 24 (Epic 3-retro, A5). Bruk `nvm use` i `frontend/`, eller last ned Node 24 og legg den først i `PATH`.
+- **Node.js 24 LTS** (22.22.2+, 24.15+ og 26+ godtas av avhengighetene, men `frontend/.nvmrc` og CI bruker 24, og frontend-testene skal kjøres på 24).
+  - macOS: `brew install node@24`, eller last ned LTS-installasjonsfilen fra <https://nodejs.org>.
+  - Windows: `winget install OpenJS.NodeJS.LTS`, eller last ned LTS-installasjonsfilen fra <https://nodejs.org>. Åpne Git Bash på nytt etterpå.
+  - Sjekk med `node --version`. Feil versjon og `npm test` som henger på Node 26.7 står under «Hvis noe feiler».
 
 ### Rask start
 
