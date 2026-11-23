@@ -75,3 +75,20 @@ Rette README etter tørrkjøringen på tredje maskin.
 - Bekrefte winget-/brew-kommandoene på en ren maskin (Docker uten manuelle steg, `node@24` i `PATH`).
 - PR for `docs/readme-kortere` er fortsatt ikke åpnet; merge med PR #105 venter på avgjørelsen om cron (B1).
 
+## 2026-11-23 kl. 23:00 — Eirik
+
+### Oppgave
+Vurdere og bygge «bekreft passord» ved registrering, og vurdere «glemt passord».
+
+### Plan
+- Del 1 (gjenta passord): egen branch, issue #108 og PR. Del 2 (glemt passord): kun vurdert og ført som åpent punkt.
+
+### Resultat
+- PR #109 (`feat/bekreft-passord`, issue #108): nytt felt «Gjenta passord», frontend-validering (`validatePasswordConfirm`), serveren uendret. 611/611 tester (8 nye), eslint og `tsc -b` rene på Node 26.7. AC lagt til i Story 1.2 i `epics.md`, README oppdatert. Ikke sjekket i nettleser. PR-en er åpen, ikke merget.
+- Glemt passord er ikke bygget (e-postleverandør, tokentabell, ruter, correct-course).
+- Tidligere samme dag: PR #105, #106 og #107 merget; logg-PR-en er merget.
+
+### Åpne punkter
+- Merge PR #109 etter grønne sjekker.
+- Glemt passord: ført som kjent begrensning (se `issues.md`).
+

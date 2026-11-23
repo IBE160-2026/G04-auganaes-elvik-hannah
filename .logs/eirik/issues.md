@@ -138,3 +138,4 @@
 - [ ] 2026-11-22 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — `epics.md` har Story 1.10 (slett konto, FR-25) under en `####`-overskrift (linje 259), mens de andre 27 har `###`: sjekk om den ligger under riktig epic og rett nivået
 
 - [ ] 2026-11-23 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Windows-/Docker-oppsett: winget-/brew-kommandoene i README «Forutsetninger» er ikke kjørt på en ren maskin; bekreft at Docker via winget starter uten manuelle steg og at `node@24` havner i `PATH`
+- [ ] 2026-11-23 [b1-push-og-readme-iphone](971-2026-11-22-12-33-00-b1-push-og-readme-iphone.md) — Glemt passord (e-postlenke og nytt passord) er ikke bygget: krever e-postleverandør, tokentabell, to ruter, ratebegrensning og `bmad-correct-course`; føres som kjent begrensning/mulig senere utvidelse (anbefalt ikke nå). Bekreft-passord er gjort i PR #109 (issue #108)
