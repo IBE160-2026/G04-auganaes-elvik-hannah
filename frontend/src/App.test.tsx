@@ -97,6 +97,67 @@ describe('App routes', () => {
     expect(server.calls('POST', '/api/auth/register')).toHaveLength(0);
   });
 
+  it('blocks registering when the repeated password differs, and focuses that field', async () => {
+    const server = fakeApi(signedOut);
+    renderAt('/registrer');
+
+    await userEvent.type(await screen.findByLabelText('E-post'), 'ola@example.com');
+    await userEvent.type(screen.getByLabelText('Navn'), 'Ola');
+    await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+    await userEvent.type(screen.getByLabelText('Gjenta passord'), 'hemmelig2');
+    await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
+
+    const confirm = screen.getByLabelText('Gjenta passord');
+    await waitFor(() => expect(confirm).toHaveFocus());
+    expect(confirm).toHaveAccessibleDescription(MESSAGES.passwordMismatch);
+    expect(screen.getByLabelText('Passord')).not.toHaveAttribute('aria-invalid');
+    expect(server.calls('POST', '/api/auth/register')).toHaveLength(0);
+  });
+
+  it('asks for the repeated password when it is left empty', async () => {
+    const server = fakeApi(signedOut);
+    renderAt('/registrer');
+
+    await userEvent.type(await screen.findByLabelText('E-post'), 'ola@example.com');
+    await userEvent.type(screen.getByLabelText('Navn'), 'Ola');
+    await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+    await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Gjenta passord')).toHaveAccessibleDescription(
+        MESSAGES.passwordConfirmMissing,
+      ),
+    );
+    expect(server.calls('POST', '/api/auth/register')).toHaveLength(0);
+  });
+
+  it('does not send the repeated password to the server', async () => {
+    let sent: unknown;
+    fakeApi({
+      ...signedOut,
+      'POST /api/auth/register': async (request) => {
+        sent = await request.json();
+        return json(201, authResponse('a1', OLA));
+      },
+      'GET /api/auth/me': () => json(200, OLA),
+      'GET /api/homes': () => json(200, homesResponse([], ['household', 'landlord'])),
+    });
+    renderAt('/registrer');
+
+    await userEvent.type(await screen.findByLabelText('E-post'), 'ola@example.com');
+    await userEvent.type(screen.getByLabelText('Navn'), 'Ola');
+    await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+    await userEvent.type(screen.getByLabelText('Gjenta passord'), 'hemmelig1');
+    await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
+
+    await screen.findByRole('heading', { name: 'Opprett hjemmet ditt' });
+    expect(sent).toEqual({
+      email: 'ola@example.com',
+      name: 'Ola',
+      password: 'hemmelig1',
+    });
+  });
+
   it('offers "Logg inn i stedet" when the email already has an account', async () => {
     fakeApi({
       ...signedOut,
@@ -108,6 +169,7 @@ describe('App routes', () => {
     await userEvent.type(await screen.findByLabelText('E-post'), 'ola@example.com');
     await userEvent.type(screen.getByLabelText('Navn'), 'Ola');
     await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+    await userEvent.type(screen.getByLabelText('Gjenta passord'), 'hemmelig1');
     await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
 
     const link = await screen.findByRole('link', { name: 'Logg inn i stedet' });
@@ -127,6 +189,7 @@ describe('App routes', () => {
     await userEvent.type(await screen.findByLabelText('E-post'), 'ola@example.c');
     await userEvent.type(screen.getByLabelText('Navn'), 'Ola');
     await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+    await userEvent.type(screen.getByLabelText('Gjenta passord'), 'hemmelig1');
     await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
 
     await waitFor(() =>
@@ -146,6 +209,7 @@ describe('App routes', () => {
     await userEvent.type(await screen.findByLabelText('E-post'), 'mari@example.com');
     await userEvent.type(screen.getByLabelText('Navn'), 'Mari');
     await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+    await userEvent.type(screen.getByLabelText('Gjenta passord'), 'hemmelig1');
     await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
 
     expect(await screen.findByRole('heading', { name: 'Opprett hjemmet ditt' })).toBeInTheDocument();
@@ -188,5 +252,6 @@ describe('App routes', () => {
     expect(await screen.findByLabelText('E-post')).toHaveAttribute('autocomplete', 'email');
     expect(screen.getByLabelText('Navn')).toHaveAttribute('autocomplete', 'name');
     expect(screen.getByLabelText('Passord')).toHaveAttribute('autocomplete', 'new-password');
+    expect(screen.getByLabelText('Gjenta passord')).toHaveAttribute('autocomplete', 'new-password');
   });
 });

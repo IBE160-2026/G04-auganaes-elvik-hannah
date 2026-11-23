@@ -33,6 +33,7 @@ async function fillRegister(email = 'jonas@example.com') {
   await userEvent.type(await screen.findByLabelText('E-post'), email);
   await userEvent.type(screen.getByLabelText('Navn'), 'Jonas');
   await userEvent.type(screen.getByLabelText('Passord'), 'hemmelig1');
+  await userEvent.type(screen.getByLabelText('Gjenta passord'), 'hemmelig1');
   await userEvent.click(screen.getByRole('button', { name: 'Opprett konto' }));
 }
 

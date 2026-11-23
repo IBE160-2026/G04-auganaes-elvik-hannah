@@ -12,6 +12,9 @@ type ValidationError = components['schemas']['ValidationError'];
 
 export type Field = 'email' | 'name' | 'password';
 export type FieldErrors = Partial<Record<Field, string>>;
+/** The registration form also has a repeat-password field that the server never sees. */
+export type RegisterField = Field | 'passwordConfirm';
+export type RegisterErrors = Partial<Record<RegisterField, string>>;
 export type RegisterInput = { email: string; name: string; password: string };
 /** Story 1.4: registering through an invite link joins its Home in the same request. */
 export type RegisterRequest = RegisterInput & { invite_token?: string };
@@ -30,6 +33,8 @@ export const MESSAGES = {
   passwordMissing: 'Skriv inn passordet ditt.',
   passwordTooShort: `Passordet må ha minst ${PASSWORD_MIN} tegn.`,
   passwordTooLong: `Passordet kan ha maks ${PASSWORD_MAX} tegn.`,
+  passwordConfirmMissing: 'Gjenta passordet.',
+  passwordMismatch: 'Passordene er ikke like.',
   unknown: GENERIC_ERROR,
 } as const;
 
@@ -50,6 +55,13 @@ export function validateRegister({ email, name, password }: RegisterInput): Fiel
   if (length(password) < PASSWORD_MIN) errors.password = MESSAGES.passwordTooShort;
   else if (length(password) > PASSWORD_MAX) errors.password = MESSAGES.passwordTooLong;
   return errors;
+}
+
+/** Checks that the repeated password is there and equal to the first (exact, no trimming). */
+export function validatePasswordConfirm(password: string, confirm: string): RegisterErrors {
+  if (!confirm) return { passwordConfirm: MESSAGES.passwordConfirmMissing };
+  if (confirm !== password) return { passwordConfirm: MESSAGES.passwordMismatch };
+  return {};
 }
 
 export function validateSignIn({ email, password }: SignInInput): FieldErrors {

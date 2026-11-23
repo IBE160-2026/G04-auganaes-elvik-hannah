@@ -405,6 +405,10 @@ So that I can access my Homes securely.
 **When** they submit a valid email + password
 **Then** a User row is created and they receive a short-lived JWT access token in the response body (kept only in frontend memory) plus an httpOnly/Secure/SameSite=Lax refresh cookie scoped to `/api/auth/refresh` (AD-7)
 
+**Given** a visitor on the registration form
+**When** the repeated password is empty or differs from the first (exact match, nothing trimmed)
+**Then** nothing is sent to the server, an inline error on the repeat field says so ("Gjenta passordet." / "Passordene er ikke like."), and focus moves to it; the repeat is never sent to the API (issue #108)
+
 **Given** a registered user
 **When** they submit correct credentials
 **Then** they receive a fresh access token + refresh cookie and land inside the app

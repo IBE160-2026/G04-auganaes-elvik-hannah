@@ -1,10 +1,16 @@
-// Story 1.2 (FR-1): create an account with email, display name and password.
+// Story 1.2 (FR-1): create an account with email, display name and password (typed twice).
 // Story 1.4 (FR-2): with ?invitasjon=<token>, the account joins that Home in the same request,
 // and the user goes back to the invite page (never straight to "/"), which shows the result.
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useSearchParams } from 'react-router';
-import { MESSAGES, PASSWORD_MIN, validateRegister, type FieldErrors } from '../api/auth';
+import {
+  MESSAGES,
+  PASSWORD_MIN,
+  validatePasswordConfirm,
+  validateRegister,
+  type RegisterErrors,
+} from '../api/auth';
 import { ApiError, fieldsOf } from '../api/errors';
 import { validInviteToken } from '../api/invites';
 import { useRegister } from '../api/queries';
@@ -18,7 +24,7 @@ export function Register() {
   const session = useSession();
   const register = useRegister();
   const formRef = useRef<HTMLFormElement>(null);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [errors, setErrors] = useState<RegisterErrors>({});
   const [emailTaken, setEmailTaken] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
@@ -31,7 +37,7 @@ export function Register() {
     return <Navigate to={`/invitasjon/${inviteToken}`} replace state={{ justRegistered: true }} />;
   }
 
-  function showErrors(next: FieldErrors) {
+  function showErrors(next: RegisterErrors) {
     flushSync(() => setErrors(next));
     focusFirstInvalid(formRef.current, next);
   }
@@ -46,7 +52,10 @@ export function Register() {
     };
     setFormError(null);
     setEmailTaken(false);
-    const invalid = validateRegister(input);
+    const invalid = {
+      ...validateRegister(input),
+      ...validatePasswordConfirm(input.password, String(data.get('passwordConfirm') ?? '')),
+    };
     if (Object.keys(invalid).length > 0) return showErrors(invalid);
     setErrors({});
     register.mutate(inviteToken ? { ...input, invite_token: inviteToken } : input, {
@@ -55,7 +64,7 @@ export function Register() {
           setEmailTaken(true);
           showErrors({ email: error.message });
         } else if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
-          showErrors(fieldsOf<FieldErrors>(error));
+          showErrors(fieldsOf<RegisterErrors>(error));
         } else {
           setFormError(MESSAGES.unknown);
         }
@@ -89,6 +98,13 @@ export function Register() {
           autoComplete="new-password"
           hint={`Minst ${PASSWORD_MIN} tegn.`}
           error={errors.password}
+        />
+        <TextField
+          label="Gjenta passord"
+          name="passwordConfirm"
+          type="password"
+          autoComplete="new-password"
+          error={errors.passwordConfirm}
         />
         {formError && (
           <p className="auth-form__error" role="alert">
