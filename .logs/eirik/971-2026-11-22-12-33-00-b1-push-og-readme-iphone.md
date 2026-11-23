@@ -57,3 +57,21 @@ Sjekke om cron-kjøringen 06:00 UTC gikk gjennom i Vercel/Neon, og hjelpe Eirik 
 - B1 står åpen (se `issues.md`): cron ikke bekreftet, og Eirik testet ikke videre nå.
 - README: legg inn installasjonsinfo for Node.js under Forutsetninger.
 
+## 2026-11-23 kl. 22:30 — Eirik
+
+### Oppgave
+Rette README etter tørrkjøringen på tredje maskin.
+
+### Plan
+- Legge til Node-installasjon, deretter installere alle forutsetninger med færrest mulige kommandoer, og forklare BIOS-virtualisering for Docker.
+
+### Resultat
+- Tørrkjøringen fungerte på tredje PC. Funn: Node-installasjon manglet, installasjonen var for manuell, og Docker krevde virtualisering slått på i BIOS.
+- `docs/readme-kortere`: `3373829` (Node-installasjon) og `3600786` (winget-/brew-kommandoer for Git, Docker, uv og Node, `wsl --install`, ny rad om BIOS-virtualisering i «Hvis noe feiler»). Pushet; ikke merget, ingen PR ennå.
+- Kommandoene er ikke kjørt på en ren maskin av KI.
+- Lukket i `issues.md`: tørrkjøring på tredje maskin og Node-punktet i README.
+
+### Åpne punkter
+- Bekrefte winget-/brew-kommandoene på en ren maskin (Docker uten manuelle steg, `node@24` i `PATH`).
+- PR for `docs/readme-kortere` er fortsatt ikke åpnet; merge med PR #105 venter på avgjørelsen om cron (B1).
+
