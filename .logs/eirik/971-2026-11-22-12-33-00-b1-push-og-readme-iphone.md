@@ -36,3 +36,24 @@ Fortsette etter nettlesersjekken: bekrefte ekte push og første cron-kjøring (B
 - Resten av gjennomgangen: lukk de åpne skjermlesersjekk-punktene som kjent grense, rett «tester (kommer)» i `docs/sensorveiledning.md`, kort ned statusen i `CLAUDE.md`, vurder en `.mailmap` og en tørrkjøring av README fra en ren klon.
 - C2 (testdata i Neon) og Neon-sjekken står åpne.
 - Cron Jobs i `vercel.json` er Legacy hos Vercel: vurder migrering til Schedules senere.
+
+## 2026-11-23 kl. 21:55 — Eirik
+
+### Oppgave
+Sjekke om cron-kjøringen 06:00 UTC gikk gjennom i Vercel/Neon, og hjelpe Eirik å starte README-tørrkjøringen på en tredje maskin.
+
+### Plan
+- Lese Vercel Schedules → Cron Jobs, deretter lese `due_notifications` i Neon (Production, `main`-grenen) med lesespørringer.
+- Veilede kloning (`git clone --branch docs/readme-kortere`) og installasjon av git, Docker, uv og Node.
+
+### Resultat
+- **Cron Jobs (Legacy):** `/api/internal/run-due-check` Active, 06:00 UTC, Invocations og P75 «—» også 23.11. Siden viser ingen kjøringshistorikk.
+- **Neon (Production):** 0 rader i `due_notifications`, 0 åpne oppgaver med frist ≤ 23.11, 6 push-abonnement. Kjøringen kan derfor verken bekreftes eller avkreftes (ingenting å varsle om). Kun SELECT kjørt; ingenting endret. Neon viste «compute last active» ca. 13 timer siden, svak støtte, ikke bevis.
+- `vercel env pull` for Production gir tomme plassholdere for hemmelige verdier; filen ble slettet.
+- Eirik valgte å ikke sette opp en forfalt oppgave for testen nå.
+- **Tredje maskin:** Eirik har klonet `docs/readme-kortere` og installert Docker og Python. Funn: README «Forutsetninger» har ingen installasjonslenke eller kommando for Node.js (uv og Docker har). Rettelse foreslått, ikke gjort.
+
+### Åpne punkter
+- B1 står åpen (se `issues.md`): cron ikke bekreftet, og Eirik testet ikke videre nå.
+- README: legg inn installasjonsinfo for Node.js under Forutsetninger.
+
