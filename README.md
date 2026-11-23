@@ -1,8 +1,21 @@
-# G04 — EHS
+# Husly – IBE160 G04
 
 Gruppeprosjekt i **IBE160 Programmering med KI** ved Høgskolen i Molde, høsten 2026 (15 studiepoeng).
 
 Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og kvalitetssikring med KI.
+
+## Hva er Husly
+
+**Husly** er en nettapp (PWA) for å holde orden på de uregelmessige oppgavene i et felles hjem, som å rense sluket, avkalke vannkokeren eller vaske stekeovnen. Slike oppgaver har ingen fast rytme, og blir glemt til noen blir irritert eller det dukker opp mugg.
+
+- **For hvem:** de som deler en husstand (kollektiv, par, familie), og utleiere med leietakere. Appen er laget for mobil, men virker like godt på større skjermer.
+- **Hjem og oppgaver:** et hjem har en liste med oppgaver som er **Må** eller **Bør**, med anbefalt hyppighet. Oppgavene krysses av, og neste frist regnes fra den dagen de faktisk ble gjort.
+- **Tre roller:** husstandsmedlemmer er likestilte og kan opprette, endre og invitere. I et utleiehjem setter **utleier** og låser Må-oppgaver og hyppighet, og **leietaker** kan krysse av, men ikke endre det utleier har bestemt. Rollene håndheves av serveren, ikke bare av knapper som er skjult.
+- **Varsler:** daglige påminnelser på mobilen (push) om det som er forfalt, en melding fra utleier til leietakerne og en rettferdig påminnelse til den som ikke har gjort sin del.
+- **Utleier:** kan kreve et bilde som bevis på bestemte Må-oppgaver, og ser en portefølje over alle utleiehjemmene sine.
+- **KI:** «Spør KI» på en oppgave gir et kort svar (og en chat med hjelperen «Fiks»), og leietakere får en velkomstguide. KI-en får bare oppgavenavn, oppgavetype og spørsmålet ditt, aldri navn eller e-post, og svarene har en ansvarsfraskrivelse.
+
+Planleggingsdokumentene (brief, PRD, UX, arkitektur og epics) ligger i [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/). Appen kjører lokalt uten noen kontoer eller nøkler, se [Kjøre appen lokalt](#kjøre-appen-lokalt).
 
 **Nettversjon (valgfri):** <https://g04husly.vercel.app>. Hovedveien for å kjøre og vurdere appen er lokal kjøring, se under. Mer om nettversjonen står i [Nettversjon (valgfri)](#nettversjon-valgfri).
 
@@ -10,7 +23,9 @@ Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og
 
 - Eirik Auganæs
 - Steffen Elvik
-- Hannah Linnea Elvestad Mattsson
+- Hannah Linnea Elvestad Mattsson (har avsluttet studiet)
+
+Eirik og Steffen har programmert sammen fra Eiriks maskin på ukentlige samlinger, så mange av commitene til begge står under Eirik.
 
 ## Dokumentasjon
 
@@ -18,20 +33,65 @@ Repoet inneholder gruppens applikasjon og dokumentasjon av utvikling, testing og
 - [KI-logg](docs/ki-logg/README.md): prompts fra alle KI-økter, koblet til commits
 - [Eksempler på styring og korrigering av KI](docs/ki-logg/korrigeringer.md)
 - [Sensorveiledning, del 1](docs/sensorveiledning.md): kriteriene vi jobber etter
+- [Prøv funksjonene](docs/prov-appen.md): oppskrifter for å prøve hver funksjon i appen lokalt
 
 ## Kjøre appen lokalt
 
 Appen kjører helt lokalt, uten gruppens kontoer eller nøkler (FR-22, AD-15). Kommandoene fungerer i zsh (macOS) og Git Bash (Windows).
 
-> **Windows:** Kjør alle kommandoene i **Git Bash**, ikke PowerShell. Windows PowerShell 5.1 støtter ikke `&&`, og standard kjøringspolicy blokkerer `npm.ps1`. Unntaket er installasjonskommandoen for uv nedenfor, som er laget for PowerShell.
+> **Windows:** Kjør alle kommandoene i **Git Bash**, ikke PowerShell. Windows PowerShell 5.1 støtter ikke `&&`, og standard kjøringspolicy blokkerer `npm.ps1`. Unntaket er installasjonskommandoene under «Forutsetninger», som kjøres i PowerShell.
 
 ### Forutsetninger
 
-- **Docker Desktop**, og det må være startet før du kjører kommandoene. På Windows må WSL2 være slått på (Docker Desktop spør om dette ved installasjon).
-- **uv** (Python-pakkehåndterer). uv henter selv riktig Python-versjon (3.12), så du trenger ikke installere Python.
-  - macOS: `curl -LsSf https://astral.sh/uv/install.sh | sh` (eller `brew install uv`)
-  - Windows: `winget install astral-sh.uv`, eller i PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`. Åpne Git Bash på nytt etterpå.
-- **Node.js 22.22.2+, 24.15+ eller 26+** (`^22.22.2 || ^24.15.0 || >=26.0.0`, det strengeste kravet blant avhengighetene, fra jsdom). `frontend/.nvmrc` peker på 24 LTS, og det er den versjonen CI bruker. Sjekk med `node --version`. **Kjør frontend-testene (`npm test`) på Node 24.** På Node 26.7 med vitest 5.0.5 starter ikke test-arbeideren («Timeout waiting for worker to respond»), mens samme tester går på 4 sekunder på 24 (Epic 3-retro, A5). Bruk `nvm use` i `frontend/`, eller last ned Node 24 og legg den først i `PATH`.
+Du trenger Git, Docker Desktop, uv og Node.js 24. Installer alt med én kommando:
+
+**Windows** (åpne PowerShell som vanlig bruker, og kjør:)
+
+```powershell
+winget install --id Git.Git -e; winget install --id Docker.DockerDesktop -e; winget install --id astral-sh.uv -e; winget install --id OpenJS.NodeJS.LTS -e
+wsl --install --no-distribution
+```
+
+Start deretter maskinen på nytt, start Docker Desktop og vent til den sier at den kjører (du trenger ikke logge inn i Docker). Bruk **Git Bash** til alle kommandoene videre.
+
+**macOS** (krever [Homebrew](https://brew.sh)):
+
+```bash
+brew install git uv node@24 && brew install --cask docker
+```
+
+Start Docker Desktop fra Programmer og vent til den kjører. Hvis `node --version` ikke viser 24 etterpå, kjør `brew link --overwrite node@24`.
+
+Lukk terminalen og åpne en ny etter installasjonen, og sjekk:
+
+```bash
+git --version && docker --version && uv --version && node --version
+```
+
+Hva de er til, og hva du gjør uten pakkehåndterer:
+
+- **Docker Desktop** kjører databasen. Det må være startet før du kjører kommandoene. Last ned fra <https://www.docker.com/products/docker-desktop/>. På Windows må WSL2 og virtualisering være på; se «Hvis noe feiler» hvis Docker ikke starter.
+- **uv** er Python-pakkehåndtereren. Den henter selv riktig Python (3.12), så du trenger ikke installere Python. Uten winget eller brew: `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) eller `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"` (Windows).
+- **Node.js 24 LTS** (22.22.2+, 24.15+ og 26+ godtas av avhengighetene, men `frontend/.nvmrc` og CI bruker 24, og frontend-testene skal kjøres på 24). Uten winget eller brew: last ned LTS-installasjonsfilen fra <https://nodejs.org>. Feil versjon og `npm test` som henger på Node 26.7 står under «Hvis noe feiler».
+
+### Rask start
+
+Når forutsetningene over er på plass og Docker Desktop kjører. Åpne to terminaler (Git Bash på Windows).
+
+Terminal 1, fra rotmappen:
+
+```bash
+docker compose up -d --wait
+cd backend && uv sync && uv run python -m app.seed && uv run fastapi dev
+```
+
+Terminal 2, fra rotmappen:
+
+```bash
+cd frontend && npm ci && npm run dev
+```
+
+Åpne <http://localhost:5173> og logg inn som `mari@example.com` med passordet `husly-demo`. Går noe galt, se [Hvis noe feiler](#hvis-noe-feiler). Stegene under forklarer hver kommando, og testene står under [Tester og lint](#tester-og-lint).
 
 ### 1. Database
 
@@ -86,128 +146,26 @@ Seed-kommandoen lager disse eksempelbrukerne:
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
 2. Logg inn som Mari. Du havner på oppgaveoversikten for «Mari og Jonas sitt hjem» (`/hjem/<id>`), med de åtte oppgavene (Må-oppgavene først) og fanelinja **Oppgaver** / **Innstillinger** nederst. Last siden på nytt; du er fortsatt logget inn.
 3. Gå til **Innstillinger** og trykk **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
-4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se under). Med en husstand blir du husstandsmedlem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier. Hjemmene dine står under **Dine hjem** på **Innstillinger**. Regelen for å opprette flere hjem med **Opprett nytt hjem** er den samme som for å bli med (Story 1.9): en utleiebolig kan alle opprette, når som helst. En husstand kan du bare opprette når du ikke allerede er husstandsmedlem eller leietaker et annet sted. Prøver du likevel, svarer serveren «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
+4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se [«Prøv oppgaveoppsett»](docs/prov-appen.md#prøv-oppgaveoppsett-story-21)). Med en husstand blir du husstandsmedlem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier. Hjemmene dine står under **Dine hjem** på **Innstillinger**. Regelen for å opprette flere hjem med **Opprett nytt hjem** er den samme som for å bli med (Story 1.9): en utleiebolig kan alle opprette, når som helst. En husstand kan du bare opprette når du ikke allerede er husstandsmedlem eller leietaker et annet sted. Prøver du likevel, svarer serveren «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
 5. **Logg ut** (på **Innstillinger**, eller på **Opprett hjemmet ditt** for en bruker uten hjem) sender deg tilbake til innloggingen.
 
-**Prøv regelen for å opprette hjem (Story 1.9):** Stegene forutsetter en nyseedet database (`uv run python -m app.seed` fra `backend/` på en tom database), siden de lager nye hjem.
+**Prøv resten:** Oppskrifter for hver funksjon (invitasjon, oppgaver, avkrysning, portefølje, slett konto og flere) står i [`docs/prov-appen.md`](docs/prov-appen.md).
 
-1. Logg inn som Kari, gå til **Innstillinger** og trykk **Opprett nytt hjem**. Hun er bare utleier, så hun får velge både **Husstand** og **Utleiebolig**. Velg **Husstand**, gi hjemmet et navn og trykk **Opprett hjem**. Hun blir husstandsmedlem i det nye hjemmet og kommer til **Sett opp oppgaver**.
-2. Logg inn som Jonas, gå til **Innstillinger** og trykk **Opprett nytt hjem**. Siden heter **Opprett ny utleiebolig**, tilbyr bare utleiebolig og sier at medlemskapet hans i «Mari og Jonas sitt hjem» ikke endres. Etter at han har opprettet den, er han både husstandsmedlem der og utleier i den nye.
-3. Serveren håndhever regelen selv om noen prøver direkte i <http://localhost:8000/docs>:
-   1. Kjør `POST /api/auth/login` med `jonas@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
-   2. Trykk **Authorize** øverst og lim inn tokenet.
-   3. Kjør `POST /api/homes` med `{"name": "Hytta", "type": "household"}`. Svaret er 409 med «Du er allerede med i «Mari og Jonas sitt hjem». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
-4. Jonas og Kari har nå to hjem hver, og bytter mellom dem under **Dine hjem** (se «Prøv oppgaveoversikten» under).
+### Hvis noe feiler
 
-**Prøv invitasjon (Story 1.4):**
-
-1. Logg inn som Mari og velg **Medlemmer og invitasjon** øverst på oppgaveoversikten. Under **Medlemmer** ser hun seg selv («(deg)») og Jonas som husstandsmedlemmer. Trykk **Lag invitasjonslenke**. Lenken kan brukes én gang og gjelder i 7 dager; **Lag ny lenke** lager en til, og de gamle virker fortsatt.
-2. Åpne lenken i et privat vindu. Du ser hjemmet og rollen. Velg **Opprett konto og bli med** og lag en ny bruker. Du er da med i «Mari og Jonas sitt hjem» som husstandsmedlem.
-3. Logg ut (private vinduer i samme nettleser deler innlogging), eller bruk en annen nettleser, og åpne den samme lenken igjen. Nå står det at lenken ikke lenger er gyldig.
-4. Logg inn som Anders (leietaker) og åpne **Medlemmer og invitasjon** for «Storgata 12». Under **Medlemmer** ser han Kari Hansen (Utleier) og seg selv (Leietaker, «(deg)»), men ingen knapp for å invitere (Story 1.5). Serveren nekter også, hvis han prøver direkte i <http://localhost:8000/docs>:
-   1. Kjør `POST /api/auth/login` med `anders@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
-   2. Trykk **Authorize** øverst og lim inn tokenet.
-   3. Kjør `GET /api/homes` og kopier `id` til «Storgata 12».
-   4. Kjør `POST /api/homes/{home_id}/invites` med den `id`-en. Svaret er 403.
-   5. Logg inn som Mari på samme måte og kjør `GET /api/homes/{home_id}/members` med `id`-en til «Storgata 12». Svaret er 403, fordi hun ikke er medlem der (Story 1.5).
-5. Er du allerede husstandsmedlem eller leietaker i ett hjem, kan du ikke bli med i et annet; invitasjonssiden sier fra om det. Utleierroller teller ikke, så en utleier kan i tillegg bli med i ett slikt hjem. Det er den samme regelen som avgjør om du kan opprette en husstand (Story 1.9).
-
-**Prøv å forlate et hjem (Story 1.8):**
-
-1. Logg inn som Jonas og åpne **Medlemmer og invitasjon**. Trykk **Forlat hjemmet**. Teksten forklarer hva som skjer; ingenting er sendt ennå, og **Avbryt** tar deg tilbake. Trykk **Ja, forlat hjemmet**. Du havner på **Opprett hjemmet ditt** med beskjeden «Du har forlatt «Mari og Jonas sitt hjem».», og kan opprette et eget hjem eller bli med via en ny invitasjon.
-2. Logg inn som Mari og åpne **Medlemmer og invitasjon**. Under **Medlemmer** står bare hun. Hun har ingen **Fjern**-knapp: et husstandsmedlem kan bare forlate selv.
-3. Logg inn som Anders i én nettleser og åpne **Medlemmer og invitasjon** for «Storgata 12». Logg inn som Kari i en annen nettleser (eller et privat vindu), åpne samme side og trykk **Fjern** ved Anders og så **Ja, fjern Anders Johnsen**. Kari ser «Anders Johnsen er fjernet.». Bytt så til en annen fane i Anders sin nettleser (eller minimer vinduet) og tilbake, uten å laste siden på nytt: han blir sendt til **Opprett hjemmet ditt**, uten feilside. Det holder ikke å klikke mellom to vinduer som står side om side; appen henter data på nytt når fanen blir synlig igjen, ikke når vinduet får fokus. Kari har ingen **Forlat hjemmet**-knapp: en utleier kan ikke forlate sin egen utleiebolig.
-4. Angre ved å kjøre `uv run python -m app.seed` fra `backend/` igjen. Den legger Jonas tilbake i «Mari og Jonas sitt hjem» og Anders tilbake i «Storgata 12» (med en ny invitasjonslenke), og sletter ingenting. Har Jonas eller Anders laget eller blitt med i et annet hjem i mellomtiden, hopper seed-en over dem.
-
-**Prøv oppgaveoppsett (Story 2.1):**
-
-1. Lag en ny bruker og opprett et hjem (punkt 3 og 4 over). Du havner på **Sett opp oppgaver** med åtte anbefalte oppgaver, hver med **Ta med**, **Må**/**Bør** og **Hvor ofte**.
-2. Gjør «Vask stekeovnen» til **Må** og velg **Hver 2. måned**, og fjern haken ved «Rens sluket». Trykk **Lagre oppgavene**. Du havner på oppgaveoversikten for hjemmet, som viser sju oppgaver med «Vask stekeovnen» blant Må-oppgavene og uten «Rens sluket». Tilbake-knappen i nettleseren tar deg ikke til skjemaet igjen.
-3. Fjerner du alle hakene og trykker **Lagre oppgavene**, står det «Velg minst én oppgave.», og ingenting blir sendt.
-4. Oppsettet kjøres én gang per hjem. Åpner du `/hjem/<id>/oppgaveoppsett` igjen etterpå, blir du sendt til oppgaveoversikten for hjemmet. Lagrer du i to faner, svarer serveren 409 på den andre, og den fanen går også dit.
-5. Logg inn som Anders (leietaker). Han ser oppgavene Kari har satt opp for «Storgata 12», men kan ikke sette opp oppgaver selv; serveren svarer 403 på `POST /api/homes/{home_id}/tasks/setup` (prøv i <http://localhost:8000/docs> som i invitasjonseksempelet). En utleier som oppretter en ny utleiebolig, setter opp oppgavene med en gang, før noen leietaker er med; har et eldre hjem ingen oppgaver, står **Sett opp oppgaver** ved det under **Dine hjem** på **Innstillinger**.
-
-**Prøv oppgaveoversikten (Story 2.2):** Steg 3 og 4 forutsetter en nyseedet database, siden de lager et nytt hjem.
-
-1. Logg inn som Mari. `/` åpner oppgaveoversikten for hjemmet hennes. Alle **Må**-oppgaver står over alle **Bør**-oppgaver, også når en Bør-oppgave er forfalt. Mens seed-dataene er ferske, står «Rens sluket» (Må) med «Snart forfall» i gult og fet skrift, og «Støvsug og vask gulvene» (Bør) med «Forfalt — frist var …» i rødt. Antall dager («i dag», «i morgen», «om N dager») og hvilke oppgaver som er forfalt, flytter seg med datoen, siden oppgavene er satt opp relativt til dagen seed-en ble kjørt. «Snart forfall» betyr innen 3 dager, og det er serveren som avgjør det (`due_status` i `GET /api/homes/{home_id}/tasks`).
-2. Trykk på en oppgave for å se detaljene. Der kan du endre **Må**/**Bør** og **Hvor ofte** (se Story 2.3 under). Trykk **Oppdater** øverst (eller dra lista ned på mobil) for å hente oppgavene på nytt; skjermleseren sier «Oppdatert». Bruk Tab: fokus går fra overskriften via **Medlemmer og invitasjon**, **Legg til oppgave** (for husstandsmedlemmer og utleiere, se Story 2.6 under) og **Oppdater** gjennom oppgavene ovenfra og ned (først avkrysningsboksen, så selve oppgaven, se Story 2.4 under), og til slutt fanelinja. **Husly** øverst er en lenke til `/`.
-3. Logg inn som Kari, gå til **Innstillinger**, trykk **Opprett nytt hjem**, velg **Husstand** og sett opp oppgavene. Hun har nå to hjem, og oppgaveoversikten viser **Bytt hjem**.
-4. Trykk **Bytt hjem** og velg «Storgata 12» under **Dine hjem**. Last siden på nytt og gå til `/` (eller trykk **Husly**): appen åpner «Storgata 12», fordi det er sist brukte hjem. Dette huskes i nettleseren (`localStorage`), per bruker og per enhet, ikke på serveren.
-
-**Prøv å justere oppgaver (Story 2.3):** Forutsetter en nyseedet database, siden stegene endrer oppgavene.
-
-1. Logg inn som Mari, trykk på «Rens sluket» og velg **Bør**. Ingenting lagres før du trykker **Lagre endringer**; da står det «Lagret». Trykker du uten å ha endret noe, står det «Ingen endringer å lagre.», og ingenting blir sendt.
-2. Logg inn som Jonas i en annen nettleser (eller et privat vindu) og trykk **Oppdater** på oppgaveoversikten: «Rens sluket» står nå blant Bør-oppgavene.
-3. Velg en ny verdi under **Hvor ofte** og lagre. Fristen flytter seg fra samme startpunkt: «Hver måned» → «Hver 2. måned» gir 30 dager senere frist. Velger du et kortere intervall, kan oppgaven bli forfalt med en gang. Endrer du bare Må/Bør, står fristen stille.
-4. Logg inn som Anders (leietaker) og åpne en oppgave i «Storgata 12». **Viktighet** og **Hvor ofte** vises låst med «Satt av utleier», og kan nås med Tab, men ikke endres. Serveren svarer også 403 for ham, uansett innhold, hvis han prøver direkte i <http://localhost:8000/docs>:
-   1. Kjør `POST /api/auth/login` med `anders@example.com` og `husly-demo`, og kopier `access_token` fra svaret.
-   2. Trykk **Authorize** øverst og lim inn tokenet.
-   3. Hent id-en til «Storgata 12» med `GET /api/homes` og en oppgave-id med `GET /api/homes/{home_id}/tasks`.
-   4. Kjør `PATCH /api/homes/{home_id}/tasks/{task_id}` med for eksempel `{"classification": "should"}`. Svaret er 403.
-5. Går du fra siden uten å lagre, forkastes endringen uten advarsel.
-
-**Prøv å krysse av oppgaver (Story 2.4):** Forutsetter en nyseedet database, siden stegene endrer oppgavene. Med Story 2.4 er også Story 2.5 (ny frist etter avkrysning) bygget.
-
-1. Logg inn som Mari. «Avkalk vannkokeren» er allerede krysset av, med «Fullført … av Jonas» i grønt og overstreket navn: seed-en lar Jonas krysse den av to dager før seed-en ble kjørt.
-2. Logg inn som Jonas i en annen nettleser (eller et privat vindu) og kryss av «Støvsug og vask gulvene». Boksen blir krysset av med en gang, uten bekreftelse, og kortet viser «Fullført i dag». Ditt eget navn står aldri der. Neste frist regnes fra dagen du krysset av (UTC) pluss hyppigheten, også når oppgaven var forfalt: «Hver 2. uke» gir frist om 14 dager. Også «i dag» og «i går» i notatet regnes i UTC-døgn, så en avkrysning like etter midnatt norsk tid kan stå som «Fullført i går».
-3. Trykk **Oppdater** hos Mari: kortet viser «Fullført i dag av Jonas». Kortet står som fullført så lenge neste frist er mer enn 3 dager unna; når den nærmer seg, kommer fristen og en tom boks tilbake.
-4. En avkrysset boks kan ikke angres. Den forblir krysset av, og et nytt trykk sender ingenting. Med Tab kommer du først til boksen («Merk «X» som fullført») og så til oppgaven.
-5. Slå av nettet (i Chrome: DevTools → **Network** → **Offline**) og kryss av en oppgave hos Jonas. Kortet viser «Fullført i dag». Slå nettet på igjen: avkrysningen blir sendt av seg selv, uten at kortet hopper tilbake. **Begrensning:** avkrysninger som er gjort uten nett, ligger bare i minnet. Laster du siden på nytt eller lukker appen før nettet er tilbake, går de tapt, og du må krysse av på nytt.
-6. Logg inn som Jonas, åpne **Medlemmer og invitasjon** og trykk **Forlat hjemmet**. Hos Mari står det nå «Fullført i dag av tidligere medlem»; avkrysningen blir stående.
-7. Anders (leietaker) kan også krysse av oppgaver i «Storgata 12». Bildebevis kommer i Epic 4.
-
-**Prøv å legge til og fjerne oppgaver (Story 2.6):** Forutsetter en nyseedet database, siden stegene endrer oppgavene.
-
-1. Logg inn som Mari og trykk **Legg til oppgave** øverst på oppgaveoversikten. Lista viser katalogoppgavene hjemmet mangler, og **Egen oppgave** nederst. Ingenting er valgt på forhånd; trykker du **Legg til** uten å velge, står det «Velg en oppgave.».
-2. Velg en katalogoppgave: anbefalt **Må**/**Bør** og **Hvor ofte** står ferdig valgt, og du kan endre dem. Lagre: oversikten viser «La til «X».» (leses opp av skjermleseren, vises bare én gang), og oppgaven står i lista med første frist i dag pluss hyppigheten.
-3. Velg **Egen oppgave**: fokus går til navnefeltet. Navnet trimmes og må være 1–100 tegn. Et navn som en aktiv oppgave allerede har (også med andre store og små bokstaver, og også katalogoppgavenes navn), avvises med en melding ved feltet. Egne oppgaver kan aldri kreve bildebevis (Epic 4).
-4. Åpne en oppgave og trykk **Fjern oppgaven**. Bekreftelsen kommer inline: «Oppgaven forsvinner fra lista for alle i hjemmet. Det som er gjort, blir stående.» Trykk **Ja, fjern oppgaven**: du kommer til oversikten med «Fjernet «X».», og oppgaven er borte for alle (trykk **Oppdater** hos Jonas). **Avbryt** sender ingenting. Oppgaven slettes ikke; den arkiveres, og det som er gjort, blir stående i databasen.
-5. Legg til den samme katalogoppgaven igjen: den blir en ny oppgave med ny første frist. Fjerner du alle oppgavene, står det «Ingen oppgaver i hjemmet ennå.» med **Legg til oppgave**; oppsettet av oppgaver tilbys ikke på nytt.
-6. Logg inn som Anders (leietaker): han ser verken **Legg til oppgave** eller **Fjern oppgaven**, og serveren svarer 403 på `POST /api/homes/{home_id}/tasks` og `DELETE /api/homes/{home_id}/tasks/{task_id}` (prøv i <http://localhost:8000/docs> som i Story 2.3). Før oppgavene er satt opp, svarer serveren 409 «Sett opp oppgavene først.» på en `POST`.
-
-**Prøv porteføljen (Story 6.1, FR-20):** Forutsetter en nyseedet database, siden stegene lager et nytt hjem. Seed-dataene gir Kari bare ett utleiehjem, og porteføljen finnes først når en utleier har to.
-
-1. Logg inn som Kari: fanelinja har ingen **Portefølje**, siden hun bare har «Storgata 12», og `GET /api/portfolio` svarer 403 (prøv i <http://localhost:8000/docs>).
-2. Gå til **Innstillinger**, trykk **Opprett nytt hjem**, velg **Utleiebolig** og sett opp oppgavene. Nå står **Portefølje** i fanelinja.
-3. Åpne den: «Storgata 12» står øverst som **Forsinket**, siden seed-dataene har forfalte Må-oppgaver mens de er ferske, og det nye hjemmet står som **Alt i orden**. Et hjem uten oppgaver står som **Ikke satt opp**. Statusen avgjøres på serveren (`backend/app/domain/portfolio.py`) og er alltid en tekst, ikke bare en farge.
-4. På mobil (under 600 px) er hver rad en lenke til **Administrer hjemmet**. På nettbrett og desktop velger du en rad og får forfalte Må-oppgaver i kolonnen ved siden av. **Oppdater** (eller et trekk ned fra toppen på mobil) henter statusen på nytt.
-
-**Prøv å slette konto (Story 1.10, FR-25):** Forutsetter en nyseedet database, siden stegene sletter en bruker.
-
-1. Logg inn som Jonas og kryss av en oppgave, for eksempel «Vask badet grundig» (seed-dataene har ingen avkrysninger fra ham, så uten dette er det ingenting som kan bli «Tidligere medlem»). Gå så til **Innstillinger** og bla ned til **Slett konto**. Trykk den: teksten sier at det ikke kan angres, og at det du har gjort i andres hjem blir stående som «Tidligere medlem». Trykk **Ja, slett kontoen** uten passord: «Skriv inn passordet ditt for å bekrefte.» Med feil passord: «Passordet stemmer ikke.»
-2. Skriv `husly-demo` og trykk **Ja, slett kontoen**. Du blir sendt til innloggingen, og `jonas@example.com` kan ikke logge inn igjen. Logg inn som Mari: i «Mari og Jonas sitt hjem» står oppgaven Jonas krysset av nå med «Fullført i dag av tidligere medlem».
-3. Logg inn som Kari (utleier, med «Storgata 12» som eneste utleiehjem) og prøv **Slett konto**: serveren svarer 409 «Du må fjerne leietakerne før du kan slette kontoen. Gjelder: Storgata 12.», så lenge Anders er leietaker. Fjern Anders under **Medlemmer og invitasjon**, og slett kontoen: «Storgata 12» slettes med oppgavene og bildene sine.
-4. Reglene står i `backend/app/domain/account_deletion.py` og testene i `backend/tests/test_account_deletion.py`. Brukerraden slettes aldri: den anonymiseres (`users.deleted_at`), så historikken henger sammen. Seed lager bare eksempelbrukerne på nytt der de mangler (en slettet bruker blir en ny Jonas som blir med i hjemmet igjen), ikke de slettede hjemmene eller historikken; kjør seed på en tom database for å få alt tilbake.
-
-Innloggingen fungerer også i Safari på `http://localhost`, fordi cookien bare får `Secure` på Vercel (eller med `AUTH_COOKIE_SECURE=true`).
-
-### Mock-modus og ekte nøkler
-
-- **KI-svarene («?» på en oppgave) er mocket uten nøkkel.** Uten `GEMINI_API_KEY` svarer en mock-leverandør med ferdigskrevne, oppgavespesifikke svar, og popoveren er merket «Demo-svar». Mocken leser ikke spørsmålet du skriver. **Velkomstguiden (Story 5.3)** lages for utleiehjem når oppgavene settes opp: KI skriver én gang en kort innledning (uten nøkkel: en ferdigskrevet demo-tekst), mens hjemmets navn og dagens Må-oppgaver med hyppighet leses levende og aldri sendes til KI. Oppsettet teller som ett av utleierens 20 KI-kall, og feiler KI, brukes en fast tekst. Leietakeren ser guiden som et kort øverst på oppgaveoversikten og kan skjule den; den ligger alltid under Innstillinger → «Velkomstguide» (utleier ser den også der). Prøv det: opprett et utleiehjem og sett opp oppgaver, inviter en leietaker, og åpne hjemmet som leietaker. Seed-hjemmet til Kari har ingen lagret innledning, så der vises den faste teksten. Når et svar er vist, åpner «Spør mer» en chat (Story 5.2) med oppgaven som utgangspunkt; hver melding i chatten er ett KI-kall som teller blant de 20 per dag, og uten nøkkel svarer mocken på oppfølgingsspørsmål (når chatten har tidligere meldinger) med et demosvar som nevner oppgaven. Prøv det: åpne «Spør KI» på en oppgave, trykk «Spør mer» og send en oppfølging. Serveren lagrer ingen chat: den lever bare i nettleseren mens siden er åpen. Testene bruker alltid mocken. I nettversjonen på Vercel gjelder det samme: er `GEMINI_API_KEY` ikke satt der, svarer mocken. **Push-varsler (Story 3.1) er mocket uten nøkler.** Uten `VAPID_PUBLIC_KEY` og `VAPID_PRIVATE_KEY` får nettleseren en fast utviklingsnøkkel, så «Slå på varsler» under Innstillinger lagrer enheten som vanlig. Forfallsjobben (Story 3.2) sender da ikke på ekte: en mock-avsender logger hva den ville sendt. Kjør jobben for hånd med `curl http://localhost:8000/api/internal/run-due-check` (uten `CRON_SECRET` og uten VAPID-nøkler trengs ingen hemmelighet; porten er den `fastapi dev` bruker hos deg). Svaret sier hvor mange medlemmer, oppgaver og push den fant. Samme dag gir et nytt kall ingenting nytt, siden hver oppgave og hvert medlem bare varsles én gang per dag. **Utleiers melding til leietakerne (Story 3.4)** går samme vei: uten VAPID-nøkler logger mock-avsenderen at den ville sendt, men siden holder ingen enhet tilbake, sier utleiersiden likevel «Sendt til N leietakere» (også i nettversjonen på Vercel til VAPID-nøklene er satt under Production). Prøv den som utleier (Kari i seed-dataene) under «Send melding til leietakerne» på oppgaveoversikten. Samme side («Administrer hjemmet») har valget «Påminnelser til leietakerne» (Story 3.5): hver dag, annenhver dag eller én gang i uken for Må-oppgaver. Forfallsjobben følger det for leietakere, og fristdagen varsler alltid. Samme side har «Bildebevis» (Story 4.1): utleier kan krysse av for å kreve bilde på Må-oppgaver av typer der det går an å se at det er gjort («Rens sluket» og «Rens filteret i kjøkkenviften» i katalogen). Leietakeren kan da ikke krysse av uten bilde: oppgaven får «Last opp bilde» i stedet for avkrysning, og bildet (JPEG, maks 3,5 MB, minnes ned i nettleseren) lagres én gang per oppgave (Story 4.2). Uten `BLOB_READ_WRITE_TOKEN` ligger bildene i mappen `backend/.photo-evidence` (`PHOTO_STORAGE_DIR` overstyrer), som git ignorerer, så det kan prøves uten konto. Med token brukes en privat Vercel Blob-lagring. Uten token på Vercel (skrivebeskyttet disk) feiler opplasting med beskjed om at bildet ikke ble lagret, så Blob-lagringen må kobles til før den hostede demoen kan ta imot bilder. Utleier ser bildet og beskrivelsen på oppgavedetaljene (Story 4.3): bildet hentes gjennom backend, aldri med en lagringsadresse, og leietakere og andre utleiere får 403. Prøv det lokalt: last opp et bilde som leietaker (se over), logg inn som utleier (Kari) og åpne oppgaven. Bilder fra opplastinger på Vercel før denne rettingen finnes ikke (Blob-adapteren lagret ingenting), så utleier får «Bildet finnes ikke lenger» til leietakeren laster opp på nytt. Se effekten lokalt: velg «Én gang i uken», opprett en Må-oppgave med frist for et par dager siden som utleier, og kjør `run-due-check` (som over) for to dager på rad; leietakeren varsles bare på fristdagen og så hver sjuende dag. **Rettferdig påminnelse (Story 3.3):** har ett medlem gjort de tre siste fullføringene av en delt oppgave og et annet ingen, går første påminnelse om oppgaven bare til det andre medlemmet (utleier, tidligere medlemmer og medlemmer som kom etterpå teller ikke med), og dagen etter får alle den vanlige påminnelsen. Seed-dataene gir Mari tre fullføringer av «Støvsug og vask gulvene» og Jonas ingen: slå på varsler som Mari og Jonas, og kjør `run-due-check` (som over); da får bare Jonas påminnelsen om gulvene. Regelen står i `backend/app/domain/fairness.py` (`WINDOW = 3`) og testene i `backend/tests/test_fairness.py`. Service workeren registreres bare i produksjonsbygg, så test varsler med `npm run build && npm run preview` (eller Docker), ikke med `npm run dev`. På iPhone (iOS 16.4 eller nyere) virker varsler bare når Husly er lagt på Hjem-skjermen og åpnes fra ikonet, ikke fra Safari; ellers står det «Varsler støttes ikke her» under Innstillinger → Varsler (bekreftet på ekte iPhone mot Production 22.11). Andre eksterne tjenester brukes ikke i Trinn 1.
-- **Egne verdier og nøkler (valgfritt):** Kopier [`.env.example`](.env.example) til `.env` i rotmappen og kjør backend-kommandoene med `--env-file ../.env` etter `uv run` (f.eks. `uv run --env-file ../.env fastapi dev`). `.env` kan overstyre `DATABASE_URL`, `JWT_SECRET`, `AUTH_COOKIE_SECURE` og, for ekte KI-svar, `GEMINI_API_KEY` (og valgfritt `GEMINI_MODEL`), og for ekte push `VAPID_PUBLIC_KEY` og `VAPID_PRIVATE_KEY` (valgfritt `VAPID_SUBJECT`). `CRON_SECRET` beskytter forfallsjobben: på Vercel, og når ekte VAPID-nøkler er satt, avvises alle kall uten `Authorization: Bearer <CRON_SECRET>`. Vercel Cron kaller den hver dag klokken 06:00 UTC (`vercel.json`), og bare i Production-deployen: legg `CRON_SECRET` inn under Production i Vercel, ellers avvises Crons kall. Settes nøkkelen, sendes bare oppgavenavnet, katalogtypen og spørsmålet ditt til Google Gemini (i chatten også dine tidligere spørsmål og KI-ens svar på dem), aldri navn, e-post eller hjemmenavn. Hver bruker kan stille 20 KI-spørsmål per dag (UTC-døgn); den 21. får beskjed om når grensen nullstilles. Kall som feiler eller går over 10 sekunder teller også, og mock-svar teller. Nye nøkler legges i `.env.example` av storyen som trenger dem. `.env` er ignorert av git og skal aldri committes.
-- **Seed-kommandoen skriver bare til en lokal database.** Den nekter å kjøre på Vercel, og når `DATABASE_URL` eller `DATABASE_URL_UNPOOLED` (også fra `.env`) peker til en annen maskin enn `localhost`/`127.0.0.1`/`::1`, uten å skrive noe (exit 2; exit 1 betyr at databasen ikke svarer). Eksempelbrukerne med kjente passord havner derfor aldri i nettversjonen; der registrerer du din egen konto.
-
-### Når API-et endres
-
-Frontenden har en typet API-klient generert fra FastAPIs OpenAPI-skjema. Etter en endring i backendens ruter eller modeller:
-
-```bash
-cd backend && uv run python -m app.export_openapi   # skriver frontend/openapi.json
-cd ../frontend && npm run gen:api                   # skriver src/api/schema.d.ts
-```
-
-Commit begge filene. En test i backenden og et steg i CI feiler hvis de ikke er oppdatert.
-
-### Sjekke PWA-en (manifest og service worker)
-
-Service workeren registreres bare i produksjonsbygget:
-
-```bash
-cd frontend
-npm run build && npm run preview
-```
-
-Åpne <http://localhost:4173>, og gå til DevTools → Application. Der skal manifestet være gyldig, og `/service-worker.js` skal være aktiv med scope `/`.
+| Symptom | Trolig årsak | Løsning |
+|---|---|---|
+| Docker Desktop starter ikke, eller sier at virtualisering er av («Virtualization support not detected», «WSL 2 installation is incomplete») | Virtualisering (Intel VT-x, AMD-V/SVM) er slått av i BIOS/UEFI, eller WSL2 mangler | Kjør `wsl --install --no-distribution` i PowerShell og start maskinen på nytt. Hjelper ikke det: start maskinen på nytt, gå inn i BIOS/UEFI (ofte `F2`, `F10`, `Del` eller `Esc` under oppstart; tastene varierer mellom produsenter), slå på **Virtualization Technology** (også kalt Intel VT-x, SVM Mode eller AMD-V), lagre og start på nytt. Sjekk i Oppgavebehandling → Ytelse → CPU at «Virtualisering» står som «Aktivert». |
+| `docker compose` svarer at den ikke får kontakt med Docker | Docker Desktop er ikke startet | Start Docker Desktop, vent til den sier at den kjører, og kjør `docker compose up -d --wait` på nytt. |
+| Seed eller backend får ikke kontakt med databasen, eller <http://localhost:8000/api/health/db> svarer ikke `{"database":"ok"}` | Databasen kjører ikke | Kjør `docker compose ps` fra rotmappen. Står ikke `db` som kjørende, kjør `docker compose up -d --wait`. Er en annen tjeneste på port 5433, avslutt den først. |
+| `uv: command not found` rett etter installasjonen | Terminalen kjenner ikke uv ennå | Lukk terminalen og åpne en ny (på Windows: åpne Git Bash på nytt). |
+| `&&` eller `npm.ps1` feiler på Windows | Du kjører i PowerShell | Bruk **Git Bash** for alle kommandoer unntatt installasjonen under «Forutsetninger». |
+| `npm ci` viser «EBADENGINE», eller `npm run dev` feiler rett etter oppstart | For gammel Node | Sjekk `node --version` mot kravet under Forutsetninger. Installer Node 24: på macOS `nvm install` og `nvm use` i `frontend/` (`.nvmrc` peker på 24), på Windows `nvm use 24` med nvm-windows, eller installer fra nodejs.org. |
+| `npm test` stopper med «Timeout waiting for worker to respond» | Node 26.7 med vitest 5.0.5 | Bytt til Node 24 og kjør på nytt. |
+| Innlogging avvises for en av testbrukerne | Seed er ikke kjørt, eller databasen er ny og tom | Kjør `uv run python -m app.seed` i `backend/`. Testbrukerne bruker passordet `husly-demo`. |
+| Siden åpner, men innlogging eller data feiler, og <http://localhost:5173/api/health> svarer ikke `{"status":"ok"}` | Backend kjører ikke på port 8000 | Start `uv run fastapi dev` i `backend/`, og se at porten ikke er brukt av noe annet. |
+| «Slå på varsler» sier at varsler ikke støttes | Service workeren registreres bare i produksjonsbygg, og på iPhone må appen åpnes fra Hjem-skjermen | Kjør `npm run build && npm run preview` i `frontend/` og åpne <http://localhost:4173>. På iPhone legger du appen på Hjem-skjermen og åpner den derfra, ikke fra Safari. |
+| Du vil begynne på nytt med tom database | | `docker compose down -v`, deretter `docker compose up -d --wait` og `uv run python -m app.seed`. |
 
 ### Tester og lint
 
@@ -233,15 +191,6 @@ cd frontend
 npm test -- --run
 npm run lint
 ```
-
-### Porter
-
-| Tjeneste | Port |
-|---|---|
-| PostgreSQL (Docker) | 5433 (5432 inne i containeren, så den ikke kolliderer med en lokal PostgreSQL) |
-| Backend (FastAPI) | 8000 |
-| Frontend, utvikling (`npm run dev`) | 5173 |
-| Frontend, produksjonsbygg (`npm run preview`) | 4173 |
 
 ## Mappestruktur
 
@@ -272,6 +221,62 @@ frontend/            React 19 + TypeScript + Vite
   openapi.json       API-skjemaet klienten genereres fra (npm run gen:api)
     service-worker.ts
 ```
+
+## Konfigurasjon og drift
+
+### Mock-modus og ekte nøkler
+
+- **Mock-modus uten nøkler.** Uten nøkler svarer appen med mock, og hvert punkt under kan prøves lokalt:
+  - **KI-svarene («?» på en oppgave) er mocket uten nøkkel.** Uten `GEMINI_API_KEY` svarer en mock-leverandør med ferdigskrevne, oppgavespesifikke svar, og popoveren er merket «Demo-svar». Mocken leser ikke spørsmålet du skriver.
+  - **Velkomstguiden (Story 5.3)** lages for utleiehjem når oppgavene settes opp: KI skriver én gang en kort innledning (uten nøkkel: en ferdigskrevet demo-tekst), mens hjemmets navn og dagens Må-oppgaver med hyppighet leses levende og aldri sendes til KI. Oppsettet teller som ett av utleierens 20 KI-kall, og feiler KI, brukes en fast tekst. Leietakeren ser guiden som et kort øverst på oppgaveoversikten og kan skjule den; den ligger alltid under Innstillinger → «Velkomstguide» (utleier ser den også der). Prøv det: opprett et utleiehjem og sett opp oppgaver, inviter en leietaker, og åpne hjemmet som leietaker. Seed-hjemmet til Kari har ingen lagret innledning, så der vises den faste teksten.
+  - Når et svar er vist, åpner «Spør mer» en chat (Story 5.2) med oppgaven som utgangspunkt; hver melding i chatten er ett KI-kall som teller blant de 20 per dag, og uten nøkkel svarer mocken på oppfølgingsspørsmål (når chatten har tidligere meldinger) med et demosvar som nevner oppgaven. Prøv det: åpne «Spør KI» på en oppgave, trykk «Spør mer» og send en oppfølging. Serveren lagrer ingen chat: den lever bare i nettleseren mens siden er åpen. Testene bruker alltid mocken. I nettversjonen på Vercel gjelder det samme: er `GEMINI_API_KEY` ikke satt der, svarer mocken.
+  - **Push-varsler (Story 3.1) er mocket uten nøkler.** Uten `VAPID_PUBLIC_KEY` og `VAPID_PRIVATE_KEY` får nettleseren en fast utviklingsnøkkel, så «Slå på varsler» under Innstillinger lagrer enheten som vanlig. Forfallsjobben (Story 3.2) sender da ikke på ekte: en mock-avsender logger hva den ville sendt. Kjør jobben for hånd med `curl http://localhost:8000/api/internal/run-due-check` (uten `CRON_SECRET` og uten VAPID-nøkler trengs ingen hemmelighet; porten er den `fastapi dev` bruker hos deg). Svaret sier hvor mange medlemmer, oppgaver og push den fant. Samme dag gir et nytt kall ingenting nytt, siden hver oppgave og hvert medlem bare varsles én gang per dag.
+  - **Utleiers melding til leietakerne (Story 3.4)** går samme vei: uten VAPID-nøkler logger mock-avsenderen at den ville sendt, men siden holder ingen enhet tilbake, sier utleiersiden likevel «Sendt til N leietakere» (også i nettversjonen på Vercel til VAPID-nøklene er satt under Production). Prøv den som utleier (Kari i seed-dataene) under «Send melding til leietakerne» på oppgaveoversikten.
+  - Samme side («Administrer hjemmet») har valget «Påminnelser til leietakerne» (Story 3.5): hver dag, annenhver dag eller én gang i uken for Må-oppgaver. Forfallsjobben følger det for leietakere, og fristdagen varsler alltid.
+  - Se effekten lokalt: velg «Én gang i uken», opprett en Må-oppgave med frist for et par dager siden som utleier, og kjør `run-due-check` (som over) for to dager på rad; leietakeren varsles bare på fristdagen og så hver sjuende dag.
+  - Samme side har «Bildebevis» (Story 4.1): utleier kan krysse av for å kreve bilde på Må-oppgaver av typer der det går an å se at det er gjort («Rens sluket» og «Rens filteret i kjøkkenviften» i katalogen). Leietakeren kan da ikke krysse av uten bilde: oppgaven får «Last opp bilde» i stedet for avkrysning, og bildet (JPEG, maks 3,5 MB, minnes ned i nettleseren) lagres én gang per oppgave (Story 4.2). Uten `BLOB_READ_WRITE_TOKEN` ligger bildene i mappen `backend/.photo-evidence` (`PHOTO_STORAGE_DIR` overstyrer), som git ignorerer, så det kan prøves uten konto. Med token brukes en privat Vercel Blob-lagring. Uten token på Vercel (skrivebeskyttet disk) feiler opplasting med beskjed om at bildet ikke ble lagret, så Blob-lagringen må kobles til før den hostede demoen kan ta imot bilder.
+  - Utleier ser bildet og beskrivelsen på oppgavedetaljene (Story 4.3): bildet hentes gjennom backend, aldri med en lagringsadresse, og leietakere og andre utleiere får 403. Prøv det lokalt: last opp et bilde som leietaker (se over), logg inn som utleier (Kari) og åpne oppgaven.
+  - Bilder fra opplastinger på Vercel før denne rettingen finnes ikke (Blob-adapteren lagret ingenting), så utleier får «Bildet finnes ikke lenger» til leietakeren laster opp på nytt.
+  - **Rettferdig påminnelse (Story 3.3):** har ett medlem gjort de tre siste fullføringene av en delt oppgave og et annet ingen, går første påminnelse om oppgaven bare til det andre medlemmet (utleier, tidligere medlemmer og medlemmer som kom etterpå teller ikke med), og dagen etter får alle den vanlige påminnelsen. Seed-dataene gir Mari tre fullføringer av «Støvsug og vask gulvene» og Jonas ingen: slå på varsler som Mari og Jonas, og kjør `run-due-check` (som over); da får bare Jonas påminnelsen om gulvene. Regelen står i `backend/app/domain/fairness.py` (`WINDOW = 3`) og testene i `backend/tests/test_fairness.py`.
+  - Service workeren registreres bare i produksjonsbygg, så test varsler med `npm run build && npm run preview` (eller Docker), ikke med `npm run dev`. På iPhone (iOS 16.4 eller nyere) virker varsler bare når Husly er lagt på Hjem-skjermen og åpnes fra ikonet, ikke fra Safari; ellers står det «Varsler støttes ikke her» under Innstillinger → Varsler (bekreftet på ekte iPhone mot Production 22.11). Andre eksterne tjenester brukes ikke i Trinn 1.
+- **Egne verdier og nøkler (valgfritt):** Kopier [`.env.example`](.env.example) til `.env` i rotmappen og kjør backend-kommandoene med `--env-file ../.env` etter `uv run` (f.eks. `uv run --env-file ../.env fastapi dev`). `.env` kan overstyre `DATABASE_URL`, `JWT_SECRET`, `AUTH_COOKIE_SECURE` og, for ekte KI-svar, `GEMINI_API_KEY` (og valgfritt `GEMINI_MODEL`), og for ekte push `VAPID_PUBLIC_KEY` og `VAPID_PRIVATE_KEY` (valgfritt `VAPID_SUBJECT`).
+  - `CRON_SECRET` beskytter forfallsjobben: på Vercel, og når ekte VAPID-nøkler er satt, avvises alle kall uten `Authorization: Bearer <CRON_SECRET>`.
+  - Vercel Cron kaller den hver dag klokken 06:00 UTC (`vercel.json`), og bare i Production-deployen: legg `CRON_SECRET` inn under Production i Vercel, ellers avvises Crons kall.
+  - Settes nøkkelen, sendes bare oppgavenavnet, katalogtypen og spørsmålet ditt til Google Gemini (i chatten også dine tidligere spørsmål og KI-ens svar på dem), aldri navn, e-post eller hjemmenavn.
+  - Hver bruker kan stille 20 KI-spørsmål per dag (UTC-døgn); den 21. får beskjed om når grensen nullstilles. Kall som feiler eller går over 10 sekunder teller også, og mock-svar teller.
+  - Nye nøkler legges i `.env.example` av storyen som trenger dem. `.env` er ignorert av git og skal aldri committes.
+- **Seed-kommandoen skriver bare til en lokal database.** Den nekter å kjøre på Vercel, og når `DATABASE_URL` eller `DATABASE_URL_UNPOOLED` (også fra `.env`) peker til en annen maskin enn `localhost`/`127.0.0.1`/`::1`, uten å skrive noe (exit 2; exit 1 betyr at databasen ikke svarer). Eksempelbrukerne med kjente passord havner derfor aldri i nettversjonen; der registrerer du din egen konto.
+
+### Når API-et endres
+
+Frontenden har en typet API-klient generert fra FastAPIs OpenAPI-skjema. Etter en endring i backendens ruter eller modeller:
+
+```bash
+cd backend && uv run python -m app.export_openapi   # skriver frontend/openapi.json
+cd ../frontend && npm run gen:api                   # skriver src/api/schema.d.ts
+```
+
+Commit begge filene. En test i backenden og et steg i CI feiler hvis de ikke er oppdatert.
+
+### Sjekke PWA-en (manifest og service worker)
+
+Service workeren registreres bare i produksjonsbygget:
+
+```bash
+cd frontend
+npm run build && npm run preview
+```
+
+Åpne <http://localhost:4173>, og gå til DevTools → Application. Der skal manifestet være gyldig, og `/service-worker.js` skal være aktiv med scope `/`.
+
+### Porter
+
+| Tjeneste | Port |
+|---|---|
+| PostgreSQL (Docker) | 5433 (5432 inne i containeren, så den ikke kolliderer med en lokal PostgreSQL) |
+| Backend (FastAPI) | 8000 |
+| Frontend, utvikling (`npm run dev`) | 5173 |
+| Frontend, produksjonsbygg (`npm run preview`) | 4173 |
 
 ## Nettversjon (valgfri)
 

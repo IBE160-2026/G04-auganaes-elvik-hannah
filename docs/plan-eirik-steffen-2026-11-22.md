@@ -53,7 +53,7 @@ Følg README fra «Kom i gang» i Git Bash. Skriv funn i issue #14, og lag én i
 ## 3. Se det som ikke er sett i nettleser (begge)
 
 - **Portefølje:** logg inn som Kari, opprett et andre utleiehjem (Innstillinger → Opprett nytt hjem → Utleiebolig, sett opp oppgaver) og åpne **Portefølje**. Sjekk 320, 700 og 1200 px: én kolonne under 600 px (raden er en lenke), to kolonner over, og at headeren ser riktig ut ved siden av den utvidede kolonnen (`.app-shell__main:has(.portfolio)` i `frontend/src/routes/Portfolio.css`).
-- **Slett konto:** README «Prøv å slette konto». Se at utleier med leietaker får beskjed om å fjerne leietakerne først, og at en oppgave Jonas har krysset av (gjør det først, seed har ingen) står igjen som «Fullført … av tidligere medlem» hos Mari.
+- **Slett konto:** `docs/prov-appen.md` «Prøv å slette konto». Se at utleier med leietaker får beskjed om å fjerne leietakerne først, og at en oppgave Jonas har krysset av (gjør det først, seed har ingen) står igjen som «Fullført … av tidligere medlem» hos Mari.
 - **Chatten (D1):** åpne «Spør KI» på en oppgave → «Spør mer» og send fire–fem meldinger. Feltet skal bli stående i bildet, og en mislykket melding (slå av nettet) skal bli stående med «Prøv igjen».
 - **Offline-melding:** slå av nettet i «Administrer hjemmet» og prøv å sende en melding: «Vi fikk ikke kontakt med tjenesten…» med «Prøv igjen».
 
