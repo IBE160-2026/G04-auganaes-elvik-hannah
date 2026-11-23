@@ -39,18 +39,40 @@ Eirik og Steffen har programmert sammen fra Eiriks maskin på ukentlige samlinge
 
 Appen kjører helt lokalt, uten gruppens kontoer eller nøkler (FR-22, AD-15). Kommandoene fungerer i zsh (macOS) og Git Bash (Windows).
 
-> **Windows:** Kjør alle kommandoene i **Git Bash**, ikke PowerShell. Windows PowerShell 5.1 støtter ikke `&&`, og standard kjøringspolicy blokkerer `npm.ps1`. Unntaket er installasjonskommandoen for uv nedenfor, som er laget for PowerShell.
+> **Windows:** Kjør alle kommandoene i **Git Bash**, ikke PowerShell. Windows PowerShell 5.1 støtter ikke `&&`, og standard kjøringspolicy blokkerer `npm.ps1`. Unntaket er installasjonskommandoene under «Forutsetninger», som kjøres i PowerShell.
 
 ### Forutsetninger
 
-- **Docker Desktop**, og det må være startet før du kjører kommandoene. På Windows må WSL2 være slått på (Docker Desktop spør om dette ved installasjon).
-- **uv** (Python-pakkehåndterer). uv henter selv riktig Python-versjon (3.12), så du trenger ikke installere Python.
-  - macOS: `curl -LsSf https://astral.sh/uv/install.sh | sh` (eller `brew install uv`)
-  - Windows: `winget install astral-sh.uv`, eller i PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`. Åpne Git Bash på nytt etterpå.
-- **Node.js 24 LTS** (22.22.2+, 24.15+ og 26+ godtas av avhengighetene, men `frontend/.nvmrc` og CI bruker 24, og frontend-testene skal kjøres på 24).
-  - macOS: `brew install node@24`, eller last ned LTS-installasjonsfilen fra <https://nodejs.org>.
-  - Windows: `winget install OpenJS.NodeJS.LTS`, eller last ned LTS-installasjonsfilen fra <https://nodejs.org>. Åpne Git Bash på nytt etterpå.
-  - Sjekk med `node --version`. Feil versjon og `npm test` som henger på Node 26.7 står under «Hvis noe feiler».
+Du trenger Git, Docker Desktop, uv og Node.js 24. Installer alt med én kommando:
+
+**Windows** (åpne PowerShell som vanlig bruker, og kjør:)
+
+```powershell
+winget install --id Git.Git -e; winget install --id Docker.DockerDesktop -e; winget install --id astral-sh.uv -e; winget install --id OpenJS.NodeJS.LTS -e
+wsl --install --no-distribution
+```
+
+Start deretter maskinen på nytt, start Docker Desktop og vent til den sier at den kjører (du trenger ikke logge inn i Docker). Bruk **Git Bash** til alle kommandoene videre.
+
+**macOS** (krever [Homebrew](https://brew.sh)):
+
+```bash
+brew install git uv node@24 && brew install --cask docker
+```
+
+Start Docker Desktop fra Programmer og vent til den kjører. Hvis `node --version` ikke viser 24 etterpå, kjør `brew link --overwrite node@24`.
+
+Lukk terminalen og åpne en ny etter installasjonen, og sjekk:
+
+```bash
+git --version && docker --version && uv --version && node --version
+```
+
+Hva de er til, og hva du gjør uten pakkehåndterer:
+
+- **Docker Desktop** kjører databasen. Det må være startet før du kjører kommandoene. Last ned fra <https://www.docker.com/products/docker-desktop/>. På Windows må WSL2 og virtualisering være på; se «Hvis noe feiler» hvis Docker ikke starter.
+- **uv** er Python-pakkehåndtereren. Den henter selv riktig Python (3.12), så du trenger ikke installere Python. Uten winget eller brew: `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) eller `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"` (Windows).
+- **Node.js 24 LTS** (22.22.2+, 24.15+ og 26+ godtas av avhengighetene, men `frontend/.nvmrc` og CI bruker 24, og frontend-testene skal kjøres på 24). Uten winget eller brew: last ned LTS-installasjonsfilen fra <https://nodejs.org>. Feil versjon og `npm test` som henger på Node 26.7 står under «Hvis noe feiler».
 
 ### Rask start
 
@@ -133,10 +155,11 @@ Seed-kommandoen lager disse eksempelbrukerne:
 
 | Symptom | Trolig årsak | Løsning |
 |---|---|---|
+| Docker Desktop starter ikke, eller sier at virtualisering er av («Virtualization support not detected», «WSL 2 installation is incomplete») | Virtualisering (Intel VT-x, AMD-V/SVM) er slått av i BIOS/UEFI, eller WSL2 mangler | Kjør `wsl --install --no-distribution` i PowerShell og start maskinen på nytt. Hjelper ikke det: start maskinen på nytt, gå inn i BIOS/UEFI (ofte `F2`, `F10`, `Del` eller `Esc` under oppstart; tastene varierer mellom produsenter), slå på **Virtualization Technology** (også kalt Intel VT-x, SVM Mode eller AMD-V), lagre og start på nytt. Sjekk i Oppgavebehandling → Ytelse → CPU at «Virtualisering» står som «Aktivert». |
 | `docker compose` svarer at den ikke får kontakt med Docker | Docker Desktop er ikke startet | Start Docker Desktop, vent til den sier at den kjører, og kjør `docker compose up -d --wait` på nytt. |
 | Seed eller backend får ikke kontakt med databasen, eller <http://localhost:8000/api/health/db> svarer ikke `{"database":"ok"}` | Databasen kjører ikke | Kjør `docker compose ps` fra rotmappen. Står ikke `db` som kjørende, kjør `docker compose up -d --wait`. Er en annen tjeneste på port 5433, avslutt den først. |
 | `uv: command not found` rett etter installasjonen | Terminalen kjenner ikke uv ennå | Lukk terminalen og åpne en ny (på Windows: åpne Git Bash på nytt). |
-| `&&` eller `npm.ps1` feiler på Windows | Du kjører i PowerShell | Bruk **Git Bash** for alle kommandoer unntatt uv-installasjonen. |
+| `&&` eller `npm.ps1` feiler på Windows | Du kjører i PowerShell | Bruk **Git Bash** for alle kommandoer unntatt installasjonen under «Forutsetninger». |
 | `npm ci` viser «EBADENGINE», eller `npm run dev` feiler rett etter oppstart | For gammel Node | Sjekk `node --version` mot kravet under Forutsetninger. Installer Node 24: på macOS `nvm install` og `nvm use` i `frontend/` (`.nvmrc` peker på 24), på Windows `nvm use 24` med nvm-windows, eller installer fra nodejs.org. |
 | `npm test` stopper med «Timeout waiting for worker to respond» | Node 26.7 med vitest 5.0.5 | Bytt til Node 24 og kjør på nytt. |
 | Innlogging avvises for en av testbrukerne | Seed er ikke kjørt, eller databasen er ny og tom | Kjør `uv run python -m app.seed` i `backend/`. Testbrukerne bruker passordet `husly-demo`. |
