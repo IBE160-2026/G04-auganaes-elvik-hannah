@@ -1,5 +1,11 @@
 // Story 1.2 (FR-1): client-side checks and 422 mapping give the same Norwegian messages.
-import { MESSAGES, fieldErrorsFrom422, validateRegister, validateSignIn } from './auth';
+import {
+  MESSAGES,
+  fieldErrorsFrom422,
+  validatePasswordConfirm,
+  validateRegister,
+  validateSignIn,
+} from './auth';
 
 const VALID = { email: 'ola@example.com', name: 'Ola', password: 'hemmelig1' };
 
@@ -19,6 +25,28 @@ describe('validateRegister', () => {
     [{ password: 'a'.repeat(129) }, 'password', MESSAGES.passwordTooLong],
   ])('%o gives an error on %s', (override, field, message) => {
     expect(validateRegister({ ...VALID, ...override })).toEqual({ [field]: message });
+  });
+});
+
+describe('validatePasswordConfirm', () => {
+  it('accepts an equal repeat', () => {
+    expect(validatePasswordConfirm('hemmelig1', 'hemmelig1')).toEqual({});
+  });
+
+  it('asks for the repeat when it is empty', () => {
+    expect(validatePasswordConfirm('hemmelig1', '')).toEqual({
+      passwordConfirm: MESSAGES.passwordConfirmMissing,
+    });
+  });
+
+  it.each([
+    ['hemmelig1', 'hemmelig2'],
+    ['hemmelig1', 'Hemmelig1'],
+    ['hemmelig1', 'hemmelig1 '],
+  ])('%s vs %s is a mismatch (exact, no trimming, case-sensitive)', (password, confirm) => {
+    expect(validatePasswordConfirm(password, confirm)).toEqual({
+      passwordConfirm: MESSAGES.passwordMismatch,
+    });
   });
 });
 

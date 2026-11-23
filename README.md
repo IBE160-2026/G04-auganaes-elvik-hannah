@@ -145,7 +145,7 @@ Seed-kommandoen lager disse eksempelbrukerne:
 
 1. Åpne <http://localhost:5173>. Du blir sendt til **Logg inn**.
 2. Logg inn som Mari. Du havner på oppgaveoversikten for «Mari og Jonas sitt hjem» (`/hjem/<id>`), med de åtte oppgavene (Må-oppgavene først) og fanelinja **Oppgaver** / **Innstillinger** nederst. Last siden på nytt; du er fortsatt logget inn.
-3. Gå til **Innstillinger** og trykk **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
+3. Gå til **Innstillinger** og trykk **Logg ut**, velg **Opprett konto** og lag din egen bruker (e-post, navn og et passord på minst 8 tegn, som du skriver to ganger). Uten et hjem blir du sendt til **Opprett hjemmet ditt**.
 4. Velg **Husstand** eller **Utleiebolig**, gi hjemmet et navn og trykk **Opprett hjem**. Du kommer til **Sett opp oppgaver** (se [«Prøv oppgaveoppsett»](docs/prov-appen.md#prøv-oppgaveoppsett-story-21)). Med en husstand blir du husstandsmedlem; nye medlemmer kommer inn via invitasjon (Story 1.4). Med en utleiebolig blir du utleier. Hjemmene dine står under **Dine hjem** på **Innstillinger**. Regelen for å opprette flere hjem med **Opprett nytt hjem** er den samme som for å bli med (Story 1.9): en utleiebolig kan alle opprette, når som helst. En husstand kan du bare opprette når du ikke allerede er husstandsmedlem eller leietaker et annet sted. Prøver du likevel, svarer serveren «Du er allerede med i «X». Du kan bare være med i ett hjem om gangen.», og ingenting blir lagret.
 5. **Logg ut** (på **Innstillinger**, eller på **Opprett hjemmet ditt** for en bruker uten hjem) sender deg tilbake til innloggingen.
 
